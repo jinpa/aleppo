@@ -52,6 +52,27 @@ function parseInstructions(raw: string[]): InstructionStep[] {
     .map((text, i) => ({ step: i + 1, text: text.trim() }));
 }
 
+export function extractFromJsonLdArray(
+  jsonLdData: object[],
+  meta: { pageTitle?: string; ogImage?: string; siteName?: string } = {}
+): ScrapedRecipe | null {
+  for (const data of jsonLdData) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const items: any[] = (data as any)["@graph"] ? (data as any)["@graph"] : [data];
+    for (const item of items) {
+      const recipe = extractFromJsonLd(item);
+      if (recipe) {
+        return {
+          ...recipe,
+          sourceName: recipe.sourceName || meta.siteName,
+          imageUrl: recipe.imageUrl || meta.ogImage || undefined,
+        };
+      }
+    }
+  }
+  return null;
+}
+
 function extractFromJsonLd(jsonLd: object): ScrapedRecipe | null {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recipe: any = jsonLd;
@@ -117,58 +138,24 @@ function extractFromJsonLd(jsonLd: object): ScrapedRecipe | null {
   };
 }
 
-export async function scrapeRecipeFromUrl(url: string): Promise<{
-  recipe: ScrapedRecipe | null;
-  rawPayload: object;
-  error?: string;
-}> {
-  let html: string;
-
-  try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; AleppoBot/1.0; recipe importer)",
-        Accept: "text/html,application/xhtml+xml",
-      },
-      signal: AbortSignal.timeout(15000),
-    });
-
-    if (!response.ok) {
-      return {
-        recipe: null,
-        rawPayload: { status: response.status, url },
-        error: `HTTP ${response.status}: ${response.statusText}`,
-      };
-    }
-
-    html = await response.text();
-  } catch (err) {
-    return {
-      recipe: null,
-      rawPayload: { url, error: String(err) },
-      error: "Failed to fetch URL",
-    };
-  }
-
+export function scrapeRecipeFromHtml(
+  html: string,
+  url?: string
+): { recipe: ScrapedRecipe | null; rawPayload: object; error?: string } {
   const root = parse(html);
 
-  // Extract all JSON-LD scripts
   const jsonLdScripts = root.querySelectorAll(
     'script[type="application/ld+json"]'
   );
   const jsonLdData: object[] = [];
-
   for (const script of jsonLdScripts) {
     try {
-      const data = JSON.parse(script.text);
-      jsonLdData.push(data);
+      jsonLdData.push(JSON.parse(script.text));
     } catch {
       // skip malformed
     }
   }
 
-  // Extract page title and meta for fallback
   const pageTitle =
     root.querySelector("title")?.text?.trim() ||
     root.querySelector('meta[property="og:title"]')?.getAttribute("content");
@@ -184,31 +171,11 @@ export async function scrapeRecipeFromUrl(url: string): Promise<{
 
   const rawPayload = { url, jsonLd: jsonLdData, pageTitle, siteName };
 
-  // Try to find a Recipe in JSON-LD
-  for (const data of jsonLdData) {
-    // Handle @graph
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const items: any[] = (data as any)["@graph"]
-      ? // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (data as any)["@graph"]
-      : [data];
-
-    for (const item of items) {
-      const recipe = extractFromJsonLd(item);
-      if (recipe) {
-        return {
-          recipe: {
-            ...recipe,
-            sourceName: recipe.sourceName || siteName,
-            imageUrl: recipe.imageUrl || ogImage || undefined,
-          },
-          rawPayload,
-        };
-      }
-    }
+  const recipe = extractFromJsonLdArray(jsonLdData, { pageTitle, ogImage, siteName });
+  if (recipe) {
+    return { recipe, rawPayload };
   }
 
-  // Fallback: return partial data
   return {
     recipe: {
       title: pageTitle,
@@ -221,4 +188,56 @@ export async function scrapeRecipeFromUrl(url: string): Promise<{
     rawPayload,
     error: "Could not parse recipe structured data. Please fill in manually.",
   };
+}
+
+export async function scrapeRecipeFromUrl(url: string): Promise<{
+  recipe: ScrapedRecipe | null;
+  rawPayload: object;
+  error?: string;
+}> {
+  let html: string;
+
+  try {
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        Accept:
+          "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Cache-Control": "no-cache",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "none",
+        "Upgrade-Insecure-Requests": "1",
+      },
+      redirect: "follow",
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      const isCloudflareSite =
+        response.headers.get("server")?.toLowerCase().includes("cloudflare") ||
+        response.headers.get("cf-ray") !== null;
+
+      return {
+        recipe: null,
+        rawPayload: { status: response.status, url, cloudflare: isCloudflareSite },
+        error: response.status === 403
+          ? "blocked"
+          : `HTTP ${response.status}: ${response.statusText}`,
+      };
+    }
+
+    html = await response.text();
+  } catch (err) {
+    return {
+      recipe: null,
+      rawPayload: { url, error: String(err) },
+      error: "Failed to fetch URL",
+    };
+  }
+
+  return scrapeRecipeFromHtml(html, url);
 }
