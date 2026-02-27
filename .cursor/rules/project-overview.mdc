@@ -1,0 +1,45 @@
+---
+description: Aleppo project overview — stack, conventions, and constraints
+alwaysApply: true
+---
+
+# Aleppo
+
+A web-first recipe management app — a "cooking diary" in the spirit of Strava/Letterboxd. Users save recipes, log every cook with a date and note, and follow friends to see what they've been cooking. Full spec: `docs/PRD.md`.
+
+## Stack
+
+| Layer | Choice |
+|-------|--------|
+| Framework | Next.js 15 (App Router) |
+| Language | TypeScript (strict) |
+| ORM | Drizzle ORM + Drizzle Kit migrations |
+| Auth | Auth.js v5 — credentials (email/pw) + Google OAuth |
+| Database | PostgreSQL 16 — Railway managed add-on |
+| Styling | Tailwind CSS v4 + shadcn/ui |
+| Images | Cloudflare R2 via `@aws-sdk/client-s3`; `sharp` for server-side resize |
+| URL scraping | `@extractus/recipe-extractor` (Schema.org JSON-LD first); Playwright fallback |
+| AI (V2 only) | `@google/generative-ai` — Gemini 2.5 Flash |
+| Hosting | Railway (Hobby plan) |
+
+## Monetization
+
+- Core product is **free, no limits** (recipes, logging, social, import)
+- **One-time ~$18 AI add-on** unlocks V2 AI features (OCR, dish-to-recipe, nutritional info) — no subscription
+
+## Key Conventions
+
+- **Never auto-save imports** — always show a review/edit step before persisting
+- **Privacy defaults to private** — both `users.is_public` and `recipes.is_public` must be true for content to appear in follower feeds
+- **Ingredients dual storage** — store both `raw` (original string) and parsed `{amount, unit, name, notes}` fields; never discard the original
+- **Recipe import audit trail** — every import writes a `recipe_imports` row with `raw_payload` (jsonb) for debugging
+- **Images always re-uploaded to R2** — never store third-party image URLs long-term; download and re-host on import
+- **No Redis, no job queues, no tRPC at MVP** — keep the stack simple until there's a reason to add complexity
+
+## MVP Scope (what's in V1.0)
+
+Recipe CRUD + tags · URL import · Cooking log (date + one-line note) · Cook count display · "Want to cook" queue · Public profiles · Follow/following feed · Shareable public recipe links · Google OAuth + email/password auth
+
+## Explicitly Out of Scope for MVP
+
+AI features · Paprika import · Browser extension · Notifications · Comments/likes · Recipe collections · Meal planning · Native mobile app
