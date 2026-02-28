@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Loader2, Globe, Lock, Camera } from "lucide-react";
+import { Loader2, Globe, Lock, Camera, Tag, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +43,8 @@ interface SettingsViewProps {
     image?: string | null;
     bio?: string | null;
     isPublic: boolean;
+    defaultTagsEnabled: boolean;
+    defaultRecipeIsPublic: boolean;
     hasPassword: boolean;
   };
 }
@@ -51,6 +53,9 @@ export function SettingsView({ user }: SettingsViewProps) {
   const router = useRouter();
   const [avatarUrl, setAvatarUrl] = useState(user.image ?? "");
   const [uploading, setUploading] = useState(false);
+  const [defaultTagsEnabled, setDefaultTagsEnabled] = useState(user.defaultTagsEnabled);
+  const [defaultRecipeIsPublic, setDefaultRecipeIsPublic] = useState(user.defaultRecipeIsPublic);
+  const [savingDefaults, setSavingDefaults] = useState(false);
 
   const profileForm = useForm<ProfileData>({
     resolver: zodResolver(profileSchema),
@@ -100,6 +105,30 @@ export function SettingsView({ user }: SettingsViewProps) {
     } else {
       const err = await res.json();
       toast({ title: err.error || "Failed to update password", variant: "destructive" });
+    }
+  };
+
+  const handleDefaultToggle = async (
+    field: "defaultTagsEnabled" | "defaultRecipeIsPublic",
+    value: boolean
+  ) => {
+    if (field === "defaultTagsEnabled") setDefaultTagsEnabled(value);
+    else setDefaultRecipeIsPublic(value);
+
+    setSavingDefaults(true);
+    const res = await fetch("/api/users/me", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ [field]: value }),
+    });
+    setSavingDefaults(false);
+
+    if (res.ok) {
+      toast({ title: "Default updated", variant: "success" });
+    } else {
+      toast({ title: "Failed to update default", variant: "destructive" });
+      if (field === "defaultTagsEnabled") setDefaultTagsEnabled(!value);
+      else setDefaultRecipeIsPublic(!value);
     }
   };
 
@@ -335,6 +364,58 @@ export function SettingsView({ user }: SettingsViewProps) {
           </div>
         </section>
       )}
+
+      <Separator />
+
+      {/* Recipe defaults */}
+      <section className="space-y-4">
+        <div>
+          <h2 className="text-lg font-semibold text-stone-900">Recipe defaults</h2>
+          <p className="text-sm text-stone-500 mt-0.5">
+            These apply when importing or creating new recipes. You can always change them per recipe.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between p-4 rounded-xl bg-stone-50 border border-stone-200">
+            <div className="flex items-center gap-3">
+              <Tag className="h-5 w-5 text-stone-600" />
+              <div>
+                <p className="text-sm font-medium text-stone-900">Include imported tags</p>
+                <p className="text-xs text-stone-500">
+                  Pre-fill tags from the recipe source when importing
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={defaultTagsEnabled}
+              disabled={savingDefaults}
+              onCheckedChange={(v) => handleDefaultToggle("defaultTagsEnabled", v)}
+            />
+          </div>
+
+          <div className="flex items-center justify-between p-4 rounded-xl bg-stone-50 border border-stone-200">
+            <div className="flex items-center gap-3">
+              <Eye className="h-5 w-5 text-stone-600" />
+              <div>
+                <p className="text-sm font-medium text-stone-900">
+                  {defaultRecipeIsPublic ? "New recipes start as public" : "New recipes start as private"}
+                </p>
+                <p className="text-xs text-stone-500">
+                  {defaultRecipeIsPublic
+                    ? "Visible to your followers and anyone with the link"
+                    : "Only visible to you until you make them public"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={defaultRecipeIsPublic}
+              disabled={savingDefaults}
+              onCheckedChange={(v) => handleDefaultToggle("defaultRecipeIsPublic", v)}
+            />
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

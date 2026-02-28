@@ -2,7 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { eq, and } from "drizzle-orm";
 import { db } from "@/db";
-import { recipeImports } from "@/db/schema";
+import { recipeImports, users } from "@/db/schema";
 import { extractFromJsonLdArray } from "@/lib/recipe-scraper";
 import { ImportFlow } from "@/components/recipes/import-flow";
 
@@ -18,10 +18,21 @@ export default async function ImportPage({
 
   const { importId, mode } = await searchParams;
 
+  const [userPrefsRow] = await db
+    .select({
+      defaultTagsEnabled: users.defaultTagsEnabled,
+      defaultRecipeIsPublic: users.defaultRecipeIsPublic,
+    })
+    .from(users)
+    .where(eq(users.id, session.user.id))
+    .limit(1);
+
+  const userPrefs = userPrefsRow ?? { defaultTagsEnabled: true, defaultRecipeIsPublic: false };
+
   // Bookmarklet flow: page was opened by the bookmarklet via window.open.
   // The client-side ImportFlow component handles the postMessage handshake.
   if (mode === "bookmarklet") {
-    return <ImportFlow mode="bookmarklet" />;
+    return <ImportFlow mode="bookmarklet" userPrefs={userPrefs} />;
   }
 
   // Legacy importId flow (kept for backward compat)
@@ -56,10 +67,11 @@ export default async function ImportPage({
           initialUrl={importRecord.sourceUrl ?? ""}
           initialRecipe={recipe}
           parseError={parseError}
+          userPrefs={userPrefs}
         />
       );
     }
   }
 
-  return <ImportFlow />;
+  return <ImportFlow userPrefs={userPrefs} />;
 }

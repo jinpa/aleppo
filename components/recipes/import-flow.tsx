@@ -16,6 +16,8 @@ import {
   ShieldAlert,
   Info,
   Copy,
+  X,
+  Tags,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +54,10 @@ interface ImportFlowProps {
   parseError?: string;
   /** Set to "bookmarklet" when opened by the bookmarklet; triggers postMessage handshake */
   mode?: "bookmarklet";
+  userPrefs?: {
+    defaultTagsEnabled: boolean;
+    defaultRecipeIsPublic: boolean;
+  };
 }
 
 function recipeToFormDefaults(
@@ -95,6 +101,7 @@ export function ImportFlow({
   initialRecipe,
   parseError: initialParseError,
   mode,
+  userPrefs,
 }: ImportFlowProps) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(initialStep);
@@ -105,12 +112,17 @@ export function ImportFlow({
   );
   const [showBookmarkletHelp, setShowBookmarkletHelp] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  const [includeTags, setIncludeTags] = useState(userPrefs?.defaultTagsEnabled ?? true);
   // true while we're waiting for the bookmarklet's postMessage data
   const [waitingForBookmarklet, setWaitingForBookmarklet] = useState(
     mode === "bookmarklet"
   );
   const [duplicate, setDuplicate] = useState<{ id: string; title: string } | null>(null);
   const [replaceExisting, setReplaceExisting] = useState(false);
+  // Preserves the originally-scraped tags so toggling "Include tags" off then on restores them
+  const originalTagsRef = useRef<string[]>(initialRecipe?.tags ?? []);
+
+  const initialFormDefaults = recipeToFormDefaults(initialRecipe, initialUrl);
 
   const {
     register,
@@ -126,10 +138,11 @@ export function ImportFlow({
       description: "",
       ingredients: [{ raw: "" }],
       instructions: [{ text: "" }],
-      tags: [],
-      isPublic: false,
       notes: "",
-      ...recipeToFormDefaults(initialRecipe, initialUrl),
+      ...initialFormDefaults,
+      // User prefs override scraped values: apply after the spread
+      tags: (userPrefs?.defaultTagsEnabled ?? true) ? (initialFormDefaults.tags ?? []) : [],
+      isPublic: userPrefs?.defaultRecipeIsPublic ?? false,
     },
   });
 
@@ -153,9 +166,13 @@ export function ImportFlow({
   const populateForm = (recipe: ScrapedRecipe, sourceUrl: string) => {
     const defaults = recipeToFormDefaults(recipe, sourceUrl);
     Object.entries(defaults).forEach(([key, value]) => {
+      if (key === "tags") return; // handle tags separately below
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setValue(key as any, value as any);
     });
+    // Store original scraped tags so the toggle can restore them
+    originalTagsRef.current = (defaults.tags as string[]) ?? [];
+    setValue("tags", includeTags ? originalTagsRef.current : []);
   };
 
   const checkForDuplicate = async (sourceUrl: string) => {
@@ -598,21 +615,47 @@ export function ImportFlow({
       </section>
 
       <section className="space-y-3">
-        <Label className="text-base font-semibold">Tags</Label>
-        <div className="flex gap-2">
-          <Input placeholder="Add a tag…" value={tagInput} onChange={(e) => setTagInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }} />
-          <Button type="button" variant="outline" onClick={addTag}>Add</Button>
-        </div>
-        {tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {tags.map((tag) => (
-              <button key={tag} type="button" onClick={() => removeTag(tag)}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-stone-100 text-stone-700 text-xs hover:bg-red-50 hover:text-red-700 transition-colors">
-                {tag} <span className="text-stone-400">×</span>
-              </button>
-            ))}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Tags className="h-4 w-4 text-stone-500" />
+            <Label className="text-base font-semibold">Tags</Label>
+            {originalTagsRef.current.length > 0 && (
+              <span className="text-xs text-stone-400">
+                ({originalTagsRef.current.length} from source)
+              </span>
+            )}
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-stone-500">Include tags</span>
+            <Switch
+              checked={includeTags}
+              onCheckedChange={(v) => {
+                setIncludeTags(v);
+                setValue("tags", v ? originalTagsRef.current : []);
+                if (!v) setTagInput("");
+              }}
+            />
+          </div>
+        </div>
+        {includeTags && (
+          <>
+            <div className="flex gap-2">
+              <Input placeholder="Add a tag…" value={tagInput} onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(); } }} />
+              <Button type="button" variant="outline" onClick={addTag}>Add</Button>
+            </div>
+            {tags.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {tags.map((tag) => (
+                  <button key={tag} type="button" onClick={() => removeTag(tag)}
+                    className="group flex items-center gap-1 px-2.5 py-1 rounded-full bg-stone-100 text-stone-700 text-xs hover:bg-red-50 hover:text-red-700 transition-colors">
+                    {tag}
+                    <X className="h-3 w-3 text-stone-400 group-hover:text-red-500" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
 

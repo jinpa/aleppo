@@ -19,6 +19,8 @@ export default async function SettingsPage() {
       image: users.image,
       bio: users.bio,
       isPublic: users.isPublic,
+      defaultTagsEnabled: users.defaultTagsEnabled,
+      defaultRecipeIsPublic: users.defaultRecipeIsPublic,
       hasPassword: users.passwordHash,
     })
     .from(users)

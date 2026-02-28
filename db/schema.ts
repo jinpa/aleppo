@@ -26,6 +26,9 @@ export const users = pgTable("users", {
   passwordHash: text("passwordHash"),
   bio: text("bio"),
   isPublic: boolean("isPublic").default(true).notNull(),
+  // Import/creation defaults
+  defaultTagsEnabled: boolean("defaultTagsEnabled").default(true).notNull(),
+  defaultRecipeIsPublic: boolean("defaultRecipeIsPublic").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });

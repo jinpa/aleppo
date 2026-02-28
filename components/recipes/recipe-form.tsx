@@ -15,6 +15,7 @@ import {
   Globe,
   Lock,
   Link2,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -422,7 +423,7 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
                 className="group flex items-center gap-1 px-2.5 py-1 rounded-full bg-stone-100 text-stone-700 text-xs hover:bg-red-50 hover:text-red-700 transition-colors"
               >
                 {tag}
-                <span className="text-stone-400 group-hover:text-red-500">×</span>
+                <X className="h-3 w-3 text-stone-400 group-hover:text-red-500" />
               </button>
             ))}
           </div>

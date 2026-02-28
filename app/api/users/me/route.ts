@@ -11,6 +11,8 @@ const updateSchema = z.object({
   bio: z.string().max(500).optional().nullable(),
   image: z.string().optional().nullable(),
   isPublic: z.boolean().optional(),
+  defaultTagsEnabled: z.boolean().optional(),
+  defaultRecipeIsPublic: z.boolean().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(8).max(100).optional(),
 });
@@ -29,6 +31,8 @@ export async function GET() {
       image: users.image,
       bio: users.bio,
       isPublic: users.isPublic,
+      defaultTagsEnabled: users.defaultTagsEnabled,
+      defaultRecipeIsPublic: users.defaultRecipeIsPublic,
       createdAt: users.createdAt,
       hasPassword: users.passwordHash,
     })
