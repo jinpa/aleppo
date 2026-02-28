@@ -78,13 +78,10 @@ function recipeToFormDefaults(
   };
 }
 
-// Blocked sites that are known to 403 server-side scrapers
+// Sites that reliably block server-side scrapers — always prompt the bookmarklet
 const BLOCKED_SITE_HINTS = [
   "seriouseats.com",
-  "nytimes.com",
-  "cooking.nytimes.com",
   "bonappetit.com",
-  "epicurious.com",
   "food52.com",
 ];
 
@@ -370,7 +367,7 @@ export function ImportFlow({
                 <Input
                   id="url"
                   type="url"
-                  placeholder="https://www.seriouseats.com/..."
+                  placeholder="https://cooking.nytimes.com/..."
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
                   className="pl-9"
@@ -423,14 +420,16 @@ export function ImportFlow({
             Works directly (no bookmarklet needed):
           </p>
           <ul className="space-y-0.5 list-disc list-inside text-stone-500">
-            <li>AllRecipes, Simply Recipes, Serious Eats ✱</li>
+            <li>AllRecipes, Simply Recipes, NYT Cooking</li>
             <li>Food Network, Epicurious, King Arthur</li>
             <li>Most sites using Schema.org recipe markup</li>
           </ul>
-          <p className="text-xs text-stone-400">
-            ✱ These sometimes block automated requests — use the bookmarklet if
-            the URL import fails.
+          <p className="font-medium text-stone-700 mt-2">
+            Always use the bookmarklet:
           </p>
+          <ul className="space-y-0.5 list-disc list-inside text-stone-500">
+            <li>Serious Eats (blocks server-side requests)</li>
+          </ul>
         </div>
       </div>
     );
@@ -467,11 +466,10 @@ export function ImportFlow({
               This site blocked the import
             </p>
             <p className="text-sm text-amber-700">
-              Sites like Serious Eats and NYT Cooking use bot protection that
-              blocks server-side requests. Use the{" "}
-              <strong>Aleppo bookmarklet</strong> to import from your browser
-              instead — it runs on the page you&apos;re already viewing, so
-              there&apos;s nothing to block.
+              This site blocks server-side requests (e.g. Serious Eats). Use
+              the <strong>Aleppo bookmarklet</strong> to import from your
+              browser instead — it runs on the page you&apos;re already
+              viewing, so there&apos;s nothing to block.
             </p>
             <button
               type="button"
@@ -692,7 +690,7 @@ function BookmarkletInstructions() {
           Step 2 — Use it:
         </p>
         <ol className="text-sm text-stone-600 space-y-1 list-decimal list-inside">
-          <li>Navigate to any recipe page (e.g. Serious Eats, NYT Cooking)</li>
+          <li>Navigate to any recipe page (e.g. Serious Eats)</li>
           <li>Click <strong>+ Aleppo</strong> in your bookmarks bar</li>
           <li>You&apos;ll be brought here to review and save the recipe</li>
         </ol>
