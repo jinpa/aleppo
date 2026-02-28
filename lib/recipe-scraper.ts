@@ -114,6 +114,16 @@ function isRecipeType(type: unknown): boolean {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseServings(recipeYield: any): number | undefined {
+  // Schema.org allows recipeYield to be a string, number, or array of either.
+  // e.g. "8-10 servings", 10, ["8-10 servings"], ["10"]
+  const raw = Array.isArray(recipeYield) ? recipeYield[0] : recipeYield;
+  if (typeof raw === "number") return raw > 0 ? raw : undefined;
+  if (typeof raw === "string") return parseInt(raw, 10) || undefined;
+  return undefined;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function findRecipeNode(node: any): ScrapedRecipe | null {
   if (!node || typeof node !== "object") return null;
   if (Array.isArray(node)) {
@@ -208,12 +218,7 @@ function extractFromJsonLd(jsonLd: object): ScrapedRecipe | null {
     // If the site only provides totalTime (e.g. NYT Cooking), use it as cookTime
     // so the user sees the time information rather than blank fields.
     cookTime: cookTime ?? (!prepTime && totalTime ? totalTime : undefined),
-    servings:
-      typeof recipe.recipeYield === "number"
-        ? recipe.recipeYield
-        : typeof recipe.recipeYield === "string"
-        ? parseInt(recipe.recipeYield, 10) || undefined
-        : undefined,
+    servings: parseServings(recipe.recipeYield),
     imageUrl,
     tags: keywords.filter(Boolean),
   };
