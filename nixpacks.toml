@@ -1,0 +1,6 @@
+# Override Nixpacks' default `npm ci` with `npm install` so that
+# platform-specific optional dependencies (e.g. @tailwindcss/oxide-linux-x64-gnu)
+# are resolved for the Railway build environment rather than being read
+# from a lock file generated on macOS.
+[phases.install]
+cmds = ["npm install"]
