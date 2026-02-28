@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/auth";
-import { eq, and, count } from "drizzle-orm";
+import { eq, and, count, desc } from "drizzle-orm";
 import { db } from "@/db";
 import { recipes, cookLogs, wantToCook, users } from "@/db/schema";
 import { RecipeDetail } from "@/components/recipes/recipe-detail";
@@ -48,13 +48,16 @@ export default async function RecipePage({
 
   if (!recipe.recipe.isPublic && !isOwner) notFound();
 
+  // Fetch logs for any viewer who can see the recipe (public or owner)
+  const canSeeLogs = isOwner || recipe.recipe.isPublic;
+
   const [logs, [cookCount], queueItem] = await Promise.all([
-    isOwner
+    canSeeLogs
       ? db
           .select()
           .from(cookLogs)
           .where(eq(cookLogs.recipeId, id))
-          .orderBy(cookLogs.cookedOn)
+          .orderBy(desc(cookLogs.cookedOn))
       : [],
     db
       .select({ count: count() })

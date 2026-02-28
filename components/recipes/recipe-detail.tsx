@@ -423,8 +423,8 @@ export function RecipeDetail({
         </section>
       )}
 
-      {/* Cook History */}
-      {isOwner && (
+      {/* Cook History — visible to all viewers of accessible recipes */}
+      {cookLogs.length > 0 || isOwner ? (
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-stone-900">
@@ -435,14 +435,16 @@ export function RecipeDetail({
                 </span>
               )}
             </h2>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowLogDialog(true)}
-            >
-              <Plus className="h-4 w-4" />
-              Log a cook
-            </Button>
+            {isOwner && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowLogDialog(true)}
+              >
+                <Plus className="h-4 w-4" />
+                Log a cook
+              </Button>
+            )}
           </div>
 
           {cookLogs.length === 0 ? (
@@ -459,7 +461,7 @@ export function RecipeDetail({
                   key={log.id}
                   className="flex items-start justify-between gap-4 p-4 bg-white rounded-xl border border-stone-200"
                 >
-                  <div>
+                  <div className="min-w-0">
                     <p className="text-sm font-medium text-stone-900">
                       {formatDate(log.cookedOn)}
                     </p>
@@ -467,19 +469,21 @@ export function RecipeDetail({
                       <p className="text-sm text-stone-600 mt-1">{log.notes}</p>
                     )}
                   </div>
-                  <button
-                    onClick={() => handleDeleteLog(log.id)}
-                    className="text-stone-400 hover:text-red-500 transition-colors flex-shrink-0"
-                    title="Remove log"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  {isOwner && (
+                    <button
+                      onClick={() => handleDeleteLog(log.id)}
+                      className="text-stone-400 hover:text-red-500 transition-colors flex-shrink-0"
+                      title="Remove log"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
           )}
         </section>
-      )}
+      ) : null}
 
       <CookLogDialog
         recipeId={recipe.id}

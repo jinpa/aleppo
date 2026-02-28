@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Users, ChefHat, Search } from "lucide-react";
+import { Users, ChefHat, Search, CalendarDays } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -115,32 +115,44 @@ export function FeedView({ feed, followingCount, followingUsers }: FeedViewProps
                 key={item.log.id}
                 className="bg-white rounded-2xl border border-stone-200 overflow-hidden"
               >
-                <div className="flex items-center gap-3 p-4 pb-3">
-                  <Link href={`/u/${item.user.id}`}>
-                    <Avatar className="h-8 w-8">
+                {/* Activity header: who + when they cooked */}
+                <div className="flex items-center gap-3 px-4 pt-4 pb-3">
+                  <Link href={`/u/${item.user.id}`} className="flex-shrink-0">
+                    <Avatar className="h-9 w-9">
                       <AvatarImage src={item.user.image ?? undefined} />
                       <AvatarFallback className="text-xs">{initials}</AvatarFallback>
                     </Avatar>
                   </Link>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-stone-900">
+                    <p className="text-sm font-medium text-stone-900 leading-tight">
                       <Link href={`/u/${item.user.id}`} className="hover:underline">
                         {item.user.name}
                       </Link>{" "}
-                      <span className="font-normal text-stone-500">cooked</span>
+                      <span className="font-normal text-stone-500">cooked this</span>
                     </p>
-                    <p className="text-xs text-stone-400">
-                      {formatRelativeDate(item.log.createdAt)}
+                    <p className="flex items-center gap-1 text-xs font-semibold text-amber-700 mt-0.5">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      {formatDate(item.log.cookedOn)}
                     </p>
                   </div>
                 </div>
 
+                {/* Note (if any) — shown outside the link so it's easy to read */}
+                {item.log.notes && (
+                  <div className="mx-4 mb-3 px-3 py-2.5 bg-amber-50 rounded-xl border border-amber-100">
+                    <p className="text-sm text-amber-900 leading-relaxed">
+                      &ldquo;{item.log.notes}&rdquo;
+                    </p>
+                  </div>
+                )}
+
+                {/* Recipe card */}
                 <Link
                   href={`/recipes/${item.recipe.id}`}
-                  className="block px-4 pb-4"
+                  className="block mx-4 mb-4 rounded-xl border border-stone-100 overflow-hidden hover:border-stone-300 transition-colors"
                 >
                   {item.recipe.imageUrl && (
-                    <div className="relative h-48 rounded-xl overflow-hidden mb-3">
+                    <div className="relative h-40 w-full">
                       <Image
                         src={item.recipe.imageUrl}
                         alt={item.recipe.title}
@@ -149,26 +161,20 @@ export function FeedView({ feed, followingCount, followingUsers }: FeedViewProps
                       />
                     </div>
                   )}
-                  <p className="font-semibold text-stone-900">
-                    {item.recipe.title}
-                  </p>
-                  {item.log.notes && (
-                    <p className="text-sm text-stone-600 mt-1 line-clamp-2">
-                      &ldquo;{item.log.notes}&rdquo;
+                  <div className="p-3">
+                    <p className="font-semibold text-stone-900 text-sm leading-snug">
+                      {item.recipe.title}
                     </p>
-                  )}
-                  <p className="text-xs text-stone-400 mt-2">
-                    Cooked on {formatDate(item.log.cookedOn)}
-                  </p>
-                  {item.recipe.tags && item.recipe.tags.length > 0 && (
-                    <div className="flex gap-1 flex-wrap mt-2">
-                      {item.recipe.tags.slice(0, 3).map((tag) => (
-                        <Badge key={tag} variant="secondary" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
+                    {item.recipe.tags && item.recipe.tags.length > 0 && (
+                      <div className="flex gap-1 flex-wrap mt-1.5">
+                        {item.recipe.tags.slice(0, 3).map((tag) => (
+                          <Badge key={tag} variant="secondary" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </Link>
               </div>
             );

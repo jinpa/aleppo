@@ -55,7 +55,7 @@ export default async function FeedPage() {
         and(eq(cookLogs.userId, users.id), eq(users.isPublic, true))
       )
       .where(inArray(cookLogs.userId, followingIds))
-      .orderBy(desc(cookLogs.createdAt))
+      .orderBy(desc(cookLogs.cookedOn), desc(cookLogs.createdAt))
       .limit(50);
   }
 

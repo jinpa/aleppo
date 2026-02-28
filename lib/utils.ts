@@ -6,7 +6,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(date: string | Date) {
-  const d = typeof date === "string" ? new Date(date) : date;
+  let d: Date;
+  if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    // Parse date-only strings by component to avoid UTC-midnight-to-local-time
+    // shift that causes e.g. "2026-02-27" to display as Feb 26 in US timezones.
+    const [year, month, day] = date.split("-").map(Number);
+    d = new Date(year, month - 1, day);
+  } else {
+    d = typeof date === "string" ? new Date(date) : date;
+  }
   return d.toLocaleDateString("en-US", {
     year: "numeric",
     month: "long",
