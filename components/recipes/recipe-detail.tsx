@@ -80,6 +80,7 @@ export function RecipeDetail({
   const [inQueue, setInQueue] = useState(initialInQueue);
   const [cookLogs, setCookLogs] = useState(initialLogs);
   const [cookCount, setCookCount] = useState(initialCount);
+  const [isPublic, setIsPublic] = useState(recipe.isPublic);
   const [showLogDialog, setShowLogDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [scaleFactor, setScaleFactor] = useState(1);
@@ -137,6 +138,22 @@ export function RecipeDetail({
     } else {
       setDeleting(false);
       toast({ title: "Failed to delete recipe", variant: "destructive" });
+    }
+  };
+
+  const handleVisibilityToggle = async () => {
+    const next = !isPublic;
+    setIsPublic(next);
+    const res = await fetch(`/api/recipes/${recipe.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isPublic: next }),
+    });
+    if (!res.ok) {
+      setIsPublic(!next);
+      toast({ title: "Failed to update visibility", variant: "destructive" });
+    } else {
+      toast({ title: next ? "Recipe is now public" : "Recipe is now private", variant: "success" });
     }
   };
 
@@ -205,19 +222,43 @@ export function RecipeDetail({
         </div>
 
         <div className="flex flex-wrap items-center gap-3 text-sm text-stone-500">
-          <span className="flex items-center gap-1">
-            {recipe.isPublic ? (
-              <>
-                <Globe className="h-4 w-4" />
-                Public
-              </>
-            ) : (
-              <>
-                <Lock className="h-4 w-4" />
-                Private
-              </>
-            )}
-          </span>
+          {isOwner ? (
+            <button
+              onClick={handleVisibilityToggle}
+              className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 font-medium transition-colors border ${
+                isPublic
+                  ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                  : "border-stone-200 bg-stone-50 text-stone-600 hover:bg-stone-100"
+              }`}
+              title={isPublic ? "Click to make private" : "Click to make public"}
+            >
+              {isPublic ? (
+                <>
+                  <Globe className="h-3.5 w-3.5" />
+                  Public
+                </>
+              ) : (
+                <>
+                  <Lock className="h-3.5 w-3.5" />
+                  Private
+                </>
+              )}
+            </button>
+          ) : (
+            <span className="flex items-center gap-1">
+              {isPublic ? (
+                <>
+                  <Globe className="h-4 w-4" />
+                  Public
+                </>
+              ) : (
+                <>
+                  <Lock className="h-4 w-4" />
+                  Private
+                </>
+              )}
+            </span>
+          )}
 
           {totalTime > 0 && (
             <span className="flex items-center gap-1">

@@ -8,6 +8,13 @@
       "when": 1772234962309,
       "tag": "0000_nosy_vin_gonzales",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772294192938,
+      "tag": "0001_users-is-public-default-true",
+      "breakpoints": true
     }
   ]
 }

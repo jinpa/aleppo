@@ -25,7 +25,7 @@ export const users = pgTable("users", {
   // Extended profile
   passwordHash: text("passwordHash"),
   bio: text("bio"),
-  isPublic: boolean("isPublic").default(false).notNull(),
+  isPublic: boolean("isPublic").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
