@@ -49,19 +49,37 @@ export default function SearchPage() {
       return next;
     });
 
-    const res = await fetch("/api/follows", {
-      method: isFollowing ? "DELETE" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ followingId: userId }),
-    });
+    try {
+      const res = await fetch("/api/follows", {
+        method: isFollowing ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ followingId: userId }),
+      });
 
-    if (!res.ok) {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setFollowing((prev) => {
+          const next = new Set(prev);
+          if (isFollowing) { next.add(userId); } else { next.delete(userId); }
+          return next;
+        });
+        toast({
+          title: "Failed to update follow",
+          description: data?.error ?? `Server returned ${res.status}`,
+          variant: "destructive",
+        });
+      }
+    } catch {
       setFollowing((prev) => {
         const next = new Set(prev);
         if (isFollowing) { next.add(userId); } else { next.delete(userId); }
         return next;
       });
-      toast({ title: "Failed to update follow", variant: "destructive" });
+      toast({
+        title: "Failed to update follow",
+        description: "Network error — please try again.",
+        variant: "destructive",
+      });
     }
   };
 

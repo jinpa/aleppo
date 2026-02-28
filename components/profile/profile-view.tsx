@@ -69,18 +69,33 @@ export function ProfileView({
     setIsFollowing(!prev);
     setFollowerCount((c) => (prev ? c - 1 : c + 1));
 
-    const res = await fetch("/api/follows", {
-      method: prev ? "DELETE" : "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ followingId: user.id }),
-    });
+    try {
+      const res = await fetch("/api/follows", {
+        method: prev ? "DELETE" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ followingId: user.id }),
+      });
 
-    if (!res.ok) {
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setIsFollowing(prev);
+        setFollowerCount(initialFollowerCount);
+        toast({
+          title: "Failed to update follow",
+          description: data?.error ?? `Server returned ${res.status}`,
+          variant: "destructive",
+        });
+      } else {
+        startTransition(() => router.refresh());
+      }
+    } catch {
       setIsFollowing(prev);
       setFollowerCount(initialFollowerCount);
-      toast({ title: "Failed to update follow", variant: "destructive" });
-    } else {
-      startTransition(() => router.refresh());
+      toast({
+        title: "Failed to update follow",
+        description: "Network error — please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -123,7 +138,7 @@ export function ProfileView({
                   Edit profile
                 </Link>
               </Button>
-            ) : (
+            ) : currentUserId ? (
               <Button
                 variant={isFollowing ? "outline" : "default"}
                 size="sm"
@@ -141,6 +156,13 @@ export function ProfileView({
                     Follow
                   </>
                 )}
+              </Button>
+            ) : (
+              <Button asChild variant="default" size="sm">
+                <Link href="/auth/signin">
+                  <UserPlus className="h-4 w-4" />
+                  Follow
+                </Link>
               </Button>
             )}
           </div>
