@@ -39,5 +39,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# drizzle
-drizzle/meta
+# drizzle - migration files (including meta/) must be committed so Railway can run them
