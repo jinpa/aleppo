@@ -540,15 +540,15 @@ export function ImportFlow({
       <div className="grid grid-cols-3 gap-3">
         <div className="space-y-1.5">
           <Label htmlFor="prepTime">Prep (min)</Label>
-          <Input id="prepTime" type="number" min="1" {...register("prepTime", { setValueAs: (v) => (v === "" ? null : parseInt(v, 10)) })} />
+          <Input id="prepTime" type="number" min="1" {...register("prepTime", { setValueAs: (v) => (v === "" || v == null || isNaN(Number(v)) ? null : parseInt(v, 10)) })} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="cookTime">Cook (min)</Label>
-          <Input id="cookTime" type="number" min="1" {...register("cookTime", { setValueAs: (v) => (v === "" ? null : parseInt(v, 10)) })} />
+          <Input id="cookTime" type="number" min="1" {...register("cookTime", { setValueAs: (v) => (v === "" || v == null || isNaN(Number(v)) ? null : parseInt(v, 10)) })} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="servings">Servings</Label>
-          <Input id="servings" type="number" min="1" {...register("servings", { setValueAs: (v) => (v === "" ? null : parseInt(v, 10)) })} />
+          <Input id="servings" type="number" min="1" {...register("servings", { setValueAs: (v) => (v === "" || v == null || isNaN(Number(v)) ? null : parseInt(v, 10)) })} />
         </div>
       </div>
 
@@ -562,7 +562,7 @@ export function ImportFlow({
         <div className="space-y-2">
           {ingredientFields.map((field, i) => (
             <div key={field.id} className="flex gap-2">
-              <Input placeholder="Ingredient…" {...register(`ingredients.${i}.raw`)} />
+              <Input placeholder="e.g. 2 cups all-purpose flour" {...register(`ingredients.${i}.raw`)} />
               {ingredientFields.length > 1 && (
                 <Button type="button" variant="ghost" size="icon" onClick={() => removeIngredient(i)} className="text-stone-400 hover:text-red-500 flex-shrink-0">
                   <Trash2 className="h-4 w-4" />
@@ -584,7 +584,7 @@ export function ImportFlow({
           {instructionFields.map((field, i) => (
             <div key={field.id} className="flex gap-2 items-start">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-stone-900 text-white flex items-center justify-center text-xs font-bold mt-2.5">{i + 1}</div>
-              <Textarea rows={2} {...register(`instructions.${i}.text`)} />
+              <Textarea rows={2} placeholder={`Step ${i + 1}...`} {...register(`instructions.${i}.text`)} />
               {instructionFields.length > 1 && (
                 <Button type="button" variant="ghost" size="icon" onClick={() => removeInstruction(i)} className="text-stone-400 hover:text-red-500 flex-shrink-0">
                   <Trash2 className="h-4 w-4" />

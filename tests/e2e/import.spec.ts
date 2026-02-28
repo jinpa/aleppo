@@ -19,9 +19,9 @@ const SKIP_NETWORK = !process.env.ENABLE_NETWORK_TESTS;
 test.describe("Import — URL step", () => {
   test("import page renders URL input", async ({ alicePage: page }) => {
     await page.goto("/recipes/import");
-    await expect(page.getByText("Import a recipe from any URL")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Import from URL" })).toBeVisible();
     await expect(
-      page.getByPlaceholder("https://www.example.com/recipe/pasta")
+      page.getByLabel("Recipe URL")
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Import" })).toBeVisible();
   });
@@ -33,9 +33,7 @@ test.describe("Import — URL step", () => {
 
   test("Import button enables after URL is typed", async ({ alicePage: page }) => {
     await page.goto("/recipes/import");
-    await page
-      .getByPlaceholder("https://www.example.com/recipe/pasta")
-      .fill("https://example.com/some-recipe");
+    await page.getByLabel("Recipe URL").fill("https://example.com/some-recipe");
     await expect(page.getByRole("button", { name: "Import" })).toBeEnabled();
   });
 
@@ -51,9 +49,7 @@ test.describe("Import — URL step", () => {
       "https://www.simplyrecipes.com/recipes/homemade_pizza/";
 
     await page.goto("/recipes/import");
-    await page
-      .getByPlaceholder("https://www.example.com/recipe/pasta")
-      .fill(testUrl);
+    await page.getByLabel("Recipe URL").fill(testUrl);
     await page.getByRole("button", { name: "Import" }).click();
 
     // Either succeeds (review step) or shows a blockage warning
@@ -74,7 +70,7 @@ test.describe("Import — review step (manual fill)", () => {
   }) => {
     await page.goto("/recipes/import");
     await page
-      .getByPlaceholder("https://www.example.com/recipe/pasta")
+      .getByLabel("Recipe URL")
       .fill("https://example.com/not-a-recipe");
     await page.getByRole("button", { name: "Import" }).click();
 
@@ -97,8 +93,8 @@ test.describe("Import — review step (manual fill)", () => {
       await instField.fill("Mix and bake");
     }
 
-    await page.getByRole("button", { name: "Save recipe" }).click();
+    await page.getByRole("button", { name: "Save recipe" }).first().click();
     await page.waitForURL(/\/recipes\/[0-9a-f-]{36}$/, { timeout: 15_000 });
-    await expect(page.getByText("Manually Filled Import Recipe")).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Manually Filled Import Recipe" })).toBeVisible();
   });
 });
