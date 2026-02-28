@@ -67,6 +67,40 @@ function parseInstructions(raw: string[]): InstructionStep[] {
     .map((text, i) => ({ step: i + 1, text: text.trim() }));
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function pickBestImage(images: any[]): string | undefined {
+  // Each entry can be a plain URL string or an ImageObject { url, width, height }.
+  // Sites like Serious Eats / AllRecipes provide 3 crops in order: [1:1, 4:3, 16:9].
+  // We prefer the widest aspect ratio since the recipe page shows a wide banner.
+  // If none have dimension metadata, we return the last entry (widest by convention).
+  let bestUrl: string | undefined;
+  let bestRatio = -1;
+  let hasAnyDimensions = false;
+
+  for (const img of images) {
+    const url = typeof img === "string" ? img : img?.url;
+    if (!url) continue;
+
+    const w = Number(img?.width);
+    const h = Number(img?.height);
+    const hasDimensions = w > 0 && h > 0;
+
+    if (hasDimensions) {
+      hasAnyDimensions = true;
+      const ratio = w / h;
+      if (ratio > bestRatio) {
+        bestRatio = ratio;
+        bestUrl = url;
+      }
+    } else if (!hasAnyDimensions) {
+      // No dimensions seen yet — keep the last URL as fallback
+      bestUrl = url;
+    }
+  }
+
+  return bestUrl;
+}
+
 const RECIPE_TYPES = new Set([
   "Recipe",
   "https://schema.org/Recipe",
@@ -146,7 +180,10 @@ function extractFromJsonLd(jsonLd: object): ScrapedRecipe | null {
   if (typeof recipe.image === "string") {
     imageUrl = recipe.image;
   } else if (Array.isArray(recipe.image) && recipe.image.length > 0) {
-    imageUrl = typeof recipe.image[0] === "string" ? recipe.image[0] : recipe.image[0]?.url;
+    // Recipe sites often provide multiple images for different aspect ratios:
+    // [1:1 square, 4:3, 16:9]. Prefer the widest (last) entry since the
+    // recipe page displays images in a wide banner container.
+    imageUrl = pickBestImage(recipe.image);
   } else if (recipe.image?.url) {
     imageUrl = recipe.image.url;
   }

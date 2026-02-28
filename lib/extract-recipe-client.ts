@@ -64,6 +64,38 @@ const RECIPE_TYPES = new Set([
   "http://schema.org/Recipe",
 ]);
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function pickBestImage(images: any[]): string | undefined {
+  // Sites like AllRecipes / Serious Eats provide 3 crops: [1:1, 4:3, 16:9].
+  // We prefer the widest aspect ratio for the banner display on the recipe page.
+  // Falls back to the last entry when no dimension metadata is available.
+  let bestUrl: string | undefined;
+  let bestRatio = -1;
+  let hasAnyDimensions = false;
+
+  for (const img of images) {
+    const url = typeof img === "string" ? img : img?.url;
+    if (!url) continue;
+
+    const w = Number(img?.width);
+    const h = Number(img?.height);
+    const hasDimensions = w > 0 && h > 0;
+
+    if (hasDimensions) {
+      hasAnyDimensions = true;
+      const ratio = w / h;
+      if (ratio > bestRatio) {
+        bestRatio = ratio;
+        bestUrl = url;
+      }
+    } else if (!hasAnyDimensions) {
+      bestUrl = url;
+    }
+  }
+
+  return bestUrl;
+}
+
 function isRecipeType(type: unknown): boolean {
   if (typeof type === "string") return RECIPE_TYPES.has(type);
   if (Array.isArray(type)) return type.some((t) => RECIPE_TYPES.has(t));
@@ -100,10 +132,7 @@ function extractOneJsonLd(recipe: any): ScrapedRecipe | null {
   if (typeof recipe.image === "string") {
     imageUrl = recipe.image;
   } else if (Array.isArray(recipe.image) && recipe.image.length > 0) {
-    imageUrl =
-      typeof recipe.image[0] === "string"
-        ? recipe.image[0]
-        : recipe.image[0]?.url;
+    imageUrl = pickBestImage(recipe.image);
   } else if (recipe.image?.url) {
     imageUrl = recipe.image.url;
   }

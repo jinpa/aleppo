@@ -1,16 +1,13 @@
 @import "tailwindcss";
 
+/* Use class-based dark mode so dark: variants only apply when .dark is set.
+   Since the app doesn't set .dark, this effectively keeps everything in light mode. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #fafaf9;
   --foreground: #1c1917;
   --ring: #78716c;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0c0a09;
-    --foreground: #fafaf9;
-  }
 }
 
 body {

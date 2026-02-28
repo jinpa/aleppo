@@ -29,8 +29,8 @@ import { extractRecipeFromJsonLd } from "@/lib/extract-recipe-client";
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  ingredients: z.array(z.object({ raw: z.string().min(1) })),
-  instructions: z.array(z.object({ text: z.string().min(1) })),
+  ingredients: z.array(z.object({ raw: z.string() })),
+  instructions: z.array(z.object({ text: z.string() })),
   tags: z.array(z.string()),
   isPublic: z.boolean(),
   notes: z.string().optional(),
@@ -309,8 +309,12 @@ export function ImportFlow({
   const onSubmit = async (data: FormData) => {
     const body = {
       ...data,
-      ingredients: data.ingredients.map((ing) => ({ raw: ing.raw, name: ing.raw })),
-      instructions: data.instructions.map((inst, idx) => ({ step: idx + 1, text: inst.text })),
+      ingredients: data.ingredients
+        .filter((ing) => ing.raw.trim())
+        .map((ing) => ({ raw: ing.raw, name: ing.raw })),
+      instructions: data.instructions
+        .filter((inst) => inst.text.trim())
+        .map((inst, idx) => ({ step: idx + 1, text: inst.text })),
     };
 
     const isReplace = replaceExisting && duplicate;
