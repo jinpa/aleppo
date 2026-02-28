@@ -14,7 +14,9 @@ import {
   Loader2,
   Globe,
   Lock,
+  Link2,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -169,10 +171,21 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
       onSubmit={handleSubmit(onSubmit)}
       className="space-y-8 max-w-2xl mx-auto"
     >
-      <div className="space-y-1">
+      <div className="space-y-3">
         <h1 className="text-2xl font-bold text-stone-900">
           {mode === "edit" ? "Edit recipe" : "New recipe"}
         </h1>
+        {mode === "create" && (
+          <Link
+            href="/recipes/import"
+            className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800 transition-colors group"
+          >
+            <span className="flex items-center justify-center w-7 h-7 rounded-lg bg-stone-100 group-hover:bg-stone-200 transition-colors">
+              <Link2 className="w-3.5 h-3.5" />
+            </span>
+            Have a URL? Import from a website instead
+          </Link>
+        )}
       </div>
 
       {/* Basic Info */}
