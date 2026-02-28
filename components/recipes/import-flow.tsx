@@ -15,6 +15,7 @@ import {
   Bookmark,
   ShieldAlert,
   Info,
+  Copy,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,6 +112,8 @@ export function ImportFlow({
   const [waitingForBookmarklet, setWaitingForBookmarklet] = useState(
     mode === "bookmarklet"
   );
+  const [duplicate, setDuplicate] = useState<{ id: string; title: string } | null>(null);
+  const [replaceExisting, setReplaceExisting] = useState(false);
 
   const {
     register,
@@ -158,6 +161,20 @@ export function ImportFlow({
     });
   };
 
+  const checkForDuplicate = async (sourceUrl: string) => {
+    if (!sourceUrl) return;
+    try {
+      const res = await fetch(`/api/recipes/check-duplicate?url=${encodeURIComponent(sourceUrl)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setDuplicate(data.duplicate ?? null);
+        setReplaceExisting(false);
+      }
+    } catch {
+      // non-critical, silently ignore
+    }
+  };
+
   // Bookmarklet postMessage handshake
   useEffect(() => {
     if (mode !== "bookmarklet") return;
@@ -193,6 +210,7 @@ export function ImportFlow({
       if (recipe) {
         populateForm(recipe, payload?.url ?? "");
         setUrl(payload?.url ?? "");
+        checkForDuplicate(payload?.url ?? "");
         setStep("review");
       } else {
         const types = jsonld.flatMap((d: unknown) => {
@@ -238,6 +256,8 @@ export function ImportFlow({
 
     setFetching(true);
     setParseError(null);
+    setDuplicate(null);
+    setReplaceExisting(false);
 
     try {
       const res = await fetch("/api/import", {
@@ -265,6 +285,7 @@ export function ImportFlow({
 
       if (recipe) {
         populateForm(recipe, url.trim());
+        checkForDuplicate(url.trim());
       }
 
       setStep("review");
@@ -292,8 +313,9 @@ export function ImportFlow({
       instructions: data.instructions.map((inst, idx) => ({ step: idx + 1, text: inst.text })),
     };
 
-    const res = await fetch("/api/recipes", {
-      method: "POST",
+    const isReplace = replaceExisting && duplicate;
+    const res = await fetch(isReplace ? `/api/recipes/${duplicate.id}` : "/api/recipes", {
+      method: isReplace ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
@@ -303,9 +325,9 @@ export function ImportFlow({
       return;
     }
 
-    const recipe = await res.json();
-    toast({ title: "Recipe imported!", variant: "success" });
-    router.push(`/recipes/${recipe.id}`);
+    const saved = await res.json();
+    toast({ title: isReplace ? "Recipe updated!" : "Recipe imported!", variant: "success" });
+    router.push(`/recipes/${saved.id}`);
     router.refresh();
   };
 
@@ -421,9 +443,15 @@ export function ImportFlow({
             Check the parsed recipe and make any edits before saving.
           </p>
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={() => setStep("url")}>
-          ← Back
-        </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button type="button" variant="outline" size="sm" onClick={() => setStep("url")}>
+            ← Back
+          </Button>
+          <Button type="submit" size="sm" disabled={isSubmitting || parseError === "blocked"}>
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            Save recipe
+          </Button>
+        </div>
       </div>
 
       {/* Error banners */}
@@ -467,6 +495,34 @@ export function ImportFlow({
           <p className="text-sm text-green-800">
             Recipe parsed successfully. Review the fields below.
           </p>
+        </div>
+      )}
+
+      {duplicate && (
+        <div className="flex gap-3 p-4 rounded-xl bg-sky-50 border border-sky-200">
+          <Copy className="h-5 w-5 text-sky-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 space-y-3">
+            <div>
+              <p className="text-sm font-medium text-sky-900">You already have this recipe</p>
+              <p className="text-sm text-sky-700 mt-0.5">
+                <a
+                  href={`/recipes/${duplicate.id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="underline font-medium hover:text-sky-900"
+                >
+                  {duplicate.title}
+                </a>{" "}
+                is already in your collection.
+              </p>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <Switch checked={replaceExisting} onCheckedChange={setReplaceExisting} />
+              <span className="text-sm text-sky-800">
+                Replace that recipe with this import
+              </span>
+            </label>
+          </div>
         </div>
       )}
 
