@@ -1,6 +1,40 @@
 import Fraction from "fraction.js";
 import type { Ingredient } from "@/db/schema";
 
+// Maps Unicode vulgar fractions to their ASCII slash equivalents.
+const UNICODE_FRACTION_MAP: Record<string, string> = {
+  "\u00BC": "1/4",  // ¼
+  "\u00BD": "1/2",  // ½
+  "\u00BE": "3/4",  // ¾
+  "\u2150": "1/7",  // ⅐
+  "\u2151": "1/9",  // ⅑
+  "\u2152": "1/10", // ⅒
+  "\u2153": "1/3",  // ⅓
+  "\u2154": "2/3",  // ⅔
+  "\u2155": "1/5",  // ⅕
+  "\u2156": "2/5",  // ⅖
+  "\u2157": "3/5",  // ⅗
+  "\u2158": "4/5",  // ⅘
+  "\u2159": "1/6",  // ⅙
+  "\u215A": "5/6",  // ⅚
+  "\u215B": "1/8",  // ⅛
+  "\u215C": "3/8",  // ⅜
+  "\u215D": "5/8",  // ⅝
+  "\u215E": "7/8",  // ⅞
+};
+
+/**
+ * Converts Unicode vulgar fractions to ASCII form so downstream parsers can
+ * handle them.  Mixed numbers like "1½" become "1 1/2"; standalone "½" → "1/2".
+ */
+function normalizeUnicodeFractions(str: string): string {
+  return str.replace(/(\d*)([\u00BC-\u00BE\u2150-\u215E])/g, (_, whole, frac) => {
+    const ascii = UNICODE_FRACTION_MAP[frac];
+    if (!ascii) return _;
+    return whole ? `${whole} ${ascii}` : ascii;
+  });
+}
+
 /**
  * Returns a display string for a scaled ingredient, or null if the ingredient
  * can't be scaled (no parseable leading number). Callers should fall back to
@@ -29,7 +63,9 @@ export function scaleIngredient(
 
       let result = parts.join(" ");
       if (ing.notes) result += `, ${ing.notes}`;
-      return result;
+      // The amount is already scaled above; scale any parentheticals embedded
+      // in the name or notes (e.g. "finely grated Parmesan (about 1½ oz)").
+      return scaleParentheticals(result, factor);
     }
   }
 
@@ -50,8 +86,10 @@ export function scaleIngredient(
  *   "salt to taste"                             → null
  */
 function scaleRawString(raw: string, factor: number): string | null {
+  // Normalize unicode fractions so the regex below can match leading "½ cup" etc.
+  const normalized = normalizeUnicodeFractions(raw);
   // Order matters: try mixed number first before whole number eats the leading digit
-  const match = raw.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+\.?\d*)(.*)/);
+  const match = normalized.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d+\.?\d*)(.*)/);
   if (!match) return null;
 
   const amountStr = match[1].trim();
@@ -67,15 +105,23 @@ function scaleRawString(raw: string, factor: number): string | null {
 }
 
 /**
- * Scales every number inside parenthetical groups in `text`.
+ * Scales measurable numbers inside parenthetical groups in `text`.
  * Leaves text outside parentheses untouched.
+ *
+ * Skips parentheticals that describe percentage ranges (contain "%" or "percent")
+ * since those are descriptors, not quantities — e.g. "(15- to 20-percent fat)".
+ *
+ * Also handles Unicode fractions: "(about 1½ ounces)" at 2× → "(about 3 ounces)".
  *
  * "white sugar (1 cup; 205g)" at 2× → "white sugar (2 cup; 410g)"
  */
 function scaleParentheticals(text: string, factor: number): string {
-  return text.replace(/\(([^)]+)\)/g, (_, inner: string) => {
+  return text.replace(/\(([^)]+)\)/g, (fullMatch, inner: string) => {
+    // Percentage/ratio descriptors — never scale these numbers.
+    if (/percent|%/i.test(inner)) return fullMatch;
+
     const scaledInner = inner.replace(
-      /(\d+\s+\d+\/\d+|\d+\/\d+|\d+\.?\d*)/g,
+      /(\d+\s+\d+\/\d+|\d+\/\d+|\d+\.?\d*[\u00BC-\u00BE\u2150-\u215E]?|[\u00BC-\u00BE\u2150-\u215E])/g,
       (num, _p1, offset: number, str: string) => {
         // Don't scale temperature values — e.g. 65°F, 18°C, 350°K
         if (/^\s*°[FCK]/i.test(str.slice(offset + num.length))) return num;
@@ -89,12 +135,14 @@ function scaleParentheticals(text: string, factor: number): string {
 }
 
 /**
- * Parses a string like "1/2", "2", "1 1/4" into a Fraction.
+ * Parses a string like "1/2", "2", "1 1/4", or "½" into a Fraction.
  * Returns null if the string can't be parsed as a positive number.
  */
 function parseFractionString(str: string): Fraction | null {
+  const s = normalizeUnicodeFractions(str.trim());
+
   // Mixed numbers: "1 1/2", "2 3/4", etc.
-  const mixedMatch = str.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  const mixedMatch = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
   if (mixedMatch) {
     const whole = parseInt(mixedMatch[1]);
     const num = parseInt(mixedMatch[2]);
@@ -104,7 +152,7 @@ function parseFractionString(str: string): Fraction | null {
   }
 
   try {
-    const f = new Fraction(str);
+    const f = new Fraction(s);
     return f.valueOf() > 0 ? f : null;
   } catch {
     return null;
