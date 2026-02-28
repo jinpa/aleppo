@@ -182,6 +182,7 @@ export const wantToCook = pgTable(
       .notNull()
       .references(() => recipes.id, { onDelete: "cascade" }),
     addedAt: timestamp("addedAt").defaultNow().notNull(),
+    position: integer("position").notNull().default(0),
   },
   (table) => ({
     pk: primaryKey({ columns: [table.userId, table.recipeId] }),

@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, asc, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { wantToCook, recipes } from "@/db/schema";
 import { QueueView } from "@/components/queue/queue-view";
@@ -20,7 +20,7 @@ export default async function QueuePage() {
     .from(wantToCook)
     .innerJoin(recipes, eq(wantToCook.recipeId, recipes.id))
     .where(eq(wantToCook.userId, session.user.id))
-    .orderBy(desc(wantToCook.addedAt));
+    .orderBy(asc(wantToCook.position), desc(wantToCook.addedAt));
 
   return <QueueView items={queue} />;
 }
