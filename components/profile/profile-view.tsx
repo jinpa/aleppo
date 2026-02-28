@@ -51,6 +51,7 @@ export function ProfileView({
   followingCount,
   isFollowing: initialFollowing,
   isOwner,
+  currentUserId,
 }: ProfileViewProps) {
   const router = useRouter();
   const [isFollowing, setIsFollowing] = useState(initialFollowing);
