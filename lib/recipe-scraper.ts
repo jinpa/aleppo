@@ -14,6 +14,21 @@ export interface ScrapedRecipe {
   tags?: string[];
 }
 
+function decodeHtmlEntities(text: string): string {
+  return text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&#(\d+);/g, (_, dec) => String.fromCharCode(parseInt(dec, 10)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) =>
+      String.fromCharCode(parseInt(hex, 16))
+    );
+}
+
 function parseTimeToMinutes(time: string | undefined): number | undefined {
   if (!time) return undefined;
   // ISO 8601 duration: PT1H30M
@@ -108,20 +123,20 @@ function extractFromJsonLd(jsonLd: object): ScrapedRecipe | null {
     return null;
   }
 
-  const rawIngredients: string[] = Array.isArray(recipe.recipeIngredient)
-    ? recipe.recipeIngredient
-    : [];
+  const rawIngredients: string[] = (
+    Array.isArray(recipe.recipeIngredient) ? recipe.recipeIngredient : []
+  ).map((s: string) => decodeHtmlEntities(s));
 
   const rawInstructions: string[] = [];
   if (Array.isArray(recipe.recipeInstructions)) {
     for (const step of recipe.recipeInstructions) {
       if (typeof step === "string") {
-        rawInstructions.push(step);
+        rawInstructions.push(decodeHtmlEntities(step));
       } else if (step["@type"] === "HowToStep" && step.text) {
-        rawInstructions.push(step.text);
+        rawInstructions.push(decodeHtmlEntities(step.text));
       } else if (step["@type"] === "HowToSection" && Array.isArray(step.itemListElement)) {
         for (const subStep of step.itemListElement) {
-          if (subStep.text) rawInstructions.push(subStep.text);
+          if (subStep.text) rawInstructions.push(decodeHtmlEntities(subStep.text));
         }
       }
     }
@@ -144,8 +159,8 @@ function extractFromJsonLd(jsonLd: object): ScrapedRecipe | null {
   }
 
   return {
-    title: recipe.name || undefined,
-    description: recipe.description || undefined,
+    title: recipe.name ? decodeHtmlEntities(recipe.name) : undefined,
+    description: recipe.description ? decodeHtmlEntities(recipe.description) : undefined,
     ingredients: parseIngredients(rawIngredients),
     instructions: parseInstructions(rawInstructions),
     prepTime: parseTimeToMinutes(recipe.prepTime),
@@ -179,9 +194,10 @@ export function scrapeRecipeFromHtml(
     }
   }
 
-  const pageTitle =
+  const rawPageTitle =
     root.querySelector("title")?.text?.trim() ||
     root.querySelector('meta[property="og:title"]')?.getAttribute("content");
+  const pageTitle = rawPageTitle ? decodeHtmlEntities(rawPageTitle) : undefined;
   const siteName = root
     .querySelector('meta[property="og:site_name"]')
     ?.getAttribute("content");
