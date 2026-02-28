@@ -18,6 +18,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: DrizzleAdapter(db),
   session: { strategy: "jwt" },
+  // Trust the X-Forwarded-Host header set by Railway's reverse proxy so that
+  // Auth.js uses the correct public domain for redirects instead of localhost.
+  trustHost: true,
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID,
