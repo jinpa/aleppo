@@ -8,4 +8,4 @@
 NPM_CONFIG_PRODUCTION = "false"
 
 [phases.install]
-cmds = ["echo '=== NIXPACKS INSTALL PHASE ===' && rm -f package-lock.json && npm install --include=dev --include=optional"]
+cmds = ["echo 'Skipping default npm install - handled in buildCommand'"]
