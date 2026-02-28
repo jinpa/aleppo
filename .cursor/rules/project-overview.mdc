@@ -36,9 +36,23 @@ A web-first recipe management app — a "cooking diary" in the spirit of Strava/
 - **Images always re-uploaded to R2** — never store third-party image URLs long-term; download and re-host on import
 - **No Redis, no job queues, no tRPC at MVP** — keep the stack simple until there's a reason to add complexity
 
-## MVP Scope (what's in V1.0)
+## Implementation Status
 
-Recipe CRUD + tags · URL import · Cooking log (date + one-line note) · Cook count display · "Want to cook" queue · Public profiles · Follow/following feed · Shareable public recipe links · Google OAuth + email/password auth
+**V1.0 MVP is complete.** All core features are implemented end-to-end. One outstanding item before full public launch:
+
+- ✅ Auth — email/password + Google OAuth (Auth.js v5 + Drizzle adapter)
+- ✅ Recipe CRUD — all fields, tags, image upload to R2
+- ✅ URL import — `@extractus/recipe-extractor`, review step, audit trail, bookmarklet
+- ✅ Cooking log — date, note, cook count, history, "tried it" status
+- ✅ Want-to-cook queue — add/remove, queue view, auto-prompt on cook log
+- ✅ Social — public profiles, follow/unfollow, following feed, user search, shareable links
+- ✅ User settings — name/avatar/bio, public toggle, change password, connected accounts
+- ✅ Recipe scaling UI (shipped early; originally scoped to V3+)
+- ⚠️ Forgot password email — UI and API route exist; email delivery needs a provider (Resend/Postmark)
+
+## Next Up (V1.5)
+
+Paprika import · Data export (JSON/PDF) · Private sharing links · "Adapted from" provenance field · JSON/CSV bulk import · Recipe collections · Longer cook notes
 
 ## Explicitly Out of Scope for MVP
 

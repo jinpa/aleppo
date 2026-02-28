@@ -2,7 +2,25 @@
 
 **Version**: 1.0  
 **Date**: 2026-02-27  
-**Status**: Draft — Ready for Implementation Planning  
+**Status**: V1.0 Implementation Complete — Beta Ready  
+
+---
+
+## Implementation Status
+
+**V1.0 MVP: Complete — ready for beta launch.** All core features are implemented and wired up end-to-end. One gap remains before a full public launch:
+
+| Area | Status | Notes |
+|------|--------|-------|
+| Auth (email/pw + Google OAuth) | ✅ Complete | |
+| Recipe CRUD + tags + image upload | ✅ Complete | |
+| URL import + review + audit trail | ✅ Complete | Bookmarklet also implemented |
+| Cooking log (date, note, count, history) | ✅ Complete | |
+| Want-to-cook queue | ✅ Complete | |
+| Social (profiles, follow, feed, search) | ✅ Complete | User search added beyond original spec |
+| User settings | ✅ Complete | |
+| Forgot password email | ⚠️ Needs email provider | UI/API done; email delivery not yet wired up |
+| Recipe scaling UI | ✅ Shipped early | Originally scoped to V3+; built during MVP |
 
 ---
 
@@ -43,86 +61,89 @@ Unlike Paprika and other recipe vaults, Aleppo treats cooking as something that 
 
 The MVP proves the core thesis: **people will track what they cook, and that data becomes more valuable over time and in social context.** All features serve this thesis or are prerequisite infrastructure.
 
-### 4.1 Authentication
+### 4.1 Authentication ✅
 
-| Feature | Detail |
-|---------|--------|
-| Email / password signup | Users create an account with email + password |
-| Google OAuth | "Sign in with Google" as an alternative |
-| Forgot password / email reset | Standard reset flow |
-| Auth library | Auth.js v5 (NextAuth) |
+| Feature | Status | Detail |
+|---------|--------|--------|
+| Email / password signup | ✅ Done | Users create an account with email + password |
+| Google OAuth | ✅ Done | "Sign in with Google" as an alternative |
+| Forgot password / email reset | ⚠️ Partial | UI + API route exist; email delivery not wired up (needs email provider) |
+| Auth library | ✅ Done | Auth.js v5 (NextAuth) with Drizzle adapter |
 
-### 4.2 Recipe Management
+### 4.2 Recipe Management ✅
 
-| Feature | Detail |
-|---------|--------|
-| Create recipe | Manual entry form: title, description, ingredients (with amounts/units), instructions (step-by-step), tags, image upload, source URL, source name, prep time, cook time, servings |
-| Edit recipe | Full editing of all fields |
-| Delete recipe | Soft confirmation; no soft-delete at MVP |
-| Tags | Free-form text tags (e.g. "weeknight", "Italian", "vegetarian"); multiple tags per recipe |
-| Recipe detail page | Clean reading view optimized for use while cooking |
-| Recipe list / search | Search by title, filter by tags; your full recipe collection |
-| Public / private toggle | Per-recipe: private (default) or public (visible to anyone with the link, and to followers in their feed) |
-| Image upload | Upload a photo; stored on Cloudflare R2; displayed on recipe card and detail |
+| Feature | Status | Detail |
+|---------|--------|--------|
+| Create recipe | ✅ Done | Manual entry form: title, description, ingredients (with amounts/units), instructions (step-by-step), tags, image upload, source URL, source name, prep time, cook time, servings |
+| Edit recipe | ✅ Done | Full editing of all fields |
+| Delete recipe | ✅ Done | Soft confirmation; no soft-delete at MVP |
+| Tags | ✅ Done | Free-form text tags; `text[]` Postgres array with GIN index |
+| Recipe detail page | ✅ Done | Clean reading view optimized for use while cooking |
+| Recipe list / search | ✅ Done | Search by title, filter by tags; your full recipe collection |
+| Public / private toggle | ✅ Done | Per-recipe: private (default) or public |
+| Image upload | ✅ Done | Upload a photo; stored on Cloudflare R2; displayed on recipe card and detail |
 
-**Out of MVP scope**: Recipe scaling, nutritional info, ingredient shopping lists, collections/lists, recipe versions/forks.
+**Out of MVP scope**: Nutritional info, ingredient shopping lists, collections/lists, recipe versions/forks.  
+**Implemented beyond MVP scope**: Recipe scaling UI (originally V3+).
 
-### 4.3 Recipe Import
+### 4.3 Recipe Import ✅
 
-| Feature | Detail |
-|---------|--------|
-| URL import | Paste a URL from any food website; app fetches and parses the recipe using Schema.org JSON-LD structured data; user reviews/edits before saving |
-| Import review step | Parsed fields shown in an editable form before saving — never auto-save imports |
-| Failed import fallback | If parsing fails, show a "we couldn't parse this — edit manually" state with whatever fields were recovered |
-| Import audit trail | Every import stores the source URL, import type, and raw payload in the DB for debugging |
+| Feature | Status | Detail |
+|---------|--------|--------|
+| URL import | ✅ Done | Paste a URL; app fetches and parses via Schema.org JSON-LD; user reviews/edits before saving |
+| Import review step | ✅ Done | Parsed fields shown in an editable form before saving — never auto-save |
+| Failed import fallback | ✅ Done | Shows "couldn't parse" state with whatever fields were recovered; allows manual entry |
+| Import audit trail | ✅ Done | Every import stores source URL, import type, and raw payload (jsonb) in `recipe_imports` |
+| Bookmarklet | ✅ Done | `/api/import/bookmarklet` + `lib/bookmarklet.ts` (originally V2 scope) |
 
 **Out of MVP scope**: Paprika import (V1.5), browser extension (V2), JSON/Markdown bulk import (V1.5), AI OCR (V2).
 
-### 4.4 Cooking Log
+### 4.4 Cooking Log ✅
 
-| Feature | Detail |
-|---------|--------|
-| "I cooked this" button | One-tap logging on any recipe; records today's date |
-| Custom date | Optional: change the date if logging retroactively |
-| One-line cook note | Optional prompt: "How did it go? Any changes?" — a single short text field |
-| Cook count display | On every recipe: "Made X times" — visible to the recipe owner and, if public, to followers |
-| Cook history list | On each recipe: a chronological list of all cook-log entries with dates and notes |
-| "Tried it" status | Derived automatically — any recipe with at least one cook log entry is "tried" |
+| Feature | Status | Detail |
+|---------|--------|--------|
+| "I cooked this" button | ✅ Done | One-tap logging on any recipe via `CookLogDialog`; records today's date |
+| Custom date | ✅ Done | Date picker in dialog for retroactive logging |
+| One-line cook note | ✅ Done | 500-char text field: "How did it go? Any changes?" |
+| Cook count display | ✅ Done | "Made X times" shown on recipe cards and detail pages |
+| Cook history list | ✅ Done | Chronological list of all cook-log entries with dates and notes on recipe detail |
+| "Tried it" status | ✅ Done | Derived automatically from cook log count |
 
 **Note**: There is no separate "tried it" flag. The cook log subsumes it: one cook log entry = tried it, zero = not yet.
 
-### 4.5 "Want to Cook" Queue
+### 4.5 "Want to Cook" Queue ✅
 
-| Feature | Detail |
-|---------|--------|
-| Queue a recipe | On any recipe: "Add to my queue" — a dedicated "want to cook" shelf, separate from saved recipes |
-| Queue view | A dedicated page showing your current queue, easily accessible from the home screen |
-| Remove from queue | When you cook a recipe, prompt to remove it from the queue |
+| Feature | Status | Detail |
+|---------|--------|--------|
+| Queue a recipe | ✅ Done | "Add to my queue" on any recipe; dedicated `want_to_cook` table |
+| Queue view | ✅ Done | `/queue` page with `QueueView` component |
+| Remove from queue | ✅ Done | Prompt to remove from queue when logging a cook via `CookLogDialog` |
 
 **Rationale**: The queue creates the habit loop that brings users back weekly ("what am I cooking this week?"). It's also the #1 Goodreads-analogue feature.
 
-### 4.6 Social Features (Minimum Viable)
+### 4.6 Social Features ✅
 
-| Feature | Detail |
-|---------|--------|
-| Public profiles | Users can make their profile public; public profiles show: display name, avatar, bio, cook count by recipe (for public recipes only) |
-| Follow / unfollow | Follow another user (no approval required in MVP) |
-| Following feed | Home page feed: recent cook logs from users you follow, filtered to public recipes only |
-| Shareable recipe link | All public recipes have a permanent URL that works without an account |
-| Cook log visibility | Cook logs on public recipes are visible on public profiles and in follower feeds |
+| Feature | Status | Detail |
+|---------|--------|--------|
+| Public profiles | ✅ Done | `/u/[id]` with `ProfileView`; shows display name, avatar, bio, cook counts for public recipes |
+| Follow / unfollow | ✅ Done | `/api/follows`; no approval required |
+| Following feed | ✅ Done | `/feed` with `FeedView`; recent cook logs from followed users on public recipes |
+| Shareable recipe link | ✅ Done | Public recipes accessible at `/recipes/[id]` without auth |
+| Cook log visibility | ✅ Done | Cook logs on public recipes visible on public profiles and in follower feeds |
+| User search | ✅ Done | `/search` + `/api/users/search` (added beyond original spec) |
 
 **Out of MVP scope**: Notifications (push or in-app), likes, comments, recipe collections/playlists, "share with a specific person" (private sharing link), direct messaging.
 
 **Cold-start design principle**: Every screen must be fully functional and valuable with zero followers. The social layer is additive, not foundational.
 
-### 4.7 User Settings
+### 4.7 User Settings ✅
 
-| Feature | Detail |
-|---------|--------|
-| Profile settings | Name, avatar, bio |
-| Public / private profile toggle | Private by default |
-| Change password | For email/password users |
-| Connected accounts | Show Google OAuth connection status |
+| Feature | Status | Detail |
+|---------|--------|--------|
+| Profile settings | ✅ Done | Name, avatar, bio via `SettingsView` + `PATCH /api/users/me` |
+| Public / private profile toggle | ✅ Done | `is_public` field; private by default |
+| Change password | ✅ Done | For email/password users; validates current password before updating |
+| Connected accounts | ✅ Done | Shows Google OAuth connection status and password setup state |
 
 ### 4.8 Monetization
 
@@ -281,13 +302,16 @@ These are validated opportunities identified during the brainstorm. Timing and s
 
 ## 11. Open Questions
 
-These are not blockers for starting development but should be answered before or during MVP:
+Pre-launch items still outstanding:
 
 1. **App name trademark / domain** — Is "aleppo.app" or a similar domain available? "Aleppo" is primarily known as a city; does that create confusion or sensitivity?
-2. **Paprika import format specifics** — Verify Paprika's current export format (YAML/HTML); validate the import script approach before V1.5
-3. **NYT Cooking and paywalled sites** — Confirm the user experience for sites we can't scrape (show clear messaging; don't leave users confused)
-4. **Google OAuth credentials** — Set up Google Cloud Console project, configure OAuth consent screen
-5. **Cloudflare R2 setup** — Create R2 bucket, configure CORS, test with the image upload flow
+2. **Email provider for password reset** — UI and API route are implemented; need to wire up an email provider (Resend, Postmark, or similar) to actually send reset emails
+3. **NYT Cooking and paywalled sites** — Confirm the UX for sites we can't scrape (error messaging is in place; verify it's clear enough)
+4. **Paprika import format specifics** — Verify Paprika's current export format (YAML/HTML); validate the import script approach before V1.5
+
+*Resolved during implementation*:
+- ~~Google OAuth credentials~~ — Set up and working
+- ~~Cloudflare R2 setup~~ — R2 bucket configured and tested
 
 ---
 
