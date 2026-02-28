@@ -3,6 +3,8 @@ description: Aleppo project overview — stack, conventions, and constraints
 alwaysApply: true
 ---
 
+> **Keep this file up to date.** When the stack, conventions, or project status change, update this file to reflect reality. For current tasks and upcoming work, see `docs/todo.md`.
+
 # Aleppo
 
 A web-first recipe management app — a "cooking diary" in the spirit of Strava/Letterboxd. Users save recipes, log every cook with a date and note, and follow friends to see what they've been cooking. Full spec: `docs/PRD.md`.
@@ -38,21 +40,9 @@ A web-first recipe management app — a "cooking diary" in the spirit of Strava/
 
 ## Implementation Status
 
-**V1.0 MVP is complete.** All core features are implemented end-to-end. One outstanding item before full public launch:
+**V1.0 MVP is complete.** All core features are implemented end-to-end.
 
-- ✅ Auth — email/password + Google OAuth (Auth.js v5 + Drizzle adapter)
-- ✅ Recipe CRUD — all fields, tags, image upload to R2
-- ✅ URL import — `@extractus/recipe-extractor`, review step, audit trail, bookmarklet
-- ✅ Cooking log — date, note, cook count, history, "tried it" status
-- ✅ Want-to-cook queue — add/remove, queue view, auto-prompt on cook log
-- ✅ Social — public profiles, follow/unfollow, following feed, user search, shareable links
-- ✅ User settings — name/avatar/bio, public toggle, change password, connected accounts
-- ✅ Recipe scaling UI (shipped early; originally scoped to V3+)
-- ⚠️ Forgot password email — UI and API route exist; email delivery needs a provider (Resend/Postmark)
-
-## Next Up (V1.5)
-
-Paprika import · Data export (JSON/PDF) · Private sharing links · "Adapted from" provenance field · JSON/CSV bulk import · Recipe collections · Longer cook notes
+For current tasks, in-progress work, and upcoming priorities, see **`docs/todo.md`** — that file is the authoritative source of truth for what's done, what's next, and what's out of scope.
 
 ## Explicitly Out of Scope for MVP
 
