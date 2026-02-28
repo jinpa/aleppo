@@ -33,6 +33,7 @@ import {
 import { CookLogDialog } from "./cook-log-dialog";
 import { formatDate, formatMinutes } from "@/lib/utils";
 import { toast } from "@/lib/use-toast";
+import { scaleIngredient } from "@/lib/scale-ingredient";
 import type { Ingredient, InstructionStep } from "@/db/schema";
 
 interface CookLog {
@@ -81,8 +82,26 @@ export function RecipeDetail({
   const [cookCount, setCookCount] = useState(initialCount);
   const [showLogDialog, setShowLogDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [scaleFactor, setScaleFactor] = useState(1);
+  const [customScale, setCustomScale] = useState("1");
 
   const totalTime = (recipe.prepTime ?? 0) + (recipe.cookTime ?? 0);
+
+  const PRESETS = [0.5, 1, 2, 3] as const;
+
+  const applyPreset = (preset: number) => {
+    setScaleFactor(preset);
+    setCustomScale(preset === 0.5 ? "0.5" : String(preset));
+  };
+
+  const handleCustomScaleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setCustomScale(raw);
+    const parsed = parseFloat(raw);
+    if (!isNaN(parsed) && parsed > 0) {
+      setScaleFactor(parsed);
+    }
+  };
 
   const handleQueueToggle = async () => {
     const prev = inQueue;
@@ -208,9 +227,9 @@ export function RecipeDetail({
           )}
 
           {recipe.servings && (
-            <span className="flex items-center gap-1">
+            <span className={`flex items-center gap-1 ${scaleFactor !== 1 ? "text-amber-600 font-medium" : ""}`}>
               <Users className="h-4 w-4" />
-              {recipe.servings} servings
+              {Math.round(recipe.servings * scaleFactor)} servings
             </span>
           )}
 
@@ -287,31 +306,65 @@ export function RecipeDetail({
         <p className="text-stone-700 leading-relaxed">{recipe.description}</p>
       )}
 
-      {/* Time details */}
-      {(recipe.prepTime || recipe.cookTime) && (
-        <div className="flex gap-6 py-4 border-y border-stone-100">
-          {recipe.prepTime && (
-            <div>
-              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium">Prep</p>
-              <p className="text-sm font-semibold text-stone-900 mt-1">
-                {formatMinutes(recipe.prepTime)}
-              </p>
-            </div>
-          )}
-          {recipe.cookTime && (
-            <div>
-              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium">Cook</p>
-              <p className="text-sm font-semibold text-stone-900 mt-1">
-                {formatMinutes(recipe.cookTime)}
-              </p>
-            </div>
-          )}
+      {/* Time details + scale control */}
+      {(recipe.prepTime || recipe.cookTime || recipe.servings) && (
+        <div className="py-4 border-y border-stone-100 space-y-3">
+          <div className="flex gap-6">
+            {recipe.prepTime && (
+              <div>
+                <p className="text-xs text-stone-500 uppercase tracking-wide font-medium">Prep</p>
+                <p className="text-sm font-semibold text-stone-900 mt-1">
+                  {formatMinutes(recipe.prepTime)}
+                </p>
+              </div>
+            )}
+            {recipe.cookTime && (
+              <div>
+                <p className="text-xs text-stone-500 uppercase tracking-wide font-medium">Cook</p>
+                <p className="text-sm font-semibold text-stone-900 mt-1">
+                  {formatMinutes(recipe.cookTime)}
+                </p>
+              </div>
+            )}
+            {recipe.servings && (
+              <div>
+                <p className="text-xs text-stone-500 uppercase tracking-wide font-medium">Serves</p>
+                <p className={`text-sm font-semibold mt-1 ${scaleFactor !== 1 ? "text-amber-600" : "text-stone-900"}`}>
+                  {Math.round(recipe.servings * scaleFactor)}
+                </p>
+              </div>
+            )}
+          </div>
           {recipe.servings && (
-            <div>
-              <p className="text-xs text-stone-500 uppercase tracking-wide font-medium">Serves</p>
-              <p className="text-sm font-semibold text-stone-900 mt-1">
-                {recipe.servings}
-              </p>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-stone-500 uppercase tracking-wide font-medium">Scale</span>
+              <div className="flex items-center gap-1">
+                {PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    onClick={() => applyPreset(preset)}
+                    className={`text-xs px-2 py-1 rounded font-medium transition-colors ${
+                      scaleFactor === preset
+                        ? "bg-amber-500 text-white"
+                        : "bg-stone-100 text-stone-600 hover:bg-stone-200"
+                    }`}
+                  >
+                    {preset === 0.5 ? "½×" : `${preset}×`}
+                  </button>
+                ))}
+                <div className="flex items-center gap-0.5 ml-1">
+                  <input
+                    type="number"
+                    min="0.1"
+                    step="0.5"
+                    value={customScale}
+                    onChange={handleCustomScaleChange}
+                    aria-label="Custom scale factor"
+                    className="w-14 text-xs border border-stone-200 rounded px-2 py-1 text-stone-700 focus:outline-none focus:ring-1 focus:ring-amber-400"
+                  />
+                  <span className="text-xs text-stone-500">×</span>
+                </div>
+              </div>
             </div>
           )}
         </div>
@@ -324,14 +377,17 @@ export function RecipeDetail({
             Ingredients
           </h2>
           <ul className="space-y-2">
-            {recipe.ingredients.map((ing, i) => (
-              <li key={i} className="flex items-start gap-3 py-1.5 border-b border-stone-50">
-                <div className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
-                <span className="text-stone-700 text-sm leading-relaxed">
-                  {ing.raw}
-                </span>
-              </li>
-            ))}
+            {recipe.ingredients.map((ing, i) => {
+              const scaled = scaleFactor !== 1 ? scaleIngredient(ing, scaleFactor) : null;
+              return (
+                <li key={i} className="flex items-start gap-3 py-1.5 border-b border-stone-50">
+                  <div className="w-2 h-2 rounded-full bg-amber-400 mt-1.5 flex-shrink-0" />
+                  <span className="text-stone-700 text-sm leading-relaxed">
+                    {scaled ?? ing.raw}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
