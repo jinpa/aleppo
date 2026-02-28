@@ -25,6 +25,7 @@ export const authConfig: NextAuthConfig = {
         "/auth/signin",
         "/auth/signup",
         "/auth/forgot-password",
+        "/auth/reset-password",
         "/auth/error",
       ];
       const isPublicRoute = publicRoutes.some((r) =>

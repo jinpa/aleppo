@@ -74,6 +74,20 @@ export const verificationTokens = pgTable(
   })
 );
 
+// ─── Password Reset Tokens ────────────────────────────────────────────────────
+
+export const passwordResetTokens = pgTable("passwordResetTokens", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  token: text("token").notNull().unique(),
+  expires: timestamp("expires", { mode: "date" }).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
 // ─── Ingredient type ─────────────────────────────────────────────────────────
 
 export type Ingredient = {
