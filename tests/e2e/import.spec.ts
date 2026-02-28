@@ -37,13 +37,10 @@ test.describe("Import — URL step", () => {
     await expect(page.getByRole("button", { name: "Import" })).toBeEnabled();
   });
 
-  test.skip(
-    SKIP_NETWORK,
-    "scrape a real recipe URL (requires network, set ENABLE_NETWORK_TESTS=1)"
-  );
   test("scrape real recipe URL and land on review step", async ({
     alicePage: page,
   }) => {
+    test.skip(SKIP_NETWORK, "requires network — set ENABLE_NETWORK_TESTS=1 to enable");
     // Simply Recipes uses Schema.org markup and allows automated access
     const testUrl =
       "https://www.simplyrecipes.com/recipes/homemade_pizza/";
