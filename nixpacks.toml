@@ -1,6 +1,7 @@
-# Override Nixpacks' default `npm ci` with `npm install` so that
-# platform-specific optional dependencies (e.g. @tailwindcss/oxide-linux-x64-gnu)
-# are resolved for the Railway build environment rather than being read
-# from a lock file generated on macOS.
+# Railway builds with NODE_ENV=production which defaults to --omit=dev.
+# Explicitly include dev + optional so that:
+#   - tailwindcss/@tailwindcss/postcss (devDeps) are present for next build
+#   - @tailwindcss/oxide-linux-x64-gnu (optional native binary) is installed
+#     for the Railway Linux environment (not present in the macOS-generated lockfile)
 [phases.install]
-cmds = ["npm install"]
+cmds = ["npm install --include=dev --include=optional"]
