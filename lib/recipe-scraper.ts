@@ -224,6 +224,88 @@ function extractFromJsonLd(jsonLd: object): ScrapedRecipe | null {
   };
 }
 
+function extractFromMicrodata(
+  root: ReturnType<typeof parse>,
+  meta: { pageTitle?: string; ogImage?: string; siteName?: string } = {}
+): ScrapedRecipe | null {
+  // Support both https and http schema URLs
+  const recipeEl =
+    root.querySelector('[itemtype="https://schema.org/Recipe"]') ??
+    root.querySelector('[itemtype="http://schema.org/Recipe"]');
+  if (!recipeEl) return null;
+
+  const name = recipeEl.querySelector('[itemprop="name"]')?.text?.trim();
+
+  // Jetpack outputs <strong>Servings: </strong> inside the yield element, so strip the label
+  const yieldEl = recipeEl.querySelector('[itemprop="recipeYield"]');
+  const yieldText = yieldEl?.text?.trim().replace(/^servings:\s*/i, "").trim();
+
+  // Prefer datetime attribute (ISO 8601 duration) over inner text for time fields
+  const getTime = (prop: string) => {
+    const el = recipeEl.querySelector(`[itemprop="${prop}"]`);
+    return el ? (el.getAttribute("datetime") ?? el.text?.trim()) : undefined;
+  };
+  const prepTime = parseTimeToMinutes(getTime("prepTime"));
+  const cookTime = parseTimeToMinutes(getTime("cookTime"));
+  const totalTime = parseTimeToMinutes(getTime("totalTime"));
+
+  const rawIngredients = recipeEl
+    .querySelectorAll('[itemprop="recipeIngredient"]')
+    .map((el) => decodeHtmlEntities(el.text.trim()))
+    .filter(Boolean);
+
+  // Try standard itemprop="recipeInstructions" elements first, then Jetpack's
+  // class-based fallback (.e-instructions / .jetpack-recipe-directions with <p> tags)
+  let rawInstructions: string[] = [];
+  const instrEls = recipeEl.querySelectorAll('[itemprop="recipeInstructions"]');
+  if (instrEls.length > 0) {
+    rawInstructions = instrEls
+      .map((el) => decodeHtmlEntities(el.text.trim()))
+      .filter(Boolean);
+  } else {
+    const dirEl = recipeEl.querySelector(
+      ".e-instructions, .jetpack-recipe-directions"
+    );
+    if (dirEl) {
+      const pEls = dirEl.querySelectorAll("p");
+      if (pEls.length > 0) {
+        rawInstructions = pEls
+          .map((p) => decodeHtmlEntities(p.text.trim()))
+          .filter(Boolean);
+      } else {
+        const text = decodeHtmlEntities(dirEl.text.trim());
+        if (text) rawInstructions = [text];
+      }
+    }
+  }
+
+  if (!name && !rawIngredients.length) return null;
+
+  const notesEl = recipeEl.querySelector(
+    '[itemprop="description"], .jetpack-recipe-notes'
+  );
+  const description = notesEl
+    ? decodeHtmlEntities(notesEl.text.trim())
+    : undefined;
+
+  const imgEl = recipeEl.querySelector('[itemprop="image"]');
+  const microdataImage =
+    imgEl?.getAttribute("src") ?? imgEl?.getAttribute("content") ?? undefined;
+
+  return {
+    title: name,
+    description,
+    ingredients: parseIngredients(rawIngredients),
+    instructions: parseInstructions(rawInstructions),
+    prepTime,
+    cookTime: cookTime ?? (!prepTime && totalTime ? totalTime : undefined),
+    servings: parseServings(yieldText),
+    imageUrl: microdataImage ?? meta.ogImage,
+    sourceName: meta.siteName,
+    tags: [],
+  };
+}
+
 export function scrapeRecipeFromHtml(
   html: string,
   url?: string
@@ -261,6 +343,12 @@ export function scrapeRecipeFromHtml(
   const recipe = extractFromJsonLdArray(jsonLdData, { pageTitle, ogImage, siteName });
   if (recipe) {
     return { recipe, rawPayload };
+  }
+
+  // Fallback: try Schema.org microdata (e.g. WordPress Jetpack recipe cards)
+  const microdataRecipe = extractFromMicrodata(root, { pageTitle, ogImage, siteName });
+  if (microdataRecipe) {
+    return { recipe: microdataRecipe, rawPayload };
   }
 
   return {
