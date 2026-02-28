@@ -115,13 +115,17 @@ function extractOneJsonLd(recipe: any): ScrapedRecipe | null {
     keywords.push(...recipe.keywords);
   }
 
+  const prepTime = parseTimeToMinutes(recipe.prepTime);
+  const cookTime = parseTimeToMinutes(recipe.cookTime);
+  const totalTime = parseTimeToMinutes(recipe.totalTime);
+
   return {
     title: recipe.name ? decodeHtmlEntities(recipe.name) : undefined,
     description: recipe.description ? decodeHtmlEntities(recipe.description) : undefined,
     ingredients: parseIngredients(rawIngredients),
     instructions: parseInstructions(rawInstructions),
-    prepTime: parseTimeToMinutes(recipe.prepTime),
-    cookTime: parseTimeToMinutes(recipe.cookTime),
+    prepTime,
+    cookTime: cookTime ?? (!prepTime && totalTime ? totalTime : undefined),
     servings:
       typeof recipe.recipeYield === "number"
         ? recipe.recipeYield

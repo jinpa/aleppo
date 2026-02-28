@@ -158,13 +158,19 @@ function extractFromJsonLd(jsonLd: object): ScrapedRecipe | null {
     keywords.push(...recipe.keywords);
   }
 
+  const prepTime = parseTimeToMinutes(recipe.prepTime);
+  const cookTime = parseTimeToMinutes(recipe.cookTime);
+  const totalTime = parseTimeToMinutes(recipe.totalTime);
+
   return {
     title: recipe.name ? decodeHtmlEntities(recipe.name) : undefined,
     description: recipe.description ? decodeHtmlEntities(recipe.description) : undefined,
     ingredients: parseIngredients(rawIngredients),
     instructions: parseInstructions(rawInstructions),
-    prepTime: parseTimeToMinutes(recipe.prepTime),
-    cookTime: parseTimeToMinutes(recipe.cookTime),
+    prepTime,
+    // If the site only provides totalTime (e.g. NYT Cooking), use it as cookTime
+    // so the user sees the time information rather than blank fields.
+    cookTime: cookTime ?? (!prepTime && totalTime ? totalTime : undefined),
     servings:
       typeof recipe.recipeYield === "number"
         ? recipe.recipeYield
