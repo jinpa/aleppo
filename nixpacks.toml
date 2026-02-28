@@ -1,7 +1,10 @@
-# Railway builds with NODE_ENV=production which defaults to --omit=dev.
-# Explicitly include dev + optional so that:
-#   - tailwindcss/@tailwindcss/postcss (devDeps) are present for next build
-#   - @tailwindcss/oxide-linux-x64-gnu (optional native binary) is installed
-#     for the Railway Linux environment (not present in the macOS-generated lockfile)
+# Railway sets NODE_ENV=production which can cause npm to skip optional platform
+# binaries (the @tailwindcss/oxide native binding). NPM_CONFIG_PRODUCTION=false
+# overrides this at the config level. npm ci guarantees a clean install from the
+# lockfile (which already contains @tailwindcss/oxide-linux-x64-gnu), eliminating
+# any Docker layer caching issues with a stale node_modules.
+[variables]
+NPM_CONFIG_PRODUCTION = "false"
+
 [phases.install]
-cmds = ["npm install --include=dev --include=optional"]
+cmds = ["npm ci --include=dev --include=optional"]
