@@ -1,11 +1,4 @@
-# @tailwindcss/oxide requires a platform-specific native binary installed as an
-# optional dependency. The package-lock.json generated on macOS can confuse npm
-# into skipping the Linux binary even though it's listed in the lockfile.
-# Deleting the lockfile before install forces npm to resolve deps fresh for the
-# Railway Linux environment, which is exactly what the oxide error message recommends.
-# NPM_CONFIG_PRODUCTION=false ensures optional deps are never skipped.
-[variables]
-NPM_CONFIG_PRODUCTION = "false"
-
-[phases.install]
-cmds = ["echo 'Skipping default npm install - handled in buildCommand'"]
+# @tailwindcss/oxide v4 requires Node >= 20 — its native binary is compiled
+# against Node 20's V8 ABI and will not load on Node 18.
+[phases.setup]
+nixPkgs = ["nodejs_20"]
