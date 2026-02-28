@@ -1,13 +1,19 @@
 /**
  * Generates the bookmarklet JavaScript source.
- * The bookmarklet runs in the user's browser on any recipe page,
- * POSTs the page HTML to Aleppo's import endpoint, and redirects
- * to the review screen — bypassing server-side bot protection entirely.
+ *
+ * Approach: open Aleppo in a new window, then pass recipe data via
+ * window.postMessage.  This avoids every transport problem:
+ *   - No cross-origin fetch (no CORS headers needed)
+ *   - No mixed-content block (HTTPS → HTTP localhost is fine with postMessage)
+ *   - No URL length limit (data never goes in a query string)
+ *
+ * Flow:
+ *   1. Bookmarklet opens /recipes/import?mode=bookmarklet in a new window.
+ *   2. That page sends window.opener.postMessage({type:'aleppo:ready'}).
+ *   3. Bookmarklet receives the signal and replies with {type:'aleppo:data', payload}.
+ *   4. Import page processes the payload and shows the review form.
  */
 export function buildBookmarkletCode(appUrl: string): string {
-  // Runs inside the user's browser on any recipe page.
-  // Extracts JSON-LD structured data, POSTs to Aleppo's API,
-  // then redirects to the review screen.
   const code = `
 (function(){
   var base=${JSON.stringify(appUrl)};
@@ -18,25 +24,20 @@ export function buildBookmarkletCode(appUrl: string): string {
     jsonld:jsonld,
     url:location.href,
     title:document.title,
-    ogImage:(document.querySelector('meta[property="og:image"]')||{}).content||'',
-    siteName:(document.querySelector('meta[property="og:site_name"]')||{}).content||''
+    ogImage:((document.querySelector('meta[property="og:image"]')||{}).content)||'',
+    siteName:((document.querySelector('meta[property="og:site_name"]')||{}).content)||''
   };
-  var btn=document.createElement('div');
-  btn.style.cssText='position:fixed;top:16px;right:16px;z-index:999999;background:#1c1917;color:#fff;padding:12px 18px;border-radius:12px;font:14px/1.5 system-ui,sans-serif;box-shadow:0 4px 24px rgba(0,0,0,.3)';
-  btn.textContent='Importing to Aleppo\u2026';
-  document.body.appendChild(btn);
-  fetch(base+'/api/import/bookmarklet',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    credentials:'include',
-    body:JSON.stringify(payload)
-  })
-  .then(function(r){return r.json();})
-  .then(function(d){
-    if(d.importId){location.href=base+'/recipes/import?importId='+d.importId;}
-    else{btn.textContent='Import failed \u2014 are you signed in to Aleppo?';btn.style.background='#dc2626';}
-  })
-  .catch(function(){btn.textContent='Could not connect to Aleppo';btn.style.background='#dc2626';});
+  var w=window.open(base+'/recipes/import?mode=bookmarklet','aleppo_import','width=1100,height=800');
+  if(!w){alert('Aleppo: allow popups for this site, then click the bookmarklet again.');return;}
+  var sent=false;
+  function onMsg(e){
+    if(!e.data||e.data.type!=='aleppo:ready'||sent)return;
+    sent=true;
+    window.removeEventListener('message',onMsg);
+    w.postMessage({type:'aleppo:data',payload:payload},base);
+  }
+  window.addEventListener('message',onMsg);
+  setTimeout(function(){window.removeEventListener('message',onMsg);},30000);
 })();
 `.trim();
 

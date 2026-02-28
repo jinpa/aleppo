@@ -11,14 +11,20 @@ export const metadata = { title: "Import Recipe" };
 export default async function ImportPage({
   searchParams,
 }: {
-  searchParams: Promise<{ importId?: string }>;
+  searchParams: Promise<{ importId?: string; mode?: string }>;
 }) {
   const session = await auth();
   if (!session?.user?.id) redirect("/auth/signin");
 
-  const { importId } = await searchParams;
+  const { importId, mode } = await searchParams;
 
-  // Bookmarklet flow: pre-populate review form from stored import record
+  // Bookmarklet flow: page was opened by the bookmarklet via window.open.
+  // The client-side ImportFlow component handles the postMessage handshake.
+  if (mode === "bookmarklet") {
+    return <ImportFlow mode="bookmarklet" />;
+  }
+
+  // Legacy importId flow (kept for backward compat)
   if (importId) {
     const [importRecord] = await db
       .select()

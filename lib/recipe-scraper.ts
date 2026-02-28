@@ -52,36 +52,59 @@ function parseInstructions(raw: string[]): InstructionStep[] {
     .map((text, i) => ({ step: i + 1, text: text.trim() }));
 }
 
+const RECIPE_TYPES = new Set([
+  "Recipe",
+  "https://schema.org/Recipe",
+  "http://schema.org/Recipe",
+]);
+
+function isRecipeType(type: unknown): boolean {
+  if (typeof type === "string") return RECIPE_TYPES.has(type);
+  if (Array.isArray(type)) return type.some((t) => RECIPE_TYPES.has(t));
+  return false;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function findRecipeNode(node: any): ScrapedRecipe | null {
+  if (!node || typeof node !== "object") return null;
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const r = findRecipeNode(item);
+      if (r) return r;
+    }
+    return null;
+  }
+  const direct = extractFromJsonLd(node);
+  if (direct) return direct;
+  if (node["@graph"]) {
+    const r = findRecipeNode(node["@graph"]);
+    if (r) return r;
+  }
+  if (node["mainEntity"]) {
+    const r = findRecipeNode(node["mainEntity"]);
+    if (r) return r;
+  }
+  return null;
+}
+
 export function extractFromJsonLdArray(
   jsonLdData: object[],
   meta: { pageTitle?: string; ogImage?: string; siteName?: string } = {}
 ): ScrapedRecipe | null {
-  for (const data of jsonLdData) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const items: any[] = (data as any)["@graph"] ? (data as any)["@graph"] : [data];
-    for (const item of items) {
-      const recipe = extractFromJsonLd(item);
-      if (recipe) {
-        return {
-          ...recipe,
-          sourceName: recipe.sourceName || meta.siteName,
-          imageUrl: recipe.imageUrl || meta.ogImage || undefined,
-        };
-      }
-    }
-  }
-  return null;
+  const recipe = findRecipeNode(jsonLdData);
+  if (!recipe) return null;
+  return {
+    ...recipe,
+    sourceName: recipe.sourceName || meta.siteName,
+    imageUrl: recipe.imageUrl || meta.ogImage || undefined,
+  };
 }
 
 function extractFromJsonLd(jsonLd: object): ScrapedRecipe | null {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recipe: any = jsonLd;
 
-  if (
-    recipe["@type"] !== "Recipe" &&
-    !Array.isArray(recipe["@type"]) &&
-    !(Array.isArray(recipe["@type"]) && recipe["@type"].includes("Recipe"))
-  ) {
+  if (!isRecipeType(recipe["@type"])) {
     return null;
   }
 

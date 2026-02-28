@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -23,6 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/lib/use-toast";
 import type { ScrapedRecipe } from "@/lib/recipe-scraper";
+import { extractRecipeFromJsonLd } from "@/lib/extract-recipe-client";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -48,6 +49,8 @@ interface ImportFlowProps {
   initialUrl?: string;
   initialRecipe?: ScrapedRecipe | null;
   parseError?: string;
+  /** Set to "bookmarklet" when opened by the bookmarklet; triggers postMessage handshake */
+  mode?: "bookmarklet";
 }
 
 function recipeToFormDefaults(
@@ -93,6 +96,7 @@ export function ImportFlow({
   initialUrl = "",
   initialRecipe,
   parseError: initialParseError,
+  mode,
 }: ImportFlowProps) {
   const router = useRouter();
   const [step, setStep] = useState<Step>(initialStep);
@@ -103,6 +107,10 @@ export function ImportFlow({
   );
   const [showBookmarkletHelp, setShowBookmarkletHelp] = useState(false);
   const [tagInput, setTagInput] = useState("");
+  // true while we're waiting for the bookmarklet's postMessage data
+  const [waitingForBookmarklet, setWaitingForBookmarklet] = useState(
+    mode === "bookmarklet"
+  );
 
   const {
     register,
@@ -133,6 +141,15 @@ export function ImportFlow({
   const tags = watch("tags");
   const isPublic = watch("isPublic");
 
+  // Refs survive React 18 Strict Mode's effect cleanup/re-run cycle.
+  // Without these, Strict Mode fires the effect twice: the first run sends
+  // "aleppo:ready", the bookmarklet responds (setting its own sent=true),
+  // cleanup removes the listener, then the second run sends "aleppo:ready"
+  // again — which the bookmarklet ignores — leaving the second listener
+  // waiting forever.
+  const bookmarkletReadySent = useRef(false);
+  const bookmarkletDataReceived = useRef(false);
+
   const populateForm = (recipe: ScrapedRecipe, sourceUrl: string) => {
     const defaults = recipeToFormDefaults(recipe, sourceUrl);
     Object.entries(defaults).forEach(([key, value]) => {
@@ -140,6 +157,80 @@ export function ImportFlow({
       setValue(key as any, value as any);
     });
   };
+
+  // Bookmarklet postMessage handshake
+  useEffect(() => {
+    if (mode !== "bookmarklet") return;
+
+    // StrictMode re-run: data was already received and state already updated.
+    if (bookmarkletDataReceived.current) return;
+
+    // Not opened via window.open — fall through to normal import UI.
+    if (!window.opener) {
+      setWaitingForBookmarklet(false);
+      return;
+    }
+
+    function handleMessage(e: MessageEvent) {
+      if (bookmarkletDataReceived.current) return; // deduplicate
+      if (!e.data || e.data.type !== "aleppo:data") return;
+
+      bookmarkletDataReceived.current = true;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const payload = e.data.payload as any;
+      const jsonld = payload?.jsonld ?? [];
+      console.debug("[Aleppo bookmarklet] received JSON-LD scripts:", jsonld.length, jsonld);
+
+      const recipe = extractRecipeFromJsonLd(jsonld, {
+        pageTitle: payload?.title,
+        ogImage: payload?.ogImage,
+        siteName: payload?.siteName,
+      });
+
+      setWaitingForBookmarklet(false);
+
+      if (recipe) {
+        populateForm(recipe, payload?.url ?? "");
+        setUrl(payload?.url ?? "");
+        setStep("review");
+      } else {
+        const types = jsonld.flatMap((d: unknown) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const a = d as any;
+          return a?.["@graph"]
+            ? (a["@graph"] as any[]).map((i) => i["@type"])
+            : [a?.["@type"]];
+        }).filter(Boolean);
+        console.debug("[Aleppo bookmarklet] @types found:", types);
+        setParseError(
+          `No recipe structured data found on that page (found ${jsonld.length} JSON-LD block${jsonld.length !== 1 ? "s" : ""}, types: ${types.join(", ") || "none"}). Please fill in the details manually.`
+        );
+        setStep("review");
+      }
+    }
+
+    window.addEventListener("message", handleMessage);
+
+    // Only send "aleppo:ready" once across StrictMode re-runs — the bookmarklet
+    // sets sent=true after responding, so a second signal would be ignored and
+    // the second listener would wait forever.
+    if (!bookmarkletReadySent.current) {
+      bookmarkletReadySent.current = true;
+      window.opener.postMessage({ type: "aleppo:ready" }, "*");
+    }
+
+    // Fallback: if no data after 10 s, show the normal import UI.
+    const timeout = setTimeout(() => {
+      if (!bookmarkletDataReceived.current) setWaitingForBookmarklet(false);
+    }, 10000);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+      clearTimeout(timeout);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   const handleFetch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,6 +308,17 @@ export function ImportFlow({
     router.push(`/recipes/${recipe.id}`);
     router.refresh();
   };
+
+  // ── Bookmarklet loading state ────────────────────────────────────────────────
+
+  if (waitingForBookmarklet) {
+    return (
+      <div className="flex flex-col items-center justify-center py-32 gap-4">
+        <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+        <p className="text-stone-600 text-sm">Receiving recipe from your browser…</p>
+      </div>
+    );
+  }
 
   // ── URL entry step ──────────────────────────────────────────────────────────
 
@@ -478,16 +580,17 @@ export function ImportFlow({
 // ── Bookmarklet installer ────────────────────────────────────────────────────
 
 function BookmarkletInstructions() {
-  const appUrl =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const linkRef = useRef<HTMLAnchorElement>(null);
 
-  // Build the bookmarklet inline (same logic as lib/bookmarklet.ts, duplicated
-  // here to avoid importing server code into a client component)
-  const code = `(function(){var base=${JSON.stringify(appUrl)};var scripts=document.querySelectorAll('script[type="application/ld+json"]');var jsonld=[];for(var i=0;i<scripts.length;i++){try{jsonld.push(JSON.parse(scripts[i].textContent));}catch(e){}}var payload={jsonld:jsonld,url:location.href,title:document.title,ogImage:((document.querySelector('meta[property="og:image"]')||{}).content)||'',siteName:((document.querySelector('meta[property="og:site_name"]')||{}).content)||''};var btn=document.createElement('div');btn.style.cssText='position:fixed;top:16px;right:16px;z-index:999999;background:#1c1917;color:#fff;padding:12px 18px;border-radius:12px;font:14px/1.5 system-ui,sans-serif;box-shadow:0 4px 24px rgba(0,0,0,.3)';btn.textContent='Importing to Aleppo\u2026';document.body.appendChild(btn);fetch(base+'/api/import/bookmarklet',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)}).then(function(r){return r.json();}).then(function(d){if(d.importId){location.href=base+'/recipes/import?importId='+d.importId;}else{btn.textContent='Import failed \u2014 are you signed in to Aleppo?';btn.style.background='#dc2626';}}).catch(function(){btn.textContent='Could not connect to Aleppo';btn.style.background='#dc2626';});})();`;
-
-  const bookmarkletHref = `javascript:${encodeURIComponent(code)}`;
+  // React blocks javascript: URLs in href as a security measure, so we must
+  // set the href directly on the DOM node after mount, bypassing React's
+  // sanitization. This is the standard pattern for bookmarklet links in React.
+  useEffect(() => {
+    if (!linkRef.current) return;
+    const appUrl = window.location.origin;
+    const code = `(function(){var base=${JSON.stringify(appUrl)};var scripts=document.querySelectorAll('script[type="application/ld+json"]');var jsonld=[];for(var i=0;i<scripts.length;i++){try{jsonld.push(JSON.parse(scripts[i].textContent));}catch(e){}}var payload={jsonld:jsonld,url:location.href,title:document.title,ogImage:((document.querySelector('meta[property="og:image"]')||{}).content)||'',siteName:((document.querySelector('meta[property="og:site_name"]')||{}).content)||''};var w=window.open(base+'/recipes/import?mode=bookmarklet','aleppo_import','width=1100,height=800');if(!w){alert('Aleppo: allow popups for this site, then click the bookmarklet again.');return;}var sent=false;function onMsg(e){if(!e.data||e.data.type!=='aleppo:ready'||sent)return;sent=true;window.removeEventListener('message',onMsg);w.postMessage({type:'aleppo:data',payload:payload},base);}window.addEventListener('message',onMsg);setTimeout(function(){window.removeEventListener('message',onMsg);},30000);})();`;
+    linkRef.current.href = `javascript:${encodeURIComponent(code)}`;
+  }, []);
 
   return (
     <div className="space-y-4 p-4 rounded-xl bg-stone-50 border border-stone-200">
@@ -505,14 +608,14 @@ function BookmarkletInstructions() {
           Step 1 — Drag this button to your bookmarks bar:
         </p>
         <div className="flex items-center gap-3">
+          {/* href is set via DOM ref in useEffect to bypass React's javascript: URL block */}
           {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
           <a
-            href={bookmarkletHref}
+            ref={linkRef}
+            href="#"
             onClick={(e) => {
               e.preventDefault();
-              alert(
-                'Drag this button to your bookmarks bar — don\'t click it here!'
-              );
+              alert("Drag this button to your bookmarks bar — don't click it here!");
             }}
             className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium shadow-sm cursor-grab active:cursor-grabbing select-none"
             draggable
