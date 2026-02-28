@@ -2,6 +2,7 @@ import type { NextAuthConfig } from "next-auth";
 
 // Lightweight config for use in middleware (edge-compatible, no db/bcrypt imports)
 export const authConfig: NextAuthConfig = {
+  trustHost: true,
   pages: {
     signIn: "/auth/signin",
     error: "/auth/error",
