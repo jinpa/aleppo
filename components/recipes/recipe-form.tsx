@@ -122,6 +122,7 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
   };
 
   const onSubmit = async (data: FormData) => {
+    console.log("[RecipeForm] onSubmit called, title:", data.title);
     const body = {
       ...data,
       ingredients: data.ingredients.map((ing) => ({
@@ -164,7 +165,10 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 max-w-2xl mx-auto">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="space-y-8 max-w-2xl mx-auto"
+    >
       <div className="space-y-1">
         <h1 className="text-2xl font-bold text-stone-900">
           {mode === "edit" ? "Edit recipe" : "New recipe"}
@@ -256,7 +260,7 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
               min="1"
               placeholder="15"
               {...register("prepTime", {
-                setValueAs: (v) => (v === "" ? null : parseInt(v, 10)),
+                setValueAs: (v) => (v === "" || v == null || isNaN(Number(v)) ? null : parseInt(v, 10)),
               })}
             />
           </div>
@@ -268,7 +272,7 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
               min="1"
               placeholder="30"
               {...register("cookTime", {
-                setValueAs: (v) => (v === "" ? null : parseInt(v, 10)),
+                setValueAs: (v) => (v === "" || v == null || isNaN(Number(v)) ? null : parseInt(v, 10)),
               })}
             />
           </div>
@@ -280,7 +284,7 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
               min="1"
               placeholder="4"
               {...register("servings", {
-                setValueAs: (v) => (v === "" ? null : parseInt(v, 10)),
+                setValueAs: (v) => (v === "" || v == null || isNaN(Number(v)) ? null : parseInt(v, 10)),
               })}
             />
           </div>
