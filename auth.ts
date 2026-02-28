@@ -22,10 +22,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // Auth.js uses the correct public domain for redirects instead of localhost.
   trustHost: true,
   providers: [
-    Google({
-      clientId: process.env.AUTH_GOOGLE_ID,
-      clientSecret: process.env.AUTH_GOOGLE_SECRET,
-    }),
+    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
+      ? [Google()]
+      : []),
     Credentials({
       name: "credentials",
       credentials: {
