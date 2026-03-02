@@ -1,0 +1,4 @@
+{
+  "_comment": "Maps hostname → URL fragment for sites with JS-rendered comments that can't be auto-detected from static HTML. Add new entries as you discover them.",
+  "cooking.nytimes.com": "#notes_section"
+}

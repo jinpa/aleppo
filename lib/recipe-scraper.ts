@@ -1,5 +1,6 @@
 import { parse } from "node-html-parser";
 import type { Ingredient, InstructionStep } from "@/db/schema";
+import commentAnchors from "@/config/comment-anchors.json";
 
 export interface ScrapedRecipe {
   title?: string;
@@ -12,6 +13,41 @@ export interface ScrapedRecipe {
   imageUrl?: string;
   sourceName?: string;
   tags?: string[];
+}
+
+// Loaded from config/comment-anchors.json — add new sites there.
+const KNOWN_COMMENT_ANCHORS = commentAnchors as Record<string, string>;
+
+function detectCommentsUrl(
+  root: ReturnType<typeof parse>,
+  pageUrl?: string
+): string | null {
+  if (!pageUrl) return null;
+
+  // Site-specific overrides for JS-rendered comment sections
+  try {
+    const { hostname } = new URL(pageUrl);
+    const knownAnchor = KNOWN_COMMENT_ANCHORS[hostname];
+    if (knownAnchor) return `${pageUrl}${knownAnchor}`;
+  } catch {
+    // malformed URL — fall through
+  }
+
+  // Check by common comment section IDs — use the specific anchor found
+  const idAnchors = ["comments", "disqus_thread", "respond"];
+  for (const id of idAnchors) {
+    if (root.querySelector(`#${id}`)) {
+      return `${pageUrl}#${id}`;
+    }
+  }
+  // Check by common comment section class names — default to #comments anchor
+  const classSelectors = [".comments-area", ".comment-list"];
+  for (const cls of classSelectors) {
+    if (root.querySelector(cls)) {
+      return `${pageUrl}#comments`;
+    }
+  }
+  return null;
 }
 
 function decodeHtmlEntities(text: string): string {
@@ -309,7 +345,7 @@ function extractFromMicrodata(
 export function scrapeRecipeFromHtml(
   html: string,
   url?: string
-): { recipe: ScrapedRecipe | null; rawPayload: object; error?: string } {
+): { recipe: ScrapedRecipe | null; rawPayload: object; error?: string; commentsUrl?: string | null } {
   const root = parse(html);
 
   const jsonLdScripts = root.querySelectorAll(
@@ -339,16 +375,17 @@ export function scrapeRecipeFromHtml(
     ?.getAttribute("content");
 
   const rawPayload = { url, jsonLd: jsonLdData, pageTitle, siteName };
+  const commentsUrl = detectCommentsUrl(root, url);
 
   const recipe = extractFromJsonLdArray(jsonLdData, { pageTitle, ogImage, siteName });
   if (recipe) {
-    return { recipe, rawPayload };
+    return { recipe, rawPayload, commentsUrl };
   }
 
   // Fallback: try Schema.org microdata (e.g. WordPress Jetpack recipe cards)
   const microdataRecipe = extractFromMicrodata(root, { pageTitle, ogImage, siteName });
   if (microdataRecipe) {
-    return { recipe: microdataRecipe, rawPayload };
+    return { recipe: microdataRecipe, rawPayload, commentsUrl };
   }
 
   return {
@@ -361,6 +398,7 @@ export function scrapeRecipeFromHtml(
       sourceName: siteName,
     },
     rawPayload,
+    commentsUrl,
     error: "Could not parse recipe structured data. Please fill in manually.",
   };
 }
@@ -369,6 +407,7 @@ export async function scrapeRecipeFromUrl(url: string): Promise<{
   recipe: ScrapedRecipe | null;
   rawPayload: object;
   error?: string;
+  commentsUrl?: string | null;
 }> {
   let html: string;
 

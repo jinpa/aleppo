@@ -31,6 +31,7 @@ const createSchema = z.object({
   prepTime: z.number().int().positive().optional().nullable(),
   cookTime: z.number().int().positive().optional().nullable(),
   servings: z.number().int().positive().optional().nullable(),
+  commentsUrl: z.string().url().optional().nullable(),
 });
 
 export async function GET(req: Request) {
@@ -97,6 +98,7 @@ export async function POST(req: Request) {
       prepTime: parsed.data.prepTime ?? null,
       cookTime: parsed.data.cookTime ?? null,
       servings: parsed.data.servings ?? null,
+      commentsUrl: parsed.data.commentsUrl ?? null,
     })
     .returning();
 

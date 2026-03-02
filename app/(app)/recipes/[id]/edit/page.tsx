@@ -40,6 +40,7 @@ export default async function EditRecipePage({
         servings: recipe.servings ?? undefined,
         sourceUrl: recipe.sourceUrl ?? "",
         sourceName: recipe.sourceName ?? "",
+        commentsUrl: recipe.commentsUrl ?? "",
         imageUrl: recipe.imageUrl ?? "",
         notes: recipe.notes ?? "",
       }}

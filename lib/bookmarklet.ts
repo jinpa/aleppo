@@ -46,12 +46,18 @@ export function buildBookmarkletCode(appUrl: string): string {
     }
     if(md.name||md.recipeIngredient.length)jsonld.push(md);
   }
+  var commentIds=['comments','disqus_thread','respond'];
+  var commentClasses=['.comments-area','.comment-list'];
+  var commentsUrl=null;
+  for(var ci=0;ci<commentIds.length;ci++){if(document.getElementById(commentIds[ci])){commentsUrl=location.href+'#'+commentIds[ci];break;}}
+  if(!commentsUrl){for(var ci=0;ci<commentClasses.length;ci++){if(document.querySelector(commentClasses[ci])){commentsUrl=location.href+'#comments';break;}}}
   var payload={
     jsonld:jsonld,
     url:location.href,
     title:document.title,
     ogImage:((document.querySelector('meta[property="og:image"]')||{}).content)||'',
-    siteName:((document.querySelector('meta[property="og:site_name"]')||{}).content)||''
+    siteName:((document.querySelector('meta[property="og:site_name"]')||{}).content)||'',
+    commentsUrl:commentsUrl
   };
   var w=window.open(base+'/recipes/import?mode=bookmarklet','aleppo_import','width=1100,height=800');
   if(!w){alert('Aleppo: allow popups for this site, then click the bookmarklet again.');return;}

@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   }
 
   const { url } = parsed.data;
-  const { recipe, rawPayload, error } = await scrapeRecipeFromUrl(url);
+  const { recipe, rawPayload, error, commentsUrl } = await scrapeRecipeFromUrl(url);
 
   // Create import audit record
   const [importRecord] = await db
@@ -39,5 +39,6 @@ export async function POST(req: Request) {
     importId: importRecord.id,
     recipe,
     parseError: error,
+    commentsUrl: commentsUrl ?? null,
   });
 }

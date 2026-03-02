@@ -20,6 +20,9 @@ interface FeedItem {
     title: string;
     imageUrl?: string | null;
     tags?: string[] | null;
+    sourceUrl?: string | null;
+    sourceName?: string | null;
+    isAdapted: boolean;
   };
   user: {
     id: string;
@@ -173,6 +176,20 @@ export function FeedView({ feed, followingCount, followingUsers }: FeedViewProps
                           </Badge>
                         ))}
                       </div>
+                    )}
+                    {item.recipe.sourceUrl && (
+                      <p className="text-xs text-stone-400 mt-1.5">
+                        {item.recipe.isAdapted ? "adapted from" : "from"}{" "}
+                        <a
+                          href={item.recipe.sourceUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:text-stone-600 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {item.recipe.sourceName || new URL(item.recipe.sourceUrl).hostname}
+                        </a>
+                      </p>
                     )}
                   </div>
                 </Link>

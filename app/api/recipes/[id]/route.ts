@@ -27,10 +27,12 @@ const updateSchema = z.object({
     .optional(),
   tags: z.array(z.string()).optional(),
   isPublic: z.boolean().optional(),
+  isAdapted: z.boolean().optional(),
   notes: z.string().max(5000).optional().nullable(),
   prepTime: z.number().int().positive().optional().nullable(),
   cookTime: z.number().int().positive().optional().nullable(),
   servings: z.number().int().positive().optional().nullable(),
+  commentsUrl: z.string().url().optional().nullable(),
 });
 
 export async function GET(

@@ -20,7 +20,7 @@ export default async function FeedPage() {
 
   let feed: {
     log: { id: string; cookedOn: string; notes?: string | null; createdAt: Date };
-    recipe: { id: string; title: string; imageUrl?: string | null; tags?: string[] | null };
+    recipe: { id: string; title: string; imageUrl?: string | null; tags?: string[] | null; sourceUrl?: string | null; sourceName?: string | null; isAdapted: boolean };
     user: { id: string; name?: string | null; image?: string | null };
   }[] = [];
 
@@ -38,6 +38,9 @@ export default async function FeedPage() {
           title: recipes.title,
           imageUrl: recipes.imageUrl,
           tags: recipes.tags,
+          sourceUrl: recipes.sourceUrl,
+          sourceName: recipes.sourceName,
+          isAdapted: recipes.isAdapted,
         },
         user: {
           id: users.id,

@@ -27,6 +27,7 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/lib/use-toast";
 import type { ScrapedRecipe } from "@/lib/recipe-scraper";
 import { extractRecipeFromJsonLd } from "@/lib/extract-recipe-client";
+import commentAnchors from "@/config/comment-anchors.json";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -42,6 +43,7 @@ const formSchema = z.object({
   sourceUrl: z.string().optional(),
   sourceName: z.string().optional(),
   imageUrl: z.string().optional(),
+  commentsUrl: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -139,6 +141,7 @@ export function ImportFlow({
       ingredients: [{ raw: "" }],
       instructions: [{ text: "" }],
       notes: "",
+      commentsUrl: "",
       ...initialFormDefaults,
       // User prefs override scraped values: apply after the spread
       tags: (userPrefs?.defaultTagsEnabled ?? true) ? (initialFormDefaults.tags ?? []) : [],
@@ -211,7 +214,22 @@ export function ImportFlow({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const payload = e.data.payload as any;
       const jsonld = payload?.jsonld ?? [];
+      const payloadUrl: string = payload?.url ?? "";
       console.debug("[Aleppo bookmarklet] received JSON-LD scripts:", jsonld.length, jsonld);
+
+      // Resolve commentsUrl: prefer DOM-detected value from the bookmarklet,
+      // then fall back to the hostname map for known JS-heavy sites.
+      let resolvedCommentsUrl = (payload?.commentsUrl as string | null) ?? null;
+      if (!resolvedCommentsUrl && payloadUrl) {
+        try {
+          const { hostname } = new URL(payloadUrl);
+          const knownAnchor = (commentAnchors as Record<string, string>)[hostname];
+          if (knownAnchor) resolvedCommentsUrl = `${payloadUrl}${knownAnchor}`;
+        } catch {
+          // malformed URL — leave null
+        }
+      }
+      setValue("commentsUrl", resolvedCommentsUrl ?? "");
 
       const recipe = extractRecipeFromJsonLd(jsonld, {
         pageTitle: payload?.title,
@@ -222,9 +240,9 @@ export function ImportFlow({
       setWaitingForBookmarklet(false);
 
       if (recipe) {
-        populateForm(recipe, payload?.url ?? "");
-        setUrl(payload?.url ?? "");
-        checkForDuplicate(payload?.url ?? "");
+        populateForm(recipe, payloadUrl);
+        setUrl(payloadUrl);
+        checkForDuplicate(payloadUrl);
         setStep("review");
       } else {
         const types = jsonld.flatMap((d: unknown) => {
@@ -287,7 +305,7 @@ export function ImportFlow({
         return;
       }
 
-      const { recipe, parseError: err } = data;
+      const { recipe, parseError: err, commentsUrl: cUrl } = data;
 
       if (err === "blocked") {
         setParseError("blocked");
@@ -296,6 +314,7 @@ export function ImportFlow({
       }
 
       if (err) setParseError(err);
+      setValue("commentsUrl", cUrl ?? "");
 
       if (recipe) {
         populateForm(recipe, url.trim());
@@ -329,6 +348,7 @@ export function ImportFlow({
       instructions: data.instructions
         .filter((inst) => inst.text.trim())
         .map((inst, idx) => ({ step: idx + 1, text: inst.text })),
+      commentsUrl: data.commentsUrl || null,
     };
 
     const isReplace = replaceExisting && duplicate;
@@ -667,6 +687,19 @@ export function ImportFlow({
         <Switch checked={isPublic} onCheckedChange={(v) => setValue("isPublic", v)} />
       </div>
 
+      <div className="space-y-1.5">
+        <Label htmlFor="commentsUrl" className="text-sm font-normal text-stone-600">
+          Comments URL{" "}
+          <span className="text-stone-400">(auto-detected — edit if wrong, or leave blank)</span>
+        </Label>
+        <Input
+          id="commentsUrl"
+          type="url"
+          placeholder="https://...#comments"
+          {...register("commentsUrl")}
+        />
+      </div>
+
       <div className="flex justify-end gap-3 pt-4 border-t border-stone-200">
         <Button type="button" variant="outline" onClick={() => setStep("url")}>Back</Button>
         <Button type="submit" disabled={isSubmitting || parseError === "blocked"}>
@@ -689,7 +722,7 @@ function BookmarkletInstructions() {
   useEffect(() => {
     if (!linkRef.current) return;
     const appUrl = window.location.origin;
-    const code = `(function(){var base=${JSON.stringify(appUrl)};var scripts=document.querySelectorAll('script[type="application/ld+json"]');var jsonld=[];for(var i=0;i<scripts.length;i++){try{jsonld.push(JSON.parse(scripts[i].textContent));}catch(e){}}var re=document.querySelector('[itemtype="https://schema.org/Recipe"],[itemtype="http://schema.org/Recipe"]');if(re){var md={'@type':'Recipe','recipeIngredient':[],'recipeInstructions':[]};var n=re.querySelector('[itemprop="name"]');if(n)md.name=n.textContent.trim();var ings=re.querySelectorAll('[itemprop="recipeIngredient"]');for(var j=0;j<ings.length;j++){var s=ings[j].textContent.trim();if(s)md.recipeIngredient.push(s);}var yr=re.querySelector('[itemprop="recipeYield"]');if(yr)md.recipeYield=yr.textContent.trim().replace(/^servings:\\s*/i,'');var tf=['totalTime','cookTime','prepTime'];for(var j=0;j<tf.length;j++){var tel=re.querySelector('[itemprop="'+tf[j]+'"]');if(tel)md[tf[j]]=tel.getAttribute('datetime')||tel.textContent.trim();}var iels=re.querySelectorAll('[itemprop="recipeInstructions"]');if(iels.length){for(var j=0;j<iels.length;j++){var s=iels[j].textContent.trim();if(s)md.recipeInstructions.push({'@type':'HowToStep','text':s});}}else{var de=re.querySelector('.e-instructions,.jetpack-recipe-directions');if(de){var ps=de.querySelectorAll('p');if(ps.length){for(var j=0;j<ps.length;j++){var s=ps[j].textContent.trim();if(s)md.recipeInstructions.push({'@type':'HowToStep','text':s});}}else{var s=de.textContent.trim();if(s)md.recipeInstructions.push({'@type':'HowToStep','text':s});}}}if(md.name||md.recipeIngredient.length)jsonld.push(md);}var payload={jsonld:jsonld,url:location.href,title:document.title,ogImage:((document.querySelector('meta[property="og:image"]')||{}).content)||'',siteName:((document.querySelector('meta[property="og:site_name"]')||{}).content)||''};var w=window.open(base+'/recipes/import?mode=bookmarklet','aleppo_import','width=1100,height=800');if(!w){alert('Aleppo: allow popups for this site, then click the bookmarklet again.');return;}var sent=false;function onMsg(e){if(!e.data||e.data.type!=='aleppo:ready'||sent)return;sent=true;window.removeEventListener('message',onMsg);w.postMessage({type:'aleppo:data',payload:payload},base);}window.addEventListener('message',onMsg);setTimeout(function(){window.removeEventListener('message',onMsg);},30000);})();`;
+    const code = `(function(){var base=${JSON.stringify(appUrl)};var scripts=document.querySelectorAll('script[type="application/ld+json"]');var jsonld=[];for(var i=0;i<scripts.length;i++){try{jsonld.push(JSON.parse(scripts[i].textContent));}catch(e){}}var re=document.querySelector('[itemtype="https://schema.org/Recipe"],[itemtype="http://schema.org/Recipe"]');if(re){var md={'@type':'Recipe','recipeIngredient':[],'recipeInstructions':[]};var n=re.querySelector('[itemprop="name"]');if(n)md.name=n.textContent.trim();var ings=re.querySelectorAll('[itemprop="recipeIngredient"]');for(var j=0;j<ings.length;j++){var s=ings[j].textContent.trim();if(s)md.recipeIngredient.push(s);}var yr=re.querySelector('[itemprop="recipeYield"]');if(yr)md.recipeYield=yr.textContent.trim().replace(/^servings:\\s*/i,'');var tf=['totalTime','cookTime','prepTime'];for(var j=0;j<tf.length;j++){var tel=re.querySelector('[itemprop="'+tf[j]+'"]');if(tel)md[tf[j]]=tel.getAttribute('datetime')||tel.textContent.trim();}var iels=re.querySelectorAll('[itemprop="recipeInstructions"]');if(iels.length){for(var j=0;j<iels.length;j++){var s=iels[j].textContent.trim();if(s)md.recipeInstructions.push({'@type':'HowToStep','text':s});}}else{var de=re.querySelector('.e-instructions,.jetpack-recipe-directions');if(de){var ps=de.querySelectorAll('p');if(ps.length){for(var j=0;j<ps.length;j++){var s=ps[j].textContent.trim();if(s)md.recipeInstructions.push({'@type':'HowToStep','text':s});}}else{var s=de.textContent.trim();if(s)md.recipeInstructions.push({'@type':'HowToStep','text':s});}}}if(md.name||md.recipeIngredient.length)jsonld.push(md);}var commentIds=['comments','disqus_thread','respond'];var commentClasses=['.comments-area','.comment-list'];var commentsUrl=null;for(var ci=0;ci<commentIds.length;ci++){if(document.getElementById(commentIds[ci])){commentsUrl=location.href+'#'+commentIds[ci];break;}}if(!commentsUrl){for(var ci=0;ci<commentClasses.length;ci++){if(document.querySelector(commentClasses[ci])){commentsUrl=location.href+'#comments';break;}}}var payload={jsonld:jsonld,url:location.href,title:document.title,ogImage:((document.querySelector('meta[property="og:image"]')||{}).content)||'',siteName:((document.querySelector('meta[property="og:site_name"]')||{}).content)||'',commentsUrl:commentsUrl};var w=window.open(base+'/recipes/import?mode=bookmarklet','aleppo_import','width=1100,height=800');if(!w){alert('Aleppo: allow popups for this site, then click the bookmarklet again.');return;}var sent=false;function onMsg(e){if(!e.data||e.data.type!=='aleppo:ready'||sent)return;sent=true;window.removeEventListener('message',onMsg);w.postMessage({type:'aleppo:data',payload:payload},base);}window.addEventListener('message',onMsg);setTimeout(function(){window.removeEventListener('message',onMsg);},30000);})();`;
     linkRef.current.href = `javascript:${encodeURIComponent(code)}`;
   }, []);
 

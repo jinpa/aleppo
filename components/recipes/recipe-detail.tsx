@@ -55,6 +55,8 @@ interface RecipeDetailProps {
     instructions?: InstructionStep[] | null;
     tags?: string[] | null;
     isPublic: boolean;
+    isAdapted: boolean;
+    commentsUrl?: string | null;
     notes?: string | null;
     prepTime?: number | null;
     cookTime?: number | null;
@@ -289,7 +291,8 @@ export function RecipeDetail({
               className="flex items-center gap-1 hover:text-stone-700"
             >
               <ExternalLink className="h-3.5 w-3.5" />
-              {recipe.sourceName || "Source"}
+              {recipe.isAdapted ? "Adapted from" : "from"}{" "}
+              {recipe.sourceName || "original"}
             </a>
           )}
         </div>
@@ -462,6 +465,21 @@ export function RecipeDetail({
           </h2>
           <p className="text-amber-800 text-sm leading-relaxed">{recipe.notes}</p>
         </section>
+      )}
+
+      {/* Comments link — only shown when comments were detected on import */}
+      {recipe.commentsUrl && (
+        <div className="text-sm text-stone-500">
+          <a
+            href={recipe.commentsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 hover:text-stone-700"
+          >
+            <ExternalLink className="h-3.5 w-3.5 flex-shrink-0" />
+            Comments on the original recipe
+          </a>
+        </div>
       )}
 
       {/* Cook History — visible to all viewers of accessible recipes */}

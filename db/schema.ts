@@ -134,6 +134,8 @@ export const recipes = pgTable(
     instructions: jsonb("instructions").$type<InstructionStep[]>().default([]),
     tags: text("tags").array().default([]),
     isPublic: boolean("isPublic").default(false).notNull(),
+    isAdapted: boolean("isAdapted").default(false).notNull(),
+    commentsUrl: text("commentsUrl"),
     notes: text("notes"),
     prepTime: integer("prepTime"),
     cookTime: integer("cookTime"),

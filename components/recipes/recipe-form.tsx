@@ -30,6 +30,7 @@ const schema = z.object({
   description: z.string().max(2000).optional(),
   sourceUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   sourceName: z.string().max(200).optional(),
+  commentsUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   imageUrl: z.string().optional(),
   ingredients: z.array(z.object({ raw: z.string().min(1, "Required") })),
   instructions: z.array(z.object({ text: z.string().min(1, "Required") })),
@@ -44,7 +45,7 @@ const schema = z.object({
 type FormData = z.infer<typeof schema>;
 
 interface RecipeFormProps {
-  initialData?: Partial<FormData & { id: string }>;
+  initialData?: Partial<FormData & { id: string; commentsUrl?: string | null }>;
   mode: "create" | "edit";
 }
 
@@ -52,6 +53,9 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
   const router = useRouter();
   const [tagInput, setTagInput] = useState("");
   const [uploading, setUploading] = useState(false);
+  // Edit mode only: tracks visibility state for the immediate-save inline toggle
+  const [editPublic, setEditPublic] = useState(initialData?.isPublic ?? false);
+  const [togglingVisibility, setTogglingVisibility] = useState(false);
 
   const {
     register,
@@ -67,6 +71,7 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
       description: initialData?.description ?? "",
       sourceUrl: initialData?.sourceUrl ?? "",
       sourceName: initialData?.sourceName ?? "",
+      commentsUrl: initialData?.commentsUrl ?? "",
       imageUrl: initialData?.imageUrl ?? "",
       ingredients: initialData?.ingredients?.length
         ? initialData.ingredients.map((i) => ({ raw: typeof i === "string" ? i : i.raw }))
@@ -124,10 +129,43 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
     setUploading(false);
   };
 
+  const handleVisibilityToggle = async () => {
+    if (!initialData?.id) return;
+    const next = !editPublic;
+    setEditPublic(next);
+    setTogglingVisibility(true);
+    const res = await fetch(`/api/recipes/${initialData.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ isPublic: next }),
+    });
+    if (!res.ok) setEditPublic(!next);
+    setTogglingVisibility(false);
+  };
+
   const onSubmit = async (data: FormData) => {
     console.log("[RecipeForm] onSubmit called, title:", data.title);
+
+    // Only mark as adapted when actual recipe content changes — not metadata
+    // like tags, commentsUrl, sourceName, notes, or timing fields.
+    const recipeContentChanged =
+      mode === "edit" &&
+      (data.title !== (initialData?.title ?? "") ||
+        data.description !== (initialData?.description ?? "") ||
+        data.ingredients.map((i) => i.raw).join("\n") !==
+          (initialData?.ingredients ?? [])
+            .map((i) => (typeof i === "string" ? i : i.raw))
+            .join("\n") ||
+        data.instructions.map((i) => i.text).join("\n") !==
+          (initialData?.instructions ?? [])
+            .map((i) => (typeof i === "string" ? i : i.text))
+            .join("\n"));
+
+    // In edit mode, isPublic is managed by the inline toggle — exclude it
+    // from the save body so a visibility change alone never triggers isAdapted.
+    const { isPublic: _ignored, ...contentData } = data;
     const body = {
-      ...data,
+      ...(mode === "edit" ? contentData : data),
       ingredients: data.ingredients.map((ing) => ({
         raw: ing.raw,
         name: ing.raw,
@@ -136,6 +174,8 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
         step: idx + 1,
         text: inst.text,
       })),
+      commentsUrl: data.commentsUrl || null,
+      ...(recipeContentChanged ? { isAdapted: true } : {}),
     };
 
     const url =
@@ -455,6 +495,21 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
             />
           </div>
         </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="commentsUrl" className="text-sm font-normal">
+            Comments URL{" "}
+            <span className="text-stone-400 font-normal">(optional — link to the original comments section)</span>
+          </Label>
+          <Input
+            id="commentsUrl"
+            type="url"
+            placeholder="https://...#comments"
+            {...register("commentsUrl")}
+          />
+          {errors.commentsUrl && (
+            <p className="text-xs text-red-600">{errors.commentsUrl.message}</p>
+          )}
+        </div>
       </section>
 
       {/* Notes */}
@@ -473,26 +528,34 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
       {/* Privacy */}
       <section className="flex items-center justify-between p-4 rounded-xl bg-stone-50 border border-stone-200">
         <div className="flex items-center gap-3">
-          {isPublic ? (
+          {(mode === "edit" ? editPublic : isPublic) ? (
             <Globe className="h-5 w-5 text-stone-600" />
           ) : (
             <Lock className="h-5 w-5 text-stone-600" />
           )}
           <div>
             <p className="text-sm font-medium text-stone-900">
-              {isPublic ? "Public recipe" : "Private recipe"}
+              {(mode === "edit" ? editPublic : isPublic) ? "Public recipe" : "Private recipe"}
             </p>
             <p className="text-xs text-stone-500">
-              {isPublic
+              {(mode === "edit" ? editPublic : isPublic)
                 ? "Visible to anyone with the link and your followers"
                 : "Only visible to you"}
             </p>
           </div>
         </div>
-        <Switch
-          checked={isPublic}
-          onCheckedChange={(v) => setValue("isPublic", v)}
-        />
+        {mode === "edit" ? (
+          <Switch
+            checked={editPublic}
+            onCheckedChange={handleVisibilityToggle}
+            disabled={togglingVisibility}
+          />
+        ) : (
+          <Switch
+            checked={isPublic}
+            onCheckedChange={(v) => setValue("isPublic", v)}
+          />
+        )}
       </section>
 
       {/* Actions */}
