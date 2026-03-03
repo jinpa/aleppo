@@ -18,7 +18,9 @@ import {
   Copy,
   X,
   Tags,
+  Library,
 } from "lucide-react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -445,7 +447,7 @@ export function ImportFlow({
             className="flex items-center gap-2 text-sm font-medium text-stone-700 hover:text-stone-900"
           >
             <Bookmark className="h-4 w-4 text-amber-500" />
-            Use the Aleppo bookmarklet for protected sites
+            Use the Aleppo bookmarklet (works on any site)
             <span className="text-stone-400">{showBookmarkletHelp ? "▲" : "▼"}</span>
           </button>
 
@@ -454,7 +456,7 @@ export function ImportFlow({
 
         <div className="text-sm text-stone-500 space-y-1">
           <p className="font-medium text-stone-700">
-            Works directly (no bookmarklet needed):
+            URL import works directly for most sites:
           </p>
           <ul className="space-y-0.5 list-disc list-inside text-stone-500">
             <li>AllRecipes, Simply Recipes, NYT Cooking</li>
@@ -462,11 +464,26 @@ export function ImportFlow({
             <li>Most sites using Schema.org recipe markup</li>
           </ul>
           <p className="font-medium text-stone-700 mt-2">
-            Always use the bookmarklet:
+            Use the bookmarklet instead if you get an error:
           </p>
           <ul className="space-y-0.5 list-disc list-inside text-stone-500">
             <li>Serious Eats (blocks server-side requests)</li>
+            <li>Any site that returns a blank or incomplete result</li>
           </ul>
+        </div>
+
+        <div className="border-t border-stone-200 pt-6">
+          <Link
+            href="/recipes/import/paprika"
+            className="flex items-center gap-3 rounded-lg border border-stone-200 px-4 py-3 hover:border-stone-300 hover:bg-stone-50 transition-colors group"
+          >
+            <Library className="h-5 w-5 text-stone-400 group-hover:text-stone-600 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-stone-800">Migrating from Paprika?</p>
+              <p className="text-xs text-stone-500">Import your whole library at once</p>
+            </div>
+            <span className="ml-auto text-stone-400 group-hover:text-stone-600 text-sm">→</span>
+          </Link>
         </div>
       </div>
     );

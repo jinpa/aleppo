@@ -61,6 +61,18 @@ test.describe("Import — URL step", () => {
   });
 });
 
+test.describe("Import — Paprika entry point", () => {
+  test("Paprika migration link is visible on import page", async ({ alicePage: page }) => {
+    await page.goto("/recipes/import");
+    await expect(page.getByRole("heading", { name: "Import from URL" })).toBeVisible();
+    // Scroll to bottom to ensure element is in view
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.screenshot({ path: "test-results/import-page-full.png", fullPage: true });
+    await expect(page.getByText("Migrating from Paprika?")).toBeVisible();
+    await expect(page.getByRole("link", { name: /Migrating from Paprika/i })).toHaveAttribute("href", "/recipes/import/paprika");
+  });
+});
+
 test.describe("Import — review step (manual fill)", () => {
   test("can navigate to review step and manually fill title to save", async ({
     alicePage: page,

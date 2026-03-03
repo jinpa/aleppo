@@ -10,7 +10,7 @@ import {
   Users,
   ChefHat,
   Plus,
-  Link2,
+  ArrowDownToLine,
   Settings,
   LogOut,
   User,
@@ -84,8 +84,8 @@ export function Nav({ session }: { session: Session | null }) {
             href="/recipes/import"
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-stone-900 text-white hover:bg-stone-800 transition-colors"
           >
-            <Link2 className="h-4 w-4" />
-            Import URL
+            <ArrowDownToLine className="h-4 w-4" />
+            Import
           </Link>
           <Link
             href="/recipes/new"
