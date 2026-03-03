@@ -1,26 +1,27 @@
 # Aleppo — Product Requirements Document
 
-**Version**: 1.0  
-**Date**: 2026-02-27  
-**Status**: V1.0 Implementation Complete — Beta Ready  
+**Version**: 1.1  
+**Date**: 2026-03-02  
+**Status**: V1.0 Complete — Post-MVP polish shipped  
 
 ---
 
 ## Implementation Status
 
-**V1.0 MVP: Complete — ready for beta launch.** All core features are implemented and wired up end-to-end. One gap remains before a full public launch:
+**V1.0 MVP: Complete — in active use.** All core features are implemented end-to-end. Post-MVP polish has also shipped. One gap remains before a full public launch:
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Auth (email/pw + Google OAuth) | ✅ Complete | |
-| Recipe CRUD + tags + image upload | ✅ Complete | |
-| URL import + review + audit trail | ✅ Complete | Bookmarklet also implemented |
+| Auth (email/pw) | ✅ Complete | Google OAuth UI removed pending credentials setup |
+| Recipe CRUD + tags + image upload | ✅ Complete | Delete from edit page also implemented |
+| URL import + review + audit trail | ✅ Complete | Bookmarklet also implemented; comments URL auto-detected |
 | Cooking log (date, note, count, history) | ✅ Complete | |
 | Want-to-cook queue | ✅ Complete | |
 | Social (profiles, follow, feed, search) | ✅ Complete | User search added beyond original spec |
 | User settings | ✅ Complete | |
 | Forgot password email | ⚠️ Needs email provider | UI/API done; email delivery not yet wired up |
 | Recipe scaling UI | ✅ Shipped early | Originally scoped to V3+; built during MVP |
+| Recipe attribution (from / adapted from) | ✅ Shipped post-MVP | `isAdapted` flag + `commentsUrl` detection; shown in feed and recipe detail |
 
 ---
 
@@ -66,7 +67,7 @@ The MVP proves the core thesis: **people will track what they cook, and that dat
 | Feature | Status | Detail |
 |---------|--------|--------|
 | Email / password signup | ✅ Done | Users create an account with email + password |
-| Google OAuth | ✅ Done | "Sign in with Google" as an alternative |
+| Google OAuth | ⚠️ Deferred | Auth.js provider code exists; UI removed pending Google OAuth credentials setup |
 | Forgot password / email reset | ⚠️ Partial | UI + API route exist; email delivery not wired up (needs email provider) |
 | Auth library | ✅ Done | Auth.js v5 (NextAuth) with Drizzle adapter |
 
@@ -75,12 +76,12 @@ The MVP proves the core thesis: **people will track what they cook, and that dat
 | Feature | Status | Detail |
 |---------|--------|--------|
 | Create recipe | ✅ Done | Manual entry form: title, description, ingredients (with amounts/units), instructions (step-by-step), tags, image upload, source URL, source name, prep time, cook time, servings |
-| Edit recipe | ✅ Done | Full editing of all fields |
-| Delete recipe | ✅ Done | Soft confirmation; no soft-delete at MVP |
+| Edit recipe | ✅ Done | Full editing of all fields; public/private toggle saves immediately (does not set `isAdapted`) |
+| Delete recipe | ✅ Done | Confirmation dialog accessible from edit page; no soft-delete at MVP |
 | Tags | ✅ Done | Free-form text tags; `text[]` Postgres array with GIN index |
 | Recipe detail page | ✅ Done | Clean reading view optimized for use while cooking |
 | Recipe list / search | ✅ Done | Search by title, filter by tags; your full recipe collection |
-| Public / private toggle | ✅ Done | Per-recipe: private (default) or public |
+| Public / private toggle | ✅ Done | Per-recipe: private (default) or public; user profiles default to public |
 | Image upload | ✅ Done | Upload a photo; stored on Cloudflare R2; displayed on recipe card and detail |
 
 **Out of MVP scope**: Nutritional info, ingredient shopping lists, collections/lists, recipe versions/forks.  
@@ -95,6 +96,8 @@ The MVP proves the core thesis: **people will track what they cook, and that dat
 | Failed import fallback | ✅ Done | Shows "couldn't parse" state with whatever fields were recovered; allows manual entry |
 | Import audit trail | ✅ Done | Every import stores source URL, import type, and raw payload (jsonb) in `recipe_imports` |
 | Bookmarklet | ✅ Done | `/api/import/bookmarklet` + `lib/bookmarklet.ts` (originally V2 scope) |
+| Comments URL detection | ✅ Done | On import, app detects a link to the source page's comments section (DOM scan + `config/comment-anchors.json` for JS-heavy sites like NYT Cooking); editable in the review step |
+| Navigation shortcut | ✅ Done | "Import URL" is the primary nav action (filled button); "New recipe" is secondary (outlined) |
 
 **Out of MVP scope**: Paprika import (V1.5), browser extension (V2), JSON/Markdown bulk import (V1.5), AI OCR (V2).
 
@@ -127,7 +130,7 @@ The MVP proves the core thesis: **people will track what they cook, and that dat
 |---------|--------|--------|
 | Public profiles | ✅ Done | `/u/[id]` with `ProfileView`; shows display name, avatar, bio, cook counts for public recipes |
 | Follow / unfollow | ✅ Done | `/api/follows`; no approval required |
-| Following feed | ✅ Done | `/feed` with `FeedView`; recent cook logs from followed users on public recipes |
+| Following feed | ✅ Done | `/feed` with `FeedView`; recent cook logs from followed users on public recipes; shows "from / adapted from [source]" attribution |
 | Shareable recipe link | ✅ Done | Public recipes accessible at `/recipes/[id]` without auth |
 | Cook log visibility | ✅ Done | Cook logs on public recipes visible on public profiles and in follower feeds |
 | User search | ✅ Done | `/search` + `/api/users/search` (added beyond original spec) |
@@ -141,9 +144,9 @@ The MVP proves the core thesis: **people will track what they cook, and that dat
 | Feature | Status | Detail |
 |---------|--------|--------|
 | Profile settings | ✅ Done | Name, avatar, bio via `SettingsView` + `PATCH /api/users/me` |
-| Public / private profile toggle | ✅ Done | `is_public` field; private by default |
+| Public / private profile toggle | ✅ Done | `is_public` field; **public by default** |
 | Change password | ✅ Done | For email/password users; validates current password before updating |
-| Connected accounts | ✅ Done | Shows Google OAuth connection status and password setup state |
+| Connected accounts | ⚠️ Partial | Google OAuth UI removed from settings pending credentials; will re-enable when OAuth is configured |
 
 ### 4.8 Monetization
 
@@ -151,12 +154,14 @@ The core product is free with no artificial limits. Monetization is through a on
 
 | Tier | Price | Features |
 |------|-------|---------|
-| **Free (forever)** | $0 | Unlimited recipes, URL import, cooking log, cook count, want-to-cook queue, public profile, follow/feed, data export |
-| **AI Add-on** | ~$18 one-time (exact price TBD at V2 launch) | AI cookbook OCR, dish-to-recipe generation, AI nutritional info — all permanently unlocked |
+| **Free (forever)** | $0 | Unlimited recipes, URL import, cooking log, cook count, want-to-cook queue, public profile, follow/feed, data export; some trail ability for AI features.
+| **AI Add-on** | ~$18 one-time (exact price TBD at V2 launch) | AI cookbook OCR, dish-to-recipe generation, handwritten recipe import, AI nutritional info — all permanently unlocked |
 
 **Rationale**: The core recipe management, social, and logging features are the growth engine — gating them hurts adoption and network effects. A recipe limit or import rate limit would specifically punish the power users (ex-Paprika users migrating their collections) who are the primary target audience.
 
 AI features are genuinely optional and have a clear, tangible value: "photograph your cookbook and import it." A one-time ~$18 charge matches the mental model of someone who already paid once for Paprika. It avoids the subscription fatigue that makes people avoid new tools.
+
+**Free AI trial**: We'll have some way to trial AI features. This gives users a taste of real value before purchasing — the limit will be small so it doesn't undermine the purchase decision. The goal is discovery, not a free substitute. It'll either be a small number of tries or no ability to save.
 
 **Economics**: Railway + Postgres runs ~$15/month. Gemini 2.5 Flash costs roughly $0.001 per AI recipe import — even a power user running 200 AI imports/month costs $0.20 in API fees. The one-time model is fully sustainable at low scale, and the math holds until at least tens of thousands of users.
 
@@ -171,7 +176,7 @@ After MVP ships and initial feedback is gathered (target: 300+ MAU before starti
 - **Paprika import**: Parse Paprika's YAML/HTML export format; "migrate from Paprika in 60 seconds" as a marketing hook
 - **Data export**: Export all recipes as JSON or PDF — critical trust feature post-Yummly
 - **Private sharing link**: Generate a token-based share link for a private recipe (no account required to view)
-- **"Adapted from" provenance field**: Optional field on each recipe to link to source (another Aleppo recipe, URL, or free text). Lays the data foundation for the V3 recipe genealogy feature.
+- ~~**"Adapted from" provenance field**~~: **Shipped in V1.1** — `isAdapted` boolean (auto-set when recipe content changes, manually clearable) + `commentsUrl` for linking to original comments. Feed and recipe detail both show "from / adapted from [source]". More sophisticated than originally planned. The V3 recipe genealogy (fork trees) still builds on this foundation.
 - **JSON / CSV bulk import**: For power users migrating from other tools
 - **Recipe collections / lists**: Curated lists of recipes with a title and description (e.g. "My weeknight staples", "Recipes for guests")
 - **Cook note length increase**: Allow longer cook notes (full paragraph) for users who want to write detailed reflections
@@ -241,7 +246,7 @@ These are validated opportunities identified during the brainstorm. Timing and s
 | Framework | Next.js 15 (App Router) | Railway deploys automatically |
 | Language | TypeScript (strict) | Required for solo maintainability |
 | ORM | Drizzle ORM | Type-safe, SQL-close, excellent Postgres support, no Rust binary |
-| Auth | Auth.js v5 (`next-auth@beta`) | Google OAuth + credentials provider, Drizzle adapter |
+| Auth | Auth.js v5 (`next-auth@beta`) | Credentials provider active; Google OAuth provider code present but UI removed pending credentials setup |
 | Database | PostgreSQL 16 | Railway managed add-on |
 | Styling | Tailwind CSS v4 | Fastest responsive UI path solo |
 | Components | shadcn/ui | Copy-paste, fully owned, Tailwind-native |
@@ -261,9 +266,9 @@ These are validated opportunities identified during the brainstorm. Timing and s
 
 ### Core tables
 
-- **`users`** — id, email, name, avatar_url, bio, is_public, password_hash (nullable for OAuth users)
+- **`users`** — id, email, name, avatar_url, bio, is_public (default true), password_hash (nullable for OAuth users)
 - **`accounts`** — OAuth provider records (Auth.js pattern)
-- **`recipes`** — id, user_id, title, description, source_url, source_name, image_url, ingredients (jsonb), instructions (jsonb), tags (text[]), is_public, notes, nutritional_info (jsonb, V2)
+- **`recipes`** — id, user_id, title, description, source_url, source_name, image_url, ingredients (jsonb), instructions (jsonb), tags (text[]), is_public (default false), is_adapted (bool, default false), comments_url (text, nullable), notes, nutritional_info (jsonb, V2)
 - **`cook_logs`** — id, recipe_id, user_id, cooked_on (date), notes (text), rating (nullable smallint)
 - **`follows`** — follower_id, following_id (composite PK)
 - **`recipe_imports`** — audit trail: import_type, source_url, raw_payload (jsonb), status, error_message
@@ -272,7 +277,9 @@ These are validated opportunities identified during the brainstorm. Timing and s
 
 - **Ingredients**: Store both `raw` (original string) and parsed `{amount, unit, name, notes}` fields — never lose the original
 - **Tags**: `text[]` Postgres array with GIN index — no junction table needed at this scale
-- **Privacy**: `is_public` on both `users` and `recipes`; a cook log is visible in feeds only if both are public
+- **Privacy**: `is_public` on both `users` and `recipes`; a cook log is visible in feeds only if both are public. User profiles default public; recipes default private
+- **Attribution**: `is_adapted` is set automatically when title, description, ingredients, or instructions change in edit mode — not triggered by tags, privacy, or `comments_url` changes. `comments_url` is auto-detected on import and editable in the review step
+- **Comment anchor map**: `config/comment-anchors.json` stores hostname → URL fragment overrides for sites (e.g. NYT Cooking) where comments are JS-rendered and can't be found via static DOM scan
 - **No soft deletes** at MVP — simplifies queries; add if needed
 - **`recipe_imports.raw_payload`**: Always store what was scraped — essential for debugging bad imports
 
@@ -306,12 +313,14 @@ Pre-launch items still outstanding:
 
 1. **App name trademark / domain** — Is "aleppo.app" or a similar domain available? "Aleppo" is primarily known as a city; does that create confusion or sensitivity?
 2. **Email provider for password reset** — UI and API route are implemented; need to wire up an email provider (Resend, Postmark, or similar) to actually send reset emails
-3. **NYT Cooking and paywalled sites** — Confirm the UX for sites we can't scrape (error messaging is in place; verify it's clear enough)
-4. **Paprika import format specifics** — Verify Paprika's current export format (YAML/HTML); validate the import script approach before V1.5
+3. **Google OAuth credentials** — Auth.js provider code exists; UI removed for now. Need to set up a Google Cloud Console project and add `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` to re-enable "Sign in with Google"
+4. **NYT Cooking and paywalled sites** — Confirm the UX for sites we can't scrape (error messaging is in place; verify it's clear enough)
+5. **Paprika import format specifics** — Verify Paprika's current export format (YAML/HTML); validate the import script approach before V1.5
 
 *Resolved during implementation*:
-- ~~Google OAuth credentials~~ — Set up and working
 - ~~Cloudflare R2 setup~~ — R2 bucket configured and tested
+- ~~Cloudflare R2 setup~~ — R2 bucket configured and tested
+- ~~Recipe attribution / "adapted from" field~~ — Shipped in V1.1 (`isAdapted` + `commentsUrl`)
 
 ---
 
