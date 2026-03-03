@@ -10,6 +10,7 @@ import {
   Users,
   ChefHat,
   Plus,
+  Link2,
   Settings,
   LogOut,
   User,
@@ -80,11 +81,18 @@ export function Nav({ session }: { session: Session | null }) {
 
         <div className="flex items-center gap-2">
           <Link
-            href="/recipes/new"
+            href="/recipes/import"
             className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-stone-900 text-white hover:bg-stone-800 transition-colors"
           >
+            <Link2 className="h-4 w-4" />
+            Import URL
+          </Link>
+          <Link
+            href="/recipes/new"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border border-stone-300 text-stone-700 hover:bg-stone-100 transition-colors"
+          >
             <Plus className="h-4 w-4" />
-            Add recipe
+            New recipe
           </Link>
 
           {session?.user ? (
@@ -167,7 +175,7 @@ export function Nav({ session }: { session: Session | null }) {
             );
           })}
           <Link
-            href="/recipes/new"
+            href="/recipes/import"
             className="flex flex-col items-center justify-center gap-1 text-xs font-medium text-amber-600"
           >
             <Plus className="h-5 w-5" />

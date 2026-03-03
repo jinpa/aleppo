@@ -82,20 +82,6 @@ export function RecipeList({ recipes }: { recipes: Recipe[] }) {
           </p>
         </div>
 
-        <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/recipes/import">
-              <Link2 className="h-4 w-4" />
-              Import URL
-            </Link>
-          </Button>
-          <Button asChild size="sm">
-            <Link href="/recipes/new">
-              <Plus className="h-4 w-4" />
-              New recipe
-            </Link>
-          </Button>
-        </div>
       </div>
 
       <div className="flex gap-2">
@@ -148,15 +134,15 @@ export function RecipeList({ recipes }: { recipes: Recipe[] }) {
           </p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center">
             <Button asChild>
-              <Link href="/recipes/new">
-                <Plus className="h-4 w-4" />
-                Create recipe
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
               <Link href="/recipes/import">
                 <Link2 className="h-4 w-4" />
                 Import from URL
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link href="/recipes/new">
+                <Plus className="h-4 w-4" />
+                Create recipe
               </Link>
             </Button>
           </div>

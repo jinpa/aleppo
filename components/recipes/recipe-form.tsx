@@ -23,6 +23,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { toast } from "@/lib/use-toast";
 
 const schema = z.object({
@@ -56,6 +67,7 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
   // Edit mode only: tracks visibility state for the immediate-save inline toggle
   const [editPublic, setEditPublic] = useState(initialData?.isPublic ?? false);
   const [togglingVisibility, setTogglingVisibility] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const {
     register,
@@ -141,6 +153,20 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
     });
     if (!res.ok) setEditPublic(!next);
     setTogglingVisibility(false);
+  };
+
+  const handleDelete = async () => {
+    if (!initialData?.id) return;
+    setDeleting(true);
+    const res = await fetch(`/api/recipes/${initialData.id}`, { method: "DELETE" });
+    if (res.ok) {
+      toast({ title: "Recipe deleted", variant: "success" });
+      router.push("/");
+      router.refresh();
+    } else {
+      setDeleting(false);
+      toast({ title: "Failed to delete recipe", variant: "destructive" });
+    }
   };
 
   const onSubmit = async (data: FormData) => {
@@ -559,18 +585,51 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
       </section>
 
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-4 border-t border-stone-200">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => router.back()}
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-          {mode === "edit" ? "Save changes" : "Save recipe"}
-        </Button>
+      <div className="flex items-center justify-between pt-4 border-t border-stone-200">
+        <div>
+          {mode === "edit" && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button type="button" variant="ghost" className="text-red-500 hover:text-red-600 hover:bg-red-50">
+                  <Trash2 className="h-4 w-4" />
+                  Delete recipe
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete recipe?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete &ldquo;{initialData?.title}&rdquo; and all
+                    its cook logs. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="bg-red-600 hover:bg-red-700"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
+        <div className="flex gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.back()}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {mode === "edit" ? "Save changes" : "Save recipe"}
+          </Button>
+        </div>
       </div>
     </form>
   );
