@@ -1,7 +1,11 @@
 import { parse } from "node-html-parser";
 import type { Ingredient, InstructionStep } from "@/db/schema";
 import commentAnchors from "@/config/comment-anchors.json";
+import keywordBlocklist from "@/config/keyword-blocklist.json";
 import { parseIngredients } from "@/lib/parse-ingredients";
+
+// Loaded from config/keyword-blocklist.json — add new entries there.
+const KEYWORD_BLOCKLIST = new Set(keywordBlocklist.map((k) => k.toLowerCase()));
 
 export interface ScrapedRecipe {
   title?: string;
@@ -237,7 +241,7 @@ function extractFromJsonLd(jsonLd: object): ScrapedRecipe | null {
     cookTime: cookTime ?? (!prepTime && totalTime ? totalTime : undefined),
     servings: parseServings(recipe.recipeYield),
     imageUrl,
-    tags: keywords.filter(Boolean),
+    tags: keywords.filter((k) => k && !KEYWORD_BLOCKLIST.has(k.toLowerCase())),
   };
 }
 

@@ -7,6 +7,10 @@
 import type { ScrapedRecipe } from "@/lib/recipe-scraper";
 import type { InstructionStep } from "@/db/schema";
 import { parseIngredients } from "@/lib/parse-ingredients";
+import keywordBlocklist from "@/config/keyword-blocklist.json";
+
+// Loaded from config/keyword-blocklist.json — add new entries there.
+const KEYWORD_BLOCKLIST = new Set(keywordBlocklist.map((k) => k.toLowerCase()));
 
 function decodeHtmlEntities(text: string): string {
   return text
@@ -144,7 +148,7 @@ function extractOneJsonLd(recipe: any): ScrapedRecipe | null {
         ? parseInt(recipe.recipeYield, 10) || undefined
         : undefined,
     imageUrl,
-    tags: keywords.filter(Boolean),
+    tags: keywords.filter((k) => k && !KEYWORD_BLOCKLIST.has(k.toLowerCase())),
   };
 }
 
