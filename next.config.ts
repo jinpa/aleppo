@@ -13,6 +13,10 @@ const nextConfig: NextConfig = {
     ],
   },
   serverExternalPackages: ["sharp", "postgres"],
+  experimental: {
+    // Paprika export files can exceed the default 10MB limit (e.g. 870 recipes ≈ 38MB)
+    middlewareClientMaxBodySize: "100mb",
+  },
 };
 
 export default nextConfig;

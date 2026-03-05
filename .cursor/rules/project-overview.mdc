@@ -16,7 +16,7 @@ A web-first recipe management app — a "cooking diary" in the spirit of Strava/
 | Framework | Next.js 15 (App Router) |
 | Language | TypeScript (strict) |
 | ORM | Drizzle ORM + Drizzle Kit migrations |
-| Auth | Auth.js v5 — credentials (email/pw) + Google OAuth |
+| Auth | Auth.js v5 — credentials (email/pw); Google OAuth code present but UI removed pending credentials |
 | Database | PostgreSQL 16 — Railway managed add-on |
 | Styling | Tailwind CSS v4 + shadcn/ui |
 | Images | Cloudflare R2 via `@aws-sdk/client-s3`; `sharp` for server-side resize |
@@ -28,19 +28,22 @@ A web-first recipe management app — a "cooking diary" in the spirit of Strava/
 
 - Core product is **free, no limits** (recipes, logging, social, import)
 - **One-time ~$18 AI add-on** unlocks V2 AI features (OCR, dish-to-recipe, nutritional info) — no subscription
+- **Free AI trial**: we'll work out some mechanism for users to be able to try AI features (e.g. limited number of uses, or no ability to save) before purchasing.
 
 ## Key Conventions
 
 - **Never auto-save imports** — always show a review/edit step before persisting
-- **Privacy defaults to private** — both `users.is_public` and `recipes.is_public` must be true for content to appear in follower feeds
+- **Recipe privacy defaults to private** — `recipes.is_public` defaults to `false`; user profiles default to public (`users.is_public` defaults to `true`). Both must be true for content to appear in follower feeds
 - **Ingredients dual storage** — store both `raw` (original string) and parsed `{amount, unit, name, notes}` fields; never discard the original
 - **Recipe import audit trail** — every import writes a `recipe_imports` row with `raw_payload` (jsonb) for debugging
 - **Images always re-uploaded to R2** — never store third-party image URLs long-term; download and re-host on import
 - **No Redis, no job queues, no tRPC at MVP** — keep the stack simple until there's a reason to add complexity
+- **Attribution tracking** — `recipes.isAdapted` (bool) is set when recipe content fields change via edit; `recipes.commentsUrl` stores a link to the original page's comments section, auto-detected on import (DOM scan + `config/comment-anchors.json` site map for JS-heavy sites)
+- **Import URL is the primary add-recipe action** — the nav and mobile bottom tab both lead with "Import URL"; "New recipe" (manual) is secondary
 
 ## Implementation Status
 
-**V1.0 MVP is complete.** All core features are implemented end-to-end.
+**V1.0 MVP is complete and in active use.** Post-MVP polish and attribution features have been shipped on top.
 
 For current tasks, in-progress work, and upcoming priorities, see **`docs/todo.md`** — that file is the authoritative source of truth for what's done, what's next, and what's out of scope.
 

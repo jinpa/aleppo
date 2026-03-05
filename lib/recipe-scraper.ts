@@ -1,6 +1,7 @@
 import { parse } from "node-html-parser";
 import type { Ingredient, InstructionStep } from "@/db/schema";
 import commentAnchors from "@/config/comment-anchors.json";
+import { parseIngredients } from "@/lib/parse-ingredients";
 
 export interface ScrapedRecipe {
   title?: string;
@@ -76,26 +77,6 @@ function parseTimeToMinutes(time: string | undefined): number | undefined {
   return total > 0 ? total : undefined;
 }
 
-function parseIngredients(raw: string[]): Ingredient[] {
-  return raw
-    .filter((s) => s.trim())
-    .map((raw) => {
-      const cleaned = raw.trim().replace(/\s+/g, " ");
-      // Basic amount/unit/name parsing
-      const match = cleaned.match(
-        /^([\d\/\.\s\u00BC-\u00BE\u2150-\u215E]+)?\s*([a-zA-Z]+(?:\s+[a-zA-Z]+)?)?\s+(.+)?$/
-      );
-      if (match) {
-        return {
-          raw: cleaned,
-          amount: match[1]?.trim() || undefined,
-          unit: match[2]?.trim() || undefined,
-          name: match[3]?.trim() || cleaned,
-        };
-      }
-      return { raw: cleaned, name: cleaned };
-    });
-}
 
 function parseInstructions(raw: string[]): InstructionStep[] {
   return raw

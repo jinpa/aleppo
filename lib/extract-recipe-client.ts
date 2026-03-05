@@ -5,7 +5,8 @@
  */
 
 import type { ScrapedRecipe } from "@/lib/recipe-scraper";
-import type { Ingredient, InstructionStep } from "@/db/schema";
+import type { InstructionStep } from "@/db/schema";
+import { parseIngredients } from "@/lib/parse-ingredients";
 
 function decodeHtmlEntities(text: string): string {
   return text
@@ -32,25 +33,6 @@ function parseTimeToMinutes(time: string | undefined): number | undefined {
   return total > 0 ? total : undefined;
 }
 
-function parseIngredients(raw: string[]): Ingredient[] {
-  return raw
-    .filter((s) => s.trim())
-    .map((r) => {
-      const cleaned = r.trim().replace(/\s+/g, " ");
-      const match = cleaned.match(
-        /^([\d\/\.\s\u00BC-\u00BE\u2150-\u215E]+)?\s*([a-zA-Z]+(?:\s+[a-zA-Z]+)?)?\s+(.+)?$/
-      );
-      if (match) {
-        return {
-          raw: cleaned,
-          amount: match[1]?.trim() || undefined,
-          unit: match[2]?.trim() || undefined,
-          name: match[3]?.trim() || cleaned,
-        };
-      }
-      return { raw: cleaned, name: cleaned };
-    });
-}
 
 function parseInstructions(raw: string[]): InstructionStep[] {
   return raw

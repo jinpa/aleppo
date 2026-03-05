@@ -40,3 +40,10 @@ yarn-error.log*
 next-env.d.ts
 
 # drizzle - migration files (including meta/) must be committed so Railway can run them
+
+# local test data (personal recipe exports etc.)
+/scripts/test-data/
+!scripts/test-data/.gitkeep
+
+# emacs backup files
+*~
