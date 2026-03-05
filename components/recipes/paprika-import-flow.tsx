@@ -355,7 +355,7 @@ export function PaprikaImportFlow({ defaultIsPublic }: Props) {
         </h2>
         <p className="text-sm text-stone-500 dark:text-stone-400">{importProgress}</p>
         <p className="text-xs text-stone-400 dark:text-stone-500">
-          This may take a minute for large libraries. Please don't close this page.
+          This may take a minute for large libraries. Please don&apos;t close this page.
         </p>
       </div>
     );
