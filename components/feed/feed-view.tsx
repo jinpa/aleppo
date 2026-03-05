@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Users, ChefHat, Search, CalendarDays } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -38,6 +39,8 @@ interface FeedViewProps {
 }
 
 export function FeedView({ feed, followingCount, followingUsers }: FeedViewProps) {
+  const router = useRouter();
+
   if (followingCount === 0) {
     return (
       <div className="max-w-xl mx-auto space-y-8">
@@ -150,9 +153,9 @@ export function FeedView({ feed, followingCount, followingUsers }: FeedViewProps
                 )}
 
                 {/* Recipe card */}
-                <Link
-                  href={`/recipes/${item.recipe.id}`}
-                  className="block mx-4 mb-4 rounded-xl border border-stone-100 overflow-hidden hover:border-stone-300 transition-colors"
+                <div
+                  onClick={() => router.push(`/recipes/${item.recipe.id}`)}
+                  className="block mx-4 mb-4 rounded-xl border border-stone-100 overflow-hidden hover:border-stone-300 transition-colors cursor-pointer"
                 >
                   {item.recipe.imageUrl && (
                     <div className="relative h-40 w-full">
@@ -192,7 +195,7 @@ export function FeedView({ feed, followingCount, followingUsers }: FeedViewProps
                       </p>
                     )}
                   </div>
-                </Link>
+                </div>
               </div>
             );
           })}

@@ -305,7 +305,7 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
               </Button>
             </div>
           ) : (
-            <label className="flex flex-col items-center justify-center h-32 rounded-xl border-2 border-dashed border-stone-300 cursor-pointer hover:border-stone-400 transition-colors bg-stone-50">
+            <label className="flex flex-col items-center justify-center h-24 rounded-xl border-2 border-dashed border-stone-300 cursor-pointer hover:border-stone-400 transition-colors bg-stone-50">
               {uploading ? (
                 <Loader2 className="h-6 w-6 animate-spin text-stone-400" />
               ) : (
@@ -437,7 +437,7 @@ export function RecipeForm({ initialData, mode }: RecipeFormProps) {
               <div className="flex-1">
                 <Textarea
                   placeholder={`Step ${i + 1}...`}
-                  rows={2}
+                  rows={8}
                   {...register(`instructions.${i}.text`)}
                 />
                 {errors.instructions?.[i]?.text && (

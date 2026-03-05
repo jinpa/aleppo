@@ -640,7 +640,7 @@ export function ImportFlow({
           {instructionFields.map((field, i) => (
             <div key={field.id} className="flex gap-2 items-start">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-stone-900 text-white flex items-center justify-center text-xs font-bold mt-2.5">{i + 1}</div>
-              <Textarea rows={2} placeholder={`Step ${i + 1}...`} {...register(`instructions.${i}.text`)} />
+              <Textarea rows={8} placeholder={`Step ${i + 1}...`} {...register(`instructions.${i}.text`)} />
               {instructionFields.length > 1 && (
                 <Button type="button" variant="ghost" size="icon" onClick={() => removeInstruction(i)} className="text-stone-400 hover:text-red-500 flex-shrink-0">
                   <Trash2 className="h-4 w-4" />
