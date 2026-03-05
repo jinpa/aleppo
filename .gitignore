@@ -44,3 +44,6 @@ next-env.d.ts
 # local test data (personal recipe exports etc.)
 /scripts/test-data/
 !scripts/test-data/.gitkeep
+
+# emacs backup files
+*~
