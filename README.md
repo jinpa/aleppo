@@ -4,6 +4,6 @@ Your cooking diary — save recipes, log every cook, and follow friends to see w
 
 This is the monorepo root.
 
-The web app is in apps/web, see the README.md there.
+The web app is in [apps/web](apps/web/README.md), see the README.md there.
 
 
