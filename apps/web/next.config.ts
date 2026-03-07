@@ -1,6 +1,24 @@
 import type { NextConfig } from "next";
 
+const allowedOrigins =
+  process.env.NODE_ENV === "development"
+    ? ["http://localhost:8081"] // Expo web dev server
+    : [];
+
 const nextConfig: NextConfig = {
+  async headers() {
+    if (allowedOrigins.length === 0) return [];
+    return [
+      {
+        source: "/api/:path*",
+        headers: [
+          { key: "Access-Control-Allow-Origin", value: allowedOrigins.join(",") },
+          { key: "Access-Control-Allow-Methods", value: "GET,POST,PUT,PATCH,DELETE,OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type,Authorization" },
+        ],
+      },
+    ];
+  },
   images: {
     remotePatterns: [
       // R2 storage (production images)
