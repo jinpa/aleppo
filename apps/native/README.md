@@ -24,4 +24,14 @@ Run the commands from the repo root:
    ```bash
    # To start the web app
    pnpm --filter native web
+   ```
 
+   ```bash
+   # To get the start menu with the QR code
+   pnpm --filter native start
+   ```
+
+   ```bash
+   # To start in the iPhone emulator
+   pnpm --filter native ios
+   ```
