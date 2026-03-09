@@ -276,35 +276,27 @@ Any user can generate a shareable invite link from their settings or profile pag
 
 The core product — recipes, URL import, cook log, queue, social, data export — is free with no limits. Monetization is through AI feature access only.
 
-Tier limits and prices are **not hardcoded in the application**. They are read at runtime from `config/ai-tiers.json`, so they can be adjusted without a code deploy. The period can be `"week"`, `"month"`, or `"account"` (lifetime, for a one-time-unlock model).
+Tier limits and prices are **not hardcoded in the application**. They are read at runtime from `config/ai-tiers.json`, so they can be adjusted without a code deploy.
 
 ### Tiers
 
 | Tier | Price | AI Access |
 |------|-------|-----------|
-| **Free** | $0 | Limited trial — quantity, period, and whether saves are allowed are all configured in `ai-tiers.json`. Goal: enough to understand the value, not enough to replace a paid tier. |
-| **Starter** | Configured in `ai-tiers.json` | Full AI access up to a monthly/weekly limit (also configured). For regular home cooks. |
-| **Pro** | Configured in `ai-tiers.json` | Same AI features as Starter at a higher volume limit. For power users and cookbook collectors. |
+| **Free** | $0 | 10 AI imports per month — covers casual use for most users. |
+| **Lifetime** | ~$15 one-time | 500 AI imports per month — covers even heavy cookbook-digitization use; cap exists to deter abuse rather than to generate additional revenue. |
 
 ### Config File Shape (illustrative — actual values TBD)
 
 ```json
 {
   "free": {
-    "limit": 3,
-    "period": "week",
-    "allow_save": true
-  },
-  "starter": {
-    "price_usd": 8,
-    "billing": "month",
-    "limit": 50,
+    "limit": 10,
     "period": "month"
   },
-  "pro": {
-    "price_usd": 18,
-    "billing": "month",
-    "limit": 300,
+  "lifetime": {
+    "price_usd": 15,
+    "billing": "one_time",
+    "limit": 500,
     "period": "month"
   }
 }
@@ -314,8 +306,8 @@ Tier limits and prices are **not hardcoded in the application**. They are read a
 
 - Admin can override any user's tier directly (for beta access, gifts, testing)
 - All AI usage is logged per user for rate-limit enforcement and cost accounting
-- Payment processor: Stripe (TBD; not needed until V2 ships)
-- **Economics**: Gemini Flash costs roughly $0.001 per AI recipe import. Even a Pro-tier power user running 300 AI imports/month costs ~$0.30 in API fees. The subscription model is sustainable at this scale.
+- Payment processor: Stripe (TBD; not needed until V2 ships) — one-time product only, no subscriptions
+- **Economics**: Gemini Flash costs roughly $0.001 per AI recipe import. At 10,000 MAU all hitting the free limit, that's ~$100/month in AI costs — absorbable at early scale. A lifetime user maxing out at 500/month costs $0.50/month in API fees; the $15 one-time fee covers roughly 2.5 years of that worst-case usage.
 
 ---
 
