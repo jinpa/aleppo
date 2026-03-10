@@ -1,27 +1,25 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
-/node_modules
-apps/**/node_modules/
-
-# monorepo build artifacts
-apps/**/.next/
-/.pnp
+node_modules
+.pnp
 .pnp.js
 .yarn/install-state.gz
 
 # testing
-/coverage
-/playwright-report
-/test-results
-/.auth
+coverage
+playwright-report
+test-results
+.auth
 
 # next.js
-/.next/
-/out/
+.next/
+out/
+
+# expo / react-native
+.expo/
+dist/
 
 # production
-/build
+build
 
 # misc
 .DS_Store
@@ -31,6 +29,7 @@ apps/**/.next/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
 # local env files
 .env*.local
@@ -46,7 +45,7 @@ next-env.d.ts
 # drizzle - migration files (including meta/) must be committed so Railway can run them
 
 # local test data (personal recipe exports etc.)
-/scripts/test-data/
+scripts/test-data/
 !scripts/test-data/.gitkeep
 
 # emacs backup files
