@@ -8,11 +8,11 @@ import {
   StyleSheet,
   ActivityIndicator,
   RefreshControl,
-  ScrollView,
   Platform,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 
@@ -97,7 +97,8 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
 }
 
 export default function RecipesScreen() {
-  const { token, signOut } = useAuth();
+  const { token, user, signOut } = useAuth();
+  const router = useRouter();
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -159,8 +160,33 @@ export default function RecipesScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.heading}>My Recipes</Text>
-        <Text style={styles.count}>{recipes.length}</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.heading}>My Recipes</Text>
+          <Text style={styles.count}>{recipes.length}</Text>
+        </View>
+        <TouchableOpacity
+          onPress={() => router.navigate("/profile")}
+          style={styles.avatarButton}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
+          {user?.image ? (
+            <Image
+              source={{ uri: user.image }}
+              style={styles.avatar}
+              contentFit="cover"
+            />
+          ) : (
+            <View style={styles.avatarFallback}>
+              {user?.name ? (
+                <Text style={styles.avatarInitials}>
+                  {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                </Text>
+              ) : (
+                <Ionicons name="person" size={16} color="#78716c" />
+              )}
+            </View>
+          )}
+        </TouchableOpacity>
       </View>
 
       <View style={styles.searchWrapper}>
@@ -176,11 +202,7 @@ export default function RecipesScreen() {
       </View>
 
       {allTags.length > 0 ? (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.tagFilterRow}
-        >
+        <View style={styles.tagFilterRow}>
           {allTags.map((tag) => (
             <TouchableOpacity
               key={tag}
@@ -200,7 +222,7 @@ export default function RecipesScreen() {
               </Text>
             </TouchableOpacity>
           ))}
-        </ScrollView>
+        </View>
       ) : null}
 
       {error ? (
@@ -256,9 +278,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     marginBottom: 12,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   heading: {
     fontSize: 28,
@@ -269,6 +296,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#78716c",
     marginTop: 4,
+  },
+  avatarButton: {
+    borderRadius: 20,
+  },
+  avatar: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+  },
+  avatarFallback: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: "#e7e5e4",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  avatarInitials: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#57534e",
   },
   searchWrapper: {
     paddingHorizontal: 16,
@@ -285,10 +333,12 @@ const styles = StyleSheet.create({
     color: "#1c1917",
   },
   tagFilterRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     paddingHorizontal: 16,
+    paddingTop: 2,
     paddingBottom: 10,
     gap: 6,
-    flexDirection: "row",
   },
   tagFilter: {
     paddingHorizontal: 12,
@@ -297,6 +347,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f4",
     borderWidth: 1,
     borderColor: "#e7e5e4",
+    alignItems: "center",
+    justifyContent: "center",
   },
   tagFilterActive: {
     backgroundColor: "#1c1917",
@@ -306,6 +358,8 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: "#57534e",
     fontWeight: "500",
+    includeFontPadding: false,
+    textAlignVertical: "center",
   },
   tagFilterTextActive: {
     color: "#fff",

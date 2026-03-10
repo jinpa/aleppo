@@ -40,7 +40,7 @@ export default function LoginScreen() {
         return;
       }
 
-      await signIn(data.token);
+      await signIn(data.token, data.user);
       router.replace("/");
     } catch {
       setError("Could not connect to server");

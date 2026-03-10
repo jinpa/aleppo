@@ -61,5 +61,13 @@ export async function POST(req: Request) {
     salt,
   });
 
-  return NextResponse.json({ token });
+  return NextResponse.json({
+    token,
+    user: {
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      image: user.image,
+    },
+  });
 }
