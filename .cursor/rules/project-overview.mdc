@@ -27,8 +27,10 @@ A web-first recipe management app — a "cooking diary" in the spirit of Strava/
 ## Monetization
 
 - Core product is **free, no limits** (recipes, logging, social, import)
-- **One-time ~$18 AI add-on** unlocks V2 AI features (OCR, dish-to-recipe, nutritional info) — no subscription
-- **Free AI trial**: we'll work out some mechanism for users to be able to try AI features (e.g. limited number of uses, or no ability to save) before purchasing.
+- **Free tier**: 10 AI imports per month — covers casual users
+- **Lifetime (~$15 one-time)**: 500 AI imports per month — for heavy users and cookbook digitizers; cap deters abuse, not revenue extraction
+- No subscriptions; Stripe used only for a single one-time product (not needed until V2 AI ships)
+- AI costs (Gemini Flash ~$0.001/import) are low enough to absorb at early scale; the lifetime fee covers costs for power users
 
 ## Key Conventions
 
