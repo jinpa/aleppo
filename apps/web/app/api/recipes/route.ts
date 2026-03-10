@@ -4,6 +4,7 @@ import { eq, desc, and, ilike, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
+import { getUserFromBearerToken } from "@/lib/mobile-auth";
 
 const createSchema = z.object({
   title: z.string().min(1).max(300),
@@ -36,7 +37,9 @@ const createSchema = z.object({
 
 export async function GET(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId =
+    session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -47,14 +50,14 @@ export async function GET(req: Request) {
   let query = db
     .select()
     .from(recipes)
-    .where(eq(recipes.userId, session.user.id))
+    .where(eq(recipes.userId, userId))
     .orderBy(desc(recipes.createdAt))
     .$dynamic();
 
   if (search) {
     query = query.where(
       and(
-        eq(recipes.userId, session.user.id),
+        eq(recipes.userId, userId),
         ilike(recipes.title, `%${search}%`)
       )
     );
@@ -63,7 +66,7 @@ export async function GET(req: Request) {
   if (tag) {
     query = query.where(
       and(
-        eq(recipes.userId, session.user.id),
+        eq(recipes.userId, userId),
         sql`${recipes.tags} @> ARRAY[${tag}]::text[]`
       )
     );
