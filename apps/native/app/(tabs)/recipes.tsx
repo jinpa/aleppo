@@ -105,6 +105,7 @@ export default function RecipesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
+  const [tagsExpanded, setTagsExpanded] = useState(false);
 
   const fetchRecipes = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -148,17 +149,13 @@ export default function RecipesScreen() {
   };
 
   const allTags = Array.from(new Set(recipes.flatMap((r) => r.tags))).sort();
+  const TAG_COLLAPSE_THRESHOLD = 5;
+  const shouldCollapse = allTags.length > TAG_COLLAPSE_THRESHOLD;
+  const visibleTags =
+    shouldCollapse && !tagsExpanded ? allTags.slice(0, TAG_COLLAPSE_THRESHOLD) : allTags;
 
-  if (loading && recipes.length === 0) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#1c1917" />
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.container}>
+  const listHeader = (
+    <View>
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <Text style={styles.heading}>My Recipes</Text>
@@ -203,7 +200,7 @@ export default function RecipesScreen() {
 
       {allTags.length > 0 ? (
         <View style={styles.tagFilterRow}>
-          {allTags.map((tag) => (
+          {visibleTags.map((tag) => (
             <TouchableOpacity
               key={tag}
               style={[
@@ -222,43 +219,65 @@ export default function RecipesScreen() {
               </Text>
             </TouchableOpacity>
           ))}
+          {shouldCollapse && (
+            <TouchableOpacity
+              style={styles.tagFilterToggle}
+              onPress={() => setTagsExpanded((v) => !v)}
+            >
+              <Text style={styles.tagFilterToggleText}>
+                {tagsExpanded
+                  ? "Show less"
+                  : `+ ${allTags.length - TAG_COLLAPSE_THRESHOLD} more`}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       ) : null}
-
-      {error ? (
-        <View style={styles.center}>
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => fetchRecipes()}
-          >
-            <Text style={styles.retryText}>Try again</Text>
-          </TouchableOpacity>
-        </View>
-      ) : recipes.length === 0 ? (
-        <View style={styles.center}>
-          <Text style={styles.emptyTitle}>No recipes yet</Text>
-          <Text style={styles.emptySubtitle}>
-            Import a recipe from a URL to get started.
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={recipes}
-          keyExtractor={(r) => r.id}
-          renderItem={({ item }) => <RecipeCard recipe={item} />}
-          contentContainerStyle={styles.list}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#1c1917"
-            />
-          }
-        />
-      )}
     </View>
+  );
+
+  const listEmpty = loading ? (
+    <View style={styles.emptyContainer}>
+      <ActivityIndicator size="large" color="#1c1917" />
+    </View>
+  ) : error ? (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.errorText}>{error}</Text>
+      <TouchableOpacity
+        style={styles.retryButton}
+        onPress={() => fetchRecipes()}
+      >
+        <Text style={styles.retryText}>Try again</Text>
+      </TouchableOpacity>
+    </View>
+  ) : (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyTitle}>No recipes yet</Text>
+      <Text style={styles.emptySubtitle}>
+        Import a recipe from a URL to get started.
+      </Text>
+    </View>
+  );
+
+  return (
+    <FlatList
+      style={styles.container}
+      data={recipes}
+      keyExtractor={(r) => r.id}
+      renderItem={({ item }) => <RecipeCard recipe={item} />}
+      ListHeaderComponent={listHeader}
+      ListEmptyComponent={listEmpty}
+      ItemSeparatorComponent={() => <View style={styles.separator} />}
+      contentContainerStyle={styles.list}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor="#1c1917"
+        />
+      }
+    />
   );
 }
 
@@ -266,11 +285,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#fafaf9",
-    paddingTop: Platform.OS === "ios" ? 60 : 24,
   },
-  center: {
-    flex: 1,
-    justifyContent: "center",
+  emptyContainer: {
+    paddingTop: 80,
     alignItems: "center",
     gap: 12,
     paddingHorizontal: 32,
@@ -280,6 +297,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
+    paddingTop: Platform.OS === "ios" ? 60 : 24,
     marginBottom: 12,
   },
   headerLeft: {
@@ -364,12 +382,31 @@ const styles = StyleSheet.create({
   tagFilterTextActive: {
     color: "#fff",
   },
+  tagFilterToggle: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#d6d3d1",
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tagFilterToggleText: {
+    fontSize: 13,
+    color: "#a8a29e",
+    fontWeight: "500",
+    includeFontPadding: false,
+    textAlignVertical: "center",
+  },
   list: {
-    paddingHorizontal: 16,
     paddingBottom: 32,
-    gap: 12,
+  },
+  separator: {
+    height: 12,
   },
   card: {
+    marginHorizontal: 16,
     backgroundColor: "#fff",
     borderRadius: 12,
     borderWidth: 1,
