@@ -1,15 +1,17 @@
 import { NextResponse } from "next/server";
 import { eq, and, count } from "drizzle-orm";
 import { auth } from "@/auth";
+import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { users, recipes, cookLogs, follows } from "@/db/schema";
 
 export async function GET(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const session = await auth();
+  const viewerId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
 
   const [user] = await db
     .select({
@@ -28,7 +30,7 @@ export async function GET(
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const isOwner = session?.user?.id === id;
+  const isOwner = viewerId === id;
 
   // Only show non-public profiles to their owner
   if (!user.isPublic && !isOwner) {
@@ -60,13 +62,13 @@ export async function GET(
     .where(eq(follows.followerId, id));
 
   let isFollowing = false;
-  if (session?.user?.id && !isOwner) {
+  if (viewerId && !isOwner) {
     const [f] = await db
       .select({ followerId: follows.followerId })
       .from(follows)
       .where(
         and(
-          eq(follows.followerId, session.user.id),
+          eq(follows.followerId, viewerId!),
           eq(follows.followingId, id)
         )
       )

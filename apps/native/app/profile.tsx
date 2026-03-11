@@ -97,13 +97,13 @@ export default function ProfileScreen() {
         <Row
           icon="settings-outline"
           label="Settings"
-          onPress={() => {}}
+          onPress={() => router.push("/settings")}
         />
         <View style={styles.divider} />
         <Row
           icon="person-outline"
           label="View public profile"
-          onPress={() => {}}
+          onPress={() => user?.id && router.push(`/u/${user.id}`)}
         />
       </View>
 

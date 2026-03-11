@@ -158,19 +158,9 @@ const tabStyles = StyleSheet.create({
     paddingBottom: Platform.OS === "ios" ? 28 : 8,
     paddingTop: 8,
   },
-  tab: {
-    flex: 1,
-    alignItems: "center",
-    gap: 2,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: "500",
-    color: "#a8a29e",
-  },
-  labelAmber: {
-    color: "#d97706",
-  },
+  tab: { flex: 1, alignItems: "center", gap: 2 },
+  label: { fontSize: 11, fontWeight: "500", color: "#a8a29e" },
+  labelAmber: { color: "#d97706" },
 });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -199,7 +189,6 @@ export default function RecipeDetailScreen() {
 
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
-  const [showComingSoon, setShowComingSoon] = useState(false);
 
   const [showLogModal, setShowLogModal] = useState(false);
   const [logDate, setLogDate] = useState(todayString);
@@ -259,7 +248,7 @@ export default function RecipeDetailScreen() {
         },
         body: JSON.stringify({ recipeId: detail.recipe.id }),
       });
-      if (!res.ok) setInQueue(wasInQueue); // revert on error
+      if (!res.ok) setInQueue(wasInQueue);
     } catch {
       setInQueue(wasInQueue);
     } finally {
@@ -422,11 +411,7 @@ export default function RecipeDetailScreen() {
           style={styles.backButton}
         >
           {user?.image ? (
-            <Image
-              source={{ uri: user.image }}
-              style={styles.avatarImg}
-              contentFit="cover"
-            />
+            <Image source={{ uri: user.image }} style={styles.avatarImg} contentFit="cover" />
           ) : (
             <Ionicons name="person-outline" size={20} color="#1c1917" />
           )}
@@ -435,12 +420,7 @@ export default function RecipeDetailScreen() {
 
       {/* Hero image */}
       {recipe.imageUrl ? (
-        <Image
-          source={{ uri: recipe.imageUrl }}
-          style={styles.heroImage}
-          contentFit="cover"
-          transition={300}
-        />
+        <Image source={{ uri: recipe.imageUrl }} style={styles.heroImage} contentFit="cover" transition={300} />
       ) : null}
 
       <View style={styles.content}>
@@ -451,7 +431,7 @@ export default function RecipeDetailScreen() {
             <View style={styles.ownerActions}>
               <TouchableOpacity
                 style={styles.iconButton}
-                onPress={() => setShowComingSoon(true)}
+                onPress={() => router.push(`/recipes/${id}/edit`)}
               >
                 <Ionicons name="pencil-outline" size={18} color="#78716c" />
               </TouchableOpacity>
@@ -475,23 +455,9 @@ export default function RecipeDetailScreen() {
           ) : null}
 
           {scaledServings ? (
-            <View
-              style={[
-                styles.metaChip,
-                scaleFactor !== 1 && styles.metaChipAmber,
-              ]}
-            >
-              <Ionicons
-                name="people-outline"
-                size={13}
-                color={scaleFactor !== 1 ? "#92400e" : "#78716c"}
-              />
-              <Text
-                style={[
-                  styles.metaChipText,
-                  scaleFactor !== 1 && styles.metaChipTextAmber,
-                ]}
-              >
+            <View style={[styles.metaChip, scaleFactor !== 1 && styles.metaChipAmber]}>
+              <Ionicons name="people-outline" size={13} color={scaleFactor !== 1 ? "#92400e" : "#78716c"} />
+              <Text style={[styles.metaChipText, scaleFactor !== 1 && styles.metaChipTextAmber]}>
                 {scaledServings} servings
               </Text>
             </View>
@@ -500,40 +466,23 @@ export default function RecipeDetailScreen() {
           {cookCount > 0 ? (
             <View style={[styles.metaChip, styles.metaChipAmber]}>
               <Ionicons name="checkmark-circle-outline" size={13} color="#92400e" />
-              <Text style={[styles.metaChipText, styles.metaChipTextAmber]}>
-                Made {cookCount}×
-              </Text>
+              <Text style={[styles.metaChipText, styles.metaChipTextAmber]}>Made {cookCount}×</Text>
             </View>
           ) : null}
 
           {isOwner ? (
-            <TouchableOpacity
-              style={styles.metaChip}
-              onPress={toggleVisibility}
-              disabled={visibilityLoading}
-            >
-              <Ionicons
-                name={isPublic ? "globe-outline" : "lock-closed-outline"}
-                size={13}
-                color="#78716c"
-              />
-              <Text style={styles.metaChipText}>
-                {isPublic ? "Public" : "Private"}
-              </Text>
+            <TouchableOpacity style={styles.metaChip} onPress={toggleVisibility} disabled={visibilityLoading}>
+              <Ionicons name={isPublic ? "globe-outline" : "lock-closed-outline"} size={13} color="#78716c" />
+              <Text style={styles.metaChipText}>{isPublic ? "Public" : "Private"}</Text>
             </TouchableOpacity>
           ) : null}
         </View>
 
         {/* Source link */}
         {recipe.sourceUrl ? (
-          <TouchableOpacity
-            onPress={() => Linking.openURL(recipe.sourceUrl!)}
-            style={styles.sourceLink}
-          >
+          <TouchableOpacity onPress={() => Linking.openURL(recipe.sourceUrl!)} style={styles.sourceLink}>
             <Ionicons name="link-outline" size={13} color="#78716c" />
-            <Text style={styles.sourceLinkText} numberOfLines={1}>
-              {recipe.sourceName ?? "Source"}
-            </Text>
+            <Text style={styles.sourceLinkText} numberOfLines={1}>{recipe.sourceName ?? "Source"}</Text>
             <Ionicons name="open-outline" size={12} color="#a8a29e" />
           </TouchableOpacity>
         ) : null}
@@ -556,17 +505,8 @@ export default function RecipeDetailScreen() {
             onPress={toggleQueue}
             disabled={queueLoading}
           >
-            <Ionicons
-              name={inQueue ? "bookmark" : "bookmark-outline"}
-              size={16}
-              color={inQueue ? "#fff" : "#1c1917"}
-            />
-            <Text
-              style={[
-                styles.actionButtonText,
-                inQueue && styles.actionButtonTextActive,
-              ]}
-            >
+            <Ionicons name={inQueue ? "bookmark" : "bookmark-outline"} size={16} color={inQueue ? "#fff" : "#1c1917"} />
+            <Text style={[styles.actionButtonText, inQueue && styles.actionButtonTextActive]}>
               {inQueue ? "In queue" : "Want to cook"}
             </Text>
           </TouchableOpacity>
@@ -601,18 +541,10 @@ export default function RecipeDetailScreen() {
                 {SCALE_PRESETS.map((p) => (
                   <TouchableOpacity
                     key={p.label}
-                    style={[
-                      styles.scalePreset,
-                      scaleFactor === p.value && styles.scalePresetActive,
-                    ]}
+                    style={[styles.scalePreset, scaleFactor === p.value && styles.scalePresetActive]}
                     onPress={() => applyScale(p.value)}
                   >
-                    <Text
-                      style={[
-                        styles.scalePresetText,
-                        scaleFactor === p.value && styles.scalePresetTextActive,
-                      ]}
-                    >
+                    <Text style={[styles.scalePresetText, scaleFactor === p.value && styles.scalePresetTextActive]}>
                       {p.label}
                     </Text>
                   </TouchableOpacity>
@@ -630,10 +562,7 @@ export default function RecipeDetailScreen() {
             </View>
 
             {recipe.ingredients.map((ing, i) => {
-              const scaled =
-                scaleFactor !== 1
-                  ? scaleIngredient(ing, scaleFactor) ?? ing.raw
-                  : ing.raw;
+              const scaled = scaleFactor !== 1 ? scaleIngredient(ing, scaleFactor) ?? ing.raw : ing.raw;
               return (
                 <View key={i} style={styles.ingredientRow}>
                   <View style={styles.ingredientBullet} />
@@ -647,9 +576,7 @@ export default function RecipeDetailScreen() {
         {/* Instructions */}
         {recipe.instructions.length > 0 ? (
           <>
-            <Text style={[styles.sectionTitle, { marginTop: 28, marginBottom: 12 }]}>
-              Instructions
-            </Text>
+            <Text style={[styles.sectionTitle, { marginTop: 28, marginBottom: 12 }]}>Instructions</Text>
             {recipe.instructions.map((step) => (
               <View key={step.step} style={styles.instructionRow}>
                 <View style={styles.stepBadge}>
@@ -673,9 +600,7 @@ export default function RecipeDetailScreen() {
         {isOwner || cookLogs.length > 0 ? (
           <>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { marginTop: 0 }]}>
-                Cook history
-              </Text>
+              <Text style={[styles.sectionTitle, { marginTop: 0 }]}>Cook history</Text>
             </View>
 
             {cookLogs.length === 0 && isOwner ? (
@@ -688,15 +613,10 @@ export default function RecipeDetailScreen() {
                 <View key={log.id} style={styles.logCard}>
                   <View style={styles.logCardBody}>
                     <Text style={styles.logDate}>{formatDate(log.cookedOn)}</Text>
-                    {log.notes ? (
-                      <Text style={styles.logNotes}>{log.notes}</Text>
-                    ) : null}
+                    {log.notes ? <Text style={styles.logNotes}>{log.notes}</Text> : null}
                   </View>
                   {isOwner ? (
-                    <TouchableOpacity
-                      onPress={() => deleteLog(log.id)}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
+                    <TouchableOpacity onPress={() => deleteLog(log.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                       <Ionicons name="trash-outline" size={18} color="#a8a29e" />
                     </TouchableOpacity>
                   ) : null}
@@ -721,31 +641,16 @@ export default function RecipeDetailScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor="#1c1917"
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1c1917" />
           }
         />
         <TabBar />
       </View>
 
       {/* Cook Log Modal */}
-      <Modal
-        visible={showLogModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowLogModal(false)}
-      >
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={() => setShowLogModal(false)}
-        />
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalWrapper}
-        >
+      <Modal visible={showLogModal} transparent animationType="slide" onRequestClose={() => setShowLogModal(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => setShowLogModal(false)} />
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalWrapper}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <Text style={styles.modalTitle}>Log a cook</Text>
@@ -773,15 +678,10 @@ export default function RecipeDetailScreen() {
             />
             <Text style={styles.charCount}>{logNotes.length}/500</Text>
 
-            {logError ? (
-              <Text style={styles.logErrorText}>{logError}</Text>
-            ) : null}
+            {logError ? <Text style={styles.logErrorText}>{logError}</Text> : null}
 
             <TouchableOpacity
-              style={[
-                styles.modalSubmit,
-                logSubmitting && styles.modalSubmitDisabled,
-              ]}
+              style={[styles.modalSubmit, logSubmitting && styles.modalSubmitDisabled]}
               onPress={submitLog}
               disabled={logSubmitting}
             >
@@ -792,10 +692,7 @@ export default function RecipeDetailScreen() {
               )}
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.modalCancel}
-              onPress={() => setShowLogModal(false)}
-            >
+            <TouchableOpacity style={styles.modalCancel} onPress={() => setShowLogModal(false)}>
               <Text style={styles.modalCancelText}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -803,16 +700,8 @@ export default function RecipeDetailScreen() {
       </Modal>
 
       {/* Delete confirmation modal */}
-      <Modal
-        visible={showDeleteConfirm}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowDeleteConfirm(false)}
-      >
-        <Pressable
-          style={styles.centeredModalBackdrop}
-          onPress={() => !deleteLoading && setShowDeleteConfirm(false)}
-        />
+      <Modal visible={showDeleteConfirm} transparent animationType="fade" onRequestClose={() => setShowDeleteConfirm(false)}>
+        <Pressable style={styles.centeredModalBackdrop} onPress={() => !deleteLoading && setShowDeleteConfirm(false)} />
         <View style={styles.centeredModalWrapper} pointerEvents="box-none">
           <View style={styles.centeredModalCard}>
             <Text style={styles.centeredModalTitle}>Delete recipe</Text>
@@ -828,10 +717,7 @@ export default function RecipeDetailScreen() {
                 <Text style={styles.centeredModalCancelText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[
-                  styles.centeredModalDestructive,
-                  deleteLoading && styles.modalSubmitDisabled,
-                ]}
+                style={[styles.centeredModalDestructive, deleteLoading && styles.modalSubmitDisabled]}
                 onPress={confirmDelete}
                 disabled={deleteLoading}
               >
@@ -845,33 +731,6 @@ export default function RecipeDetailScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* Coming soon modal */}
-      <Modal
-        visible={showComingSoon}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowComingSoon(false)}
-      >
-        <Pressable
-          style={styles.centeredModalBackdrop}
-          onPress={() => setShowComingSoon(false)}
-        />
-        <View style={styles.centeredModalWrapper} pointerEvents="box-none">
-          <View style={styles.centeredModalCard}>
-            <Text style={styles.centeredModalTitle}>Coming soon</Text>
-            <Text style={styles.centeredModalBody}>
-              Recipe editing is not yet available in the app.
-            </Text>
-            <TouchableOpacity
-              style={styles.centeredModalOk}
-              onPress={() => setShowComingSoon(false)}
-            >
-              <Text style={styles.centeredModalOkText}>OK</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </>
   );
 }
@@ -879,551 +738,168 @@ export default function RecipeDetailScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#fafaf9",
-  },
-  listContent: {
-    paddingBottom: Platform.OS === "ios" ? 32 : 16,
-  },
-  centered: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 32,
-  },
-  avatarImg: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-  },
-  errorText: {
-    fontSize: 15,
-    color: "#b91c1c",
-    textAlign: "center",
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#d6d3d1",
-  },
-  retryText: {
-    fontSize: 14,
-    color: "#57534e",
-  },
-
-  // Back row
+  container: { flex: 1, backgroundColor: "#fafaf9" },
+  listContent: { paddingBottom: Platform.OS === "ios" ? 32 : 16 },
+  centered: { flex: 1, justifyContent: "center", alignItems: "center", gap: 12, paddingHorizontal: 32 },
+  avatarImg: { width: 28, height: 28, borderRadius: 14 },
+  errorText: { fontSize: 15, color: "#b91c1c", textAlign: "center" },
+  retryButton: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 8, borderWidth: 1, borderColor: "#d6d3d1" },
+  retryText: { fontSize: 14, color: "#57534e" },
   backRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: Platform.OS === "ios" ? 60 : 24,
-    paddingHorizontal: 16,
-    paddingBottom: 8,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingTop: Platform.OS === "ios" ? 60 : 24, paddingHorizontal: 16, paddingBottom: 8,
   },
   backButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
-    justifyContent: "center",
-    alignItems: "center",
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: "#fff", borderWidth: 1, borderColor: "#e7e5e4",
+    justifyContent: "center", alignItems: "center",
   },
-
-  // Hero image
-  heroImage: {
-    width: "100%",
-    height: 240,
-  },
-
-  // Content padding
-  content: {
-    paddingHorizontal: 16,
-    paddingTop: 16,
-  },
-
-  // Title row
+  heroImage: { width: "100%", height: 240 },
+  content: { paddingHorizontal: 16, paddingTop: 16 },
   titleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    justifyContent: "space-between",
-    gap: 12,
-    marginBottom: 12,
+    flexDirection: "row", alignItems: "flex-start",
+    justifyContent: "space-between", gap: 12, marginBottom: 12,
   },
-  title: {
-    flex: 1,
-    fontSize: 26,
-    fontWeight: "700",
-    color: "#1c1917",
-    lineHeight: 32,
-  },
-  ownerActions: {
-    flexDirection: "row",
-    gap: 4,
-    paddingTop: 4,
-  },
+  title: { flex: 1, fontSize: 26, fontWeight: "700", color: "#1c1917", lineHeight: 32 },
+  ownerActions: { flexDirection: "row", gap: 4, paddingTop: 4 },
   iconButton: {
-    width: 34,
-    height: 34,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
-    backgroundColor: "#fff",
-    justifyContent: "center",
-    alignItems: "center",
+    width: 34, height: 34, borderRadius: 8,
+    borderWidth: 1, borderColor: "#e7e5e4", backgroundColor: "#fff",
+    justifyContent: "center", alignItems: "center",
   },
-
-  // Meta chips
-  metaRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginBottom: 10,
-  },
+  metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 },
   metaChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#f5f5f4",
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    flexDirection: "row", alignItems: "center", gap: 4,
+    backgroundColor: "#f5f5f4", borderWidth: 1, borderColor: "#e7e5e4",
+    borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4,
   },
-  metaChipAmber: {
-    backgroundColor: "#fef3c7",
-    borderColor: "#fde68a",
-  },
-  metaChipText: {
-    fontSize: 13,
-    color: "#78716c",
-    fontWeight: "500",
-  },
-  metaChipTextAmber: {
-    color: "#92400e",
-  },
-
-  // Source link
-  sourceLink: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginBottom: 12,
-  },
-  sourceLinkText: {
-    fontSize: 13,
-    color: "#78716c",
-    textDecorationLine: "underline",
-    flex: 1,
-  },
-
-  // Tags
-  tagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 6,
-    marginBottom: 16,
-  },
+  metaChipAmber: { backgroundColor: "#fef3c7", borderColor: "#fde68a" },
+  metaChipText: { fontSize: 13, color: "#78716c", fontWeight: "500" },
+  metaChipTextAmber: { color: "#92400e" },
+  sourceLink: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 },
+  sourceLinkText: { fontSize: 13, color: "#78716c", textDecorationLine: "underline", flex: 1 },
+  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 },
   tag: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    backgroundColor: "#f5f5f4",
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
+    paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
+    backgroundColor: "#f5f5f4", borderWidth: 1, borderColor: "#e7e5e4",
   },
-  tagText: {
-    fontSize: 13,
-    color: "#57534e",
-    fontWeight: "500",
-  },
-
-  // Action buttons
-  actionRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 20,
-  },
+  tagText: { fontSize: 13, color: "#57534e", fontWeight: "500" },
+  actionRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
   actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
-    backgroundColor: "#fff",
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 14, paddingVertical: 9,
+    borderRadius: 8, borderWidth: 1, borderColor: "#e7e5e4", backgroundColor: "#fff",
   },
-  actionButtonActive: {
-    backgroundColor: "#1c1917",
-    borderColor: "#1c1917",
-  },
-  actionButtonText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#1c1917",
-  },
-  actionButtonTextActive: {
-    color: "#fff",
-  },
+  actionButtonActive: { backgroundColor: "#1c1917", borderColor: "#1c1917" },
+  actionButtonText: { fontSize: 14, fontWeight: "500", color: "#1c1917" },
+  actionButtonTextActive: { color: "#fff" },
   actionButtonFilled: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 8,
-    backgroundColor: "#1c1917",
+    flexDirection: "row", alignItems: "center", gap: 6,
+    paddingHorizontal: 14, paddingVertical: 9, borderRadius: 8, backgroundColor: "#1c1917",
   },
-  actionButtonFilledText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#fff",
-  },
-
-  // Description
-  description: {
-    fontSize: 15,
-    color: "#44403c",
-    lineHeight: 22,
-    marginBottom: 24,
-  },
-
-  // Section header (title + controls inline)
+  actionButtonFilledText: { fontSize: 14, fontWeight: "500", color: "#fff" },
+  description: { fontSize: 15, color: "#44403c", lineHeight: 22, marginBottom: 24 },
   sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginTop: 24,
-    marginBottom: 12,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    marginTop: 24, marginBottom: 12,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1c1917",
-  },
-
-  // Scale controls
-  scaleControls: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#1c1917" },
+  scaleControls: { flexDirection: "row", alignItems: "center", gap: 4 },
   scalePreset: {
-    paddingHorizontal: 9,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
-    backgroundColor: "#fff",
+    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 6,
+    borderWidth: 1, borderColor: "#e7e5e4", backgroundColor: "#fff",
   },
-  scalePresetActive: {
-    backgroundColor: "#1c1917",
-    borderColor: "#1c1917",
-  },
-  scalePresetText: {
-    fontSize: 12,
-    fontWeight: "500",
-    color: "#57534e",
-  },
-  scalePresetTextActive: {
-    color: "#fff",
-  },
+  scalePresetActive: { backgroundColor: "#1c1917", borderColor: "#1c1917" },
+  scalePresetText: { fontSize: 12, fontWeight: "500", color: "#57534e" },
+  scalePresetTextActive: { color: "#fff" },
   scaleInput: {
-    width: 40,
-    paddingHorizontal: 6,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
-    backgroundColor: "#fff",
-    fontSize: 12,
-    color: "#1c1917",
-    textAlign: "center",
+    width: 40, paddingHorizontal: 6, paddingVertical: 4,
+    borderRadius: 6, borderWidth: 1, borderColor: "#e7e5e4",
+    backgroundColor: "#fff", fontSize: 12, color: "#1c1917", textAlign: "center",
   },
-
-  // Ingredients
   ingredientRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    paddingVertical: 5,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f5f5f4",
+    flexDirection: "row", alignItems: "flex-start", gap: 10,
+    paddingVertical: 5, borderBottomWidth: 1, borderBottomColor: "#f5f5f4",
   },
   ingredientBullet: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: "#d97706",
-    marginTop: 8,
-    flexShrink: 0,
+    width: 6, height: 6, borderRadius: 3, backgroundColor: "#d97706",
+    marginTop: 8, flexShrink: 0,
   },
-  ingredientText: {
-    flex: 1,
-    fontSize: 15,
-    color: "#1c1917",
-    lineHeight: 22,
-  },
-
-  // Instructions
-  instructionRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    marginBottom: 16,
-  },
+  ingredientText: { flex: 1, fontSize: 15, color: "#1c1917", lineHeight: 22 },
+  instructionRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, marginBottom: 16 },
   stepBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "#1c1917",
-    justifyContent: "center",
-    alignItems: "center",
-    flexShrink: 0,
-    marginTop: 1,
+    width: 28, height: 28, borderRadius: 14, backgroundColor: "#1c1917",
+    justifyContent: "center", alignItems: "center", flexShrink: 0, marginTop: 1,
   },
-  stepNumber: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  instructionText: {
-    flex: 1,
-    fontSize: 15,
-    color: "#1c1917",
-    lineHeight: 22,
-  },
-
-  // Notes
-  notesBox: {
-    backgroundColor: "#fef3c7",
-    borderRadius: 10,
-    padding: 14,
-    marginTop: 20,
-    marginBottom: 4,
-  },
+  stepNumber: { fontSize: 13, fontWeight: "700", color: "#fff" },
+  instructionText: { flex: 1, fontSize: 15, color: "#1c1917", lineHeight: 22 },
+  notesBox: { backgroundColor: "#fef3c7", borderRadius: 10, padding: 14, marginTop: 20, marginBottom: 4 },
   notesLabel: {
-    fontSize: 12,
-    fontWeight: "700",
-    color: "#92400e",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginBottom: 6,
+    fontSize: 12, fontWeight: "700", color: "#92400e",
+    textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 6,
   },
-  notesText: {
-    fontSize: 14,
-    color: "#78350f",
-    lineHeight: 20,
-  },
-
-  // Cook history
+  notesText: { fontSize: 14, color: "#78350f", lineHeight: 20 },
   emptyLogs: {
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
-    borderStyle: "dashed",
-    borderRadius: 10,
-    paddingVertical: 24,
-    alignItems: "center",
-    gap: 8,
-    marginTop: 8,
+    borderWidth: 1, borderColor: "#e7e5e4", borderStyle: "dashed",
+    borderRadius: 10, paddingVertical: 24, alignItems: "center", gap: 8, marginTop: 8,
   },
-  emptyLogsText: {
-    fontSize: 14,
-    color: "#a8a29e",
-  },
+  emptyLogsText: { fontSize: 14, color: "#a8a29e" },
   logCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 8,
+    flexDirection: "row", alignItems: "center", backgroundColor: "#fff",
+    borderWidth: 1, borderColor: "#e7e5e4", borderRadius: 10, padding: 12, marginBottom: 8,
   },
-  logCardBody: {
-    flex: 1,
-    gap: 3,
-  },
-  logDate: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#1c1917",
-  },
-  logNotes: {
-    fontSize: 13,
-    color: "#78716c",
-    lineHeight: 18,
-  },
-
-  // Modal
-  modalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
-  },
-  modalWrapper: {
-    flex: 1,
-    justifyContent: "flex-end",
-  },
+  logCardBody: { flex: 1, gap: 3 },
+  logDate: { fontSize: 14, fontWeight: "600", color: "#1c1917" },
+  logNotes: { fontSize: 13, color: "#78716c", lineHeight: 18 },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.4)" },
+  modalWrapper: { flex: 1, justifyContent: "flex-end" },
   modalSheet: {
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
-    paddingBottom: Platform.OS === "ios" ? 40 : 24,
+    backgroundColor: "#fff", borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 20, paddingBottom: Platform.OS === "ios" ? 40 : 24,
   },
   modalHandle: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "#d6d3d1",
-    alignSelf: "center",
-    marginBottom: 16,
+    width: 36, height: 4, borderRadius: 2, backgroundColor: "#d6d3d1",
+    alignSelf: "center", marginBottom: 16,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#1c1917",
-    marginBottom: 16,
-  },
-  modalLabel: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#57534e",
-    marginBottom: 6,
-  },
+  modalTitle: { fontSize: 18, fontWeight: "700", color: "#1c1917", marginBottom: 16 },
+  modalLabel: { fontSize: 13, fontWeight: "600", color: "#57534e", marginBottom: 6 },
   modalInput: {
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    fontSize: 15,
-    color: "#1c1917",
-    backgroundColor: "#fafaf9",
-    marginBottom: 14,
+    borderWidth: 1, borderColor: "#e7e5e4", borderRadius: 8,
+    paddingHorizontal: 12, paddingVertical: 9, fontSize: 15, color: "#1c1917",
+    backgroundColor: "#fafaf9", marginBottom: 14,
   },
-  modalTextarea: {
-    height: 90,
-    marginBottom: 4,
-  },
-  charCount: {
-    fontSize: 11,
-    color: "#a8a29e",
-    textAlign: "right",
-    marginBottom: 12,
-  },
-  logErrorText: {
-    fontSize: 13,
-    color: "#b91c1c",
-    marginBottom: 10,
-  },
+  modalTextarea: { height: 90, marginBottom: 4 },
+  charCount: { fontSize: 11, color: "#a8a29e", textAlign: "right", marginBottom: 12 },
+  logErrorText: { fontSize: 13, color: "#b91c1c", marginBottom: 10 },
   modalSubmit: {
-    backgroundColor: "#1c1917",
-    borderRadius: 10,
-    paddingVertical: 13,
-    alignItems: "center",
-    marginBottom: 10,
+    backgroundColor: "#1c1917", borderRadius: 10,
+    paddingVertical: 13, alignItems: "center", marginBottom: 10,
   },
-  modalSubmitDisabled: {
-    opacity: 0.6,
-  },
-  modalSubmitText: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  modalCancel: {
-    paddingVertical: 10,
-    alignItems: "center",
-  },
-  modalCancelText: {
-    fontSize: 15,
-    color: "#78716c",
-  },
-
-  // Centered alert-style modals (delete confirm, coming soon)
-  centeredModalBackdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.45)",
-  },
+  modalSubmitDisabled: { opacity: 0.6 },
+  modalSubmitText: { fontSize: 15, fontWeight: "600", color: "#fff" },
+  modalCancel: { paddingVertical: 10, alignItems: "center" },
+  modalCancelText: { fontSize: 15, color: "#78716c" },
+  centeredModalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.45)" },
   centeredModalWrapper: {
-    ...StyleSheet.absoluteFillObject,
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 32,
+    ...StyleSheet.absoluteFillObject, justifyContent: "center",
+    alignItems: "center", paddingHorizontal: 32,
   },
   centeredModalCard: {
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    padding: 20,
-    width: "100%",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
+    backgroundColor: "#fff", borderRadius: 16, padding: 20, width: "100%",
+    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
   },
-  centeredModalTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    color: "#1c1917",
-    marginBottom: 8,
-  },
-  centeredModalBody: {
-    fontSize: 14,
-    color: "#57534e",
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  centeredModalActions: {
-    flexDirection: "row",
-    gap: 10,
-    justifyContent: "flex-end",
-  },
+  centeredModalTitle: { fontSize: 17, fontWeight: "700", color: "#1c1917", marginBottom: 8 },
+  centeredModalBody: { fontSize: 14, color: "#57534e", lineHeight: 20, marginBottom: 20 },
+  centeredModalActions: { flexDirection: "row", gap: 10, justifyContent: "flex-end" },
   centeredModalCancel: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
+    paddingHorizontal: 16, paddingVertical: 10,
+    borderRadius: 8, borderWidth: 1, borderColor: "#e7e5e4",
   },
-  centeredModalCancelText: {
-    fontSize: 14,
-    fontWeight: "500",
-    color: "#57534e",
-  },
+  centeredModalCancelText: { fontSize: 14, fontWeight: "500", color: "#57534e" },
   centeredModalDestructive: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: "#b91c1c",
-    minWidth: 70,
-    alignItems: "center",
+    paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8,
+    backgroundColor: "#b91c1c", minWidth: 70, alignItems: "center",
   },
-  centeredModalDestructiveText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-  },
-  centeredModalOk: {
-    alignSelf: "flex-end",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: "#1c1917",
-  },
-  centeredModalOkText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#fff",
-  },
+  centeredModalDestructiveText: { fontSize: 14, fontWeight: "600", color: "#fff" },
 });

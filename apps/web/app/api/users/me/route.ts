@@ -3,6 +3,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { auth } from "@/auth";
+import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 
@@ -17,9 +18,10 @@ const updateSchema = z.object({
   newPassword: z.string().min(8).max(100).optional(),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -37,7 +39,7 @@ export async function GET() {
       hasPassword: users.passwordHash,
     })
     .from(users)
-    .where(eq(users.id, session.user.id))
+    .where(eq(users.id, userId))
     .limit(1);
 
   if (!user) {
@@ -52,7 +54,8 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -75,7 +78,7 @@ export async function PATCH(req: Request) {
     const [user] = await db
       .select({ passwordHash: users.passwordHash })
       .from(users)
-      .where(eq(users.id, session.user.id))
+      .where(eq(users.id, userId))
       .limit(1);
 
     if (!user?.passwordHash) {
@@ -97,14 +100,14 @@ export async function PATCH(req: Request) {
     await db
       .update(users)
       .set({ passwordHash, updatedAt: new Date() })
-      .where(eq(users.id, session.user.id));
+      .where(eq(users.id, userId));
   }
 
   if (Object.keys(updates).length > 0) {
     await db
       .update(users)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(users.id, session.user.id));
+      .where(eq(users.id, userId));
   }
 
   return NextResponse.json({ success: true });

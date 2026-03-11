@@ -1,19 +1,21 @@
 import { NextResponse } from "next/server";
 import { eq, desc, inArray, and } from "drizzle-orm";
 import { auth } from "@/auth";
+import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { cookLogs, recipes, users, follows } from "@/db/schema";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const following = await db
     .select({ followingId: follows.followingId })
     .from(follows)
-    .where(eq(follows.followerId, session.user.id));
+    .where(eq(follows.followerId, userId));
 
   if (following.length === 0) {
     return NextResponse.json([]);

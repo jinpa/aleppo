@@ -50,3 +50,7 @@ scripts/test-data/
 
 # emacs backup files
 *~
+
+# claude code settings
+.claude/settings.json
+.claude/settings.local.json

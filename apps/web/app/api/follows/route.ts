@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@/auth";
+import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { follows, users } from "@/db/schema";
 
@@ -10,7 +11,8 @@ const schema = z.object({ followingId: z.string() });
 export async function POST(req: Request) {
   try {
     const session = await auth();
-    if (!session?.user?.id) {
+    const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -20,7 +22,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid data" }, { status: 400 });
     }
 
-    if (parsed.data.followingId === session.user.id) {
+    if (parsed.data.followingId === userId) {
       return NextResponse.json(
         { error: "Cannot follow yourself" },
         { status: 400 }
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
     await db
       .insert(follows)
       .values({
-        followerId: session.user.id,
+        followerId: userId,
         followingId: parsed.data.followingId,
       })
       .onConflictDoNothing();
@@ -59,7 +61,8 @@ export async function POST(req: Request) {
 export async function DELETE(req: Request) {
   try {
     const session = await auth();
-    if (!session?.user?.id) {
+    const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -73,7 +76,7 @@ export async function DELETE(req: Request) {
       .delete(follows)
       .where(
         and(
-          eq(follows.followerId, session.user.id),
+          eq(follows.followerId, userId),
           eq(follows.followingId, parsed.data.followingId)
         )
       );
