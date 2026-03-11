@@ -13,35 +13,70 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
   const { signIn } = useAuth();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const handleSignIn = async () => {
+  const handleRegister = async () => {
     setError(null);
-    setLoading(true);
 
+    if (!name.trim() || name.trim().length < 2) {
+      setError("Name must be at least 2 characters");
+      return;
+    }
+    if (!email.trim()) {
+      setError("Please enter your email");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setLoading(true);
     try {
-      const res = await fetch(`${API_URL}/api/auth/mobile/credentials`, {
+      const res = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error ?? "Sign in failed");
+        setError(data.error ?? "Registration failed");
         return;
       }
 
-      await signIn(data.token, data.user);
+      // Auto sign-in after successful registration
+      const loginRes = await fetch(`${API_URL}/api/auth/mobile/credentials`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+
+      const loginData = await loginRes.json();
+
+      if (!loginRes.ok) {
+        // Registration succeeded but auto-login failed — go back to login
+        router.replace("/login");
+        return;
+      }
+
+      await signIn(loginData.token, loginData.user);
       router.replace("/");
     } catch {
       setError("Could not connect to server");
@@ -59,8 +94,8 @@ export default function LoginScreen() {
         <View style={styles.logo}>
           <Text style={styles.logoText}>🍳</Text>
         </View>
-        <Text style={styles.title}>Welcome back</Text>
-        <Text style={styles.subtitle}>Sign in to your cooking diary</Text>
+        <Text style={styles.title}>Create account</Text>
+        <Text style={styles.subtitle}>Start your cooking diary</Text>
 
         {error && (
           <View style={styles.errorBox}>
@@ -69,6 +104,17 @@ export default function LoginScreen() {
         )}
 
         <View style={styles.form}>
+          <Text style={styles.label}>Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Your name"
+            placeholderTextColor="#a8a29e"
+            value={name}
+            onChangeText={setName}
+            autoCapitalize="words"
+            autoComplete="name"
+          />
+
           <Text style={styles.label}>Email</Text>
           <TextInput
             style={styles.input}
@@ -85,14 +131,12 @@ export default function LoginScreen() {
           <View style={styles.inputRow}>
             <TextInput
               style={styles.inputFlex}
-              placeholder="••••••••"
+              placeholder="Min. 8 characters"
               placeholderTextColor="#a8a29e"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
-              autoComplete="password"
-              returnKeyType="go"
-              onSubmitEditing={handleSignIn}
+              autoComplete="new-password"
             />
             <TouchableOpacity
               style={styles.eyeButton}
@@ -107,27 +151,47 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
+          <Text style={styles.label}>Confirm password</Text>
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.inputFlex}
+              placeholder="Repeat your password"
+              placeholderTextColor="#a8a29e"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showConfirmPassword}
+              autoComplete="new-password"
+              returnKeyType="go"
+              onSubmitEditing={handleRegister}
+            />
+            <TouchableOpacity
+              style={styles.eyeButton}
+              onPress={() => setShowConfirmPassword((v) => !v)}
+              focusable={false}
+            >
+              <Ionicons
+                name={showConfirmPassword ? "eye-off" : "eye"}
+                size={20}
+                color="#78716c"
+              />
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
-            onPress={handleSignIn}
+            onPress={handleRegister}
             disabled={loading}
           >
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={styles.buttonText}>Sign in</Text>
+              <Text style={styles.buttonText}>Create account</Text>
             )}
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity
-          onPress={() => router.push("/register")}
-          style={styles.registerLink}
-        >
-          <Text style={styles.registerLinkText}>
-            No account yet?{" "}
-            <Text style={styles.registerLinkBold}>Create one</Text>
-          </Text>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backLink}>
+          <Text style={styles.backLinkText}>Already have an account? Sign in</Text>
         </TouchableOpacity>
     </KeyboardAwareScrollView>
   );
@@ -234,16 +298,12 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 15,
   },
-  registerLink: {
+  backLink: {
     marginTop: 24,
     alignItems: "center",
   },
-  registerLinkText: {
+  backLinkText: {
     color: "#78716c",
     fontSize: 14,
-  },
-  registerLinkBold: {
-    color: "#1c1917",
-    fontWeight: "600",
   },
 });
