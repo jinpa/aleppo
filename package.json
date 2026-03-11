@@ -11,7 +11,10 @@
   },
   "scripts": {
     "dev:web": "pnpm --filter @aleppo/web dev",
-    "build:web": "pnpm --filter @aleppo/web build"
+    "build:web": "pnpm --filter @aleppo/web build",
+    "start": "pnpm --filter @aleppo/web start",
+    "build:railway": "pnpm --filter @aleppo/web build:railway",
+    "start:railway": "pnpm --filter @aleppo/web start:railway"
   },
   "dependencies": {
     "pnpm": "^10.32.0"
