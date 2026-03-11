@@ -2,7 +2,7 @@
 set -e
 
 echo "▶ Building Expo web SPA..."
-EXPO_PUBLIC_API_URL='' pnpm --filter native expo export --platform web
+EXPO_PUBLIC_API_URL='' pnpm --filter native exec expo export --platform web
 
 echo "▶ Copying SPA assets into Next.js public/..."
 rm -rf apps/web/public/_expo apps/web/public/spa.html
