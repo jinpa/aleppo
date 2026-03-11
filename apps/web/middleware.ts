@@ -1,15 +1,12 @@
-import NextAuth from "next-auth";
-import { authConfig } from "@/auth.config";
-import { type NextRequest, type NextFetchEvent, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
-const { auth } = NextAuth(authConfig);
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
 
-export async function middleware(request: NextRequest, event: NextFetchEvent) {
-  // For API routes with a Bearer token, inject it as a session cookie so
-  // that auth() in route handlers can read it without any modification.
-  // API routes are already unconditionally allowed through by authConfig,
-  // so bypassing the auth middleware here is safe.
-  if (request.nextUrl.pathname.startsWith("/api/")) {
+  // ── API routes ────────────────────────────────────────────────────────────
+  // Inject a Bearer token as a session cookie so that auth() in route handlers
+  // works for both cookie-based and token-based callers.
+  if (pathname.startsWith("/api/")) {
     const authHeader = request.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.slice(7);
@@ -30,14 +27,21 @@ export async function middleware(request: NextRequest, event: NextFetchEvent) {
         return NextResponse.next({ request: { headers: modifiedHeaders } });
       }
     }
+    return NextResponse.next();
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  return (auth as any)(request, event);
+  // ── SPA catch-all ─────────────────────────────────────────────────────────
+  // All non-API, non-static requests are served by the Expo web SPA.
+  // Auth is handled client-side by the SPA (Bearer token in localStorage).
+  const url = request.nextUrl.clone();
+  url.pathname = "/spa.html";
+  return NextResponse.rewrite(url);
 }
 
 export const config = {
+  // Exclude Next.js internals, Expo static assets, and files with extensions
+  // (images, fonts, manifests, etc.) — those are served directly from public/.
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|_expo|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json|woff2?|ttf|otf)$).*)",
   ],
 };

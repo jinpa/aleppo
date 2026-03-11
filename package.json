@@ -13,7 +13,7 @@
     "dev:web": "pnpm --filter @aleppo/web dev",
     "build:web": "pnpm --filter @aleppo/web build",
     "start": "pnpm --filter @aleppo/web start",
-    "build:railway": "pnpm --filter @aleppo/web build:railway",
+    "build:railway": "sh scripts/build-spa.sh && pnpm --filter @aleppo/web build:railway",
     "start:railway": "pnpm --filter @aleppo/web start:railway"
   },
   "dependencies": {
