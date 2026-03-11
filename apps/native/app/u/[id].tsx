@@ -71,7 +71,7 @@ export default function UserProfileScreen() {
           fetch(`${API_URL}/api/users/${id}`, { headers }),
           fetch(`${API_URL}/api/users/${id}/recipes`, { headers }),
         ]);
-        if (profileRes.status === 401) {
+        if (profileRes.status === 401 && token) {
           await signOut();
           return;
         }

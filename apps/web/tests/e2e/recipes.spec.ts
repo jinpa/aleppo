@@ -1,14 +1,11 @@
 /**
  * Recipe CRUD tests — run as Alice (authenticated).
  *
- * Covers:
- *  - Creating a minimal private recipe
- *  - Creating a recipe with more detail (description, times, tags)
- *  - Making a recipe public via the privacy toggle
- *  - Viewing the recipe detail page
- *  - Editing a recipe
- *  - Deleting a recipe
- *  - Adding / removing from the want-to-cook queue
+ * Key notes:
+ * - After createRecipe(), we're already on the detail page via in-app navigation.
+ *   Avoid page.goto(recipeUrl) as it causes a full reload that races with auth.
+ * - Use SPA tab navigation (e.g. click "Queue" tab) instead of page.goto("/queue").
+ * - TouchableOpacity renders as <div> without role="button"; use getByText().
  */
 
 import { test, expect } from "./fixtures";
@@ -39,46 +36,41 @@ async function createRecipe(
     servings,
   } = opts;
 
-  await page.goto("/recipes/new");
-  await expect(page.getByRole("heading", { name: "New recipe" })).toBeVisible();
+  await page.goto("/new");
+  await expect(page.getByText("New Recipe")).toBeVisible();
 
-  await page.getByLabel("Title").fill(title);
+  await page.getByPlaceholder("Recipe title").fill(title);
 
   if (description) {
-    await page.getByLabel("Description").fill(description);
+    await page.getByPlaceholder("Brief description").fill(description);
   }
+
+  // Times — all three inputs share placeholder "0"; target by position
   if (prepTime) {
-    await page.getByLabel("Prep (min)").fill(prepTime);
+    await page.locator('input[placeholder="0"]').nth(0).fill(prepTime);
   }
   if (cookTime) {
-    await page.getByLabel("Cook (min)").fill(cookTime);
+    await page.locator('input[placeholder="0"]').nth(1).fill(cookTime);
   }
   if (servings) {
-    await page.getByLabel("Servings").fill(servings);
+    await page.locator('input[placeholder="0"]').nth(2).fill(servings);
   }
 
-  // Fill first ingredient (form starts with one empty row)
-  await page
-    .getByPlaceholder("e.g. 2 cups all-purpose flour")
-    .first()
-    .fill(ingredient);
+  await page.getByPlaceholder("Ingredient 1").fill(ingredient);
+  await page.getByPlaceholder("Step 1").fill(instruction);
 
-  // Fill first instruction step
-  await page.getByPlaceholder("Step 1...").first().fill(instruction);
-
-  // Add tags
   for (const tag of tags) {
-    await page.getByPlaceholder("Add a tag (e.g. Italian, weeknight)").fill(tag);
+    await page.getByPlaceholder("Add a tag").fill(tag);
     await page.keyboard.press("Enter");
   }
 
   if (isPublic) {
     await page.getByRole("switch").click();
-    await expect(page.getByText("Public recipe")).toBeVisible();
+    await expect(page.getByText("Anyone can view this recipe")).toBeVisible();
   }
 
-  await page.getByRole("button", { name: "Save recipe" }).click();
-  // Wait for navigation to the saved recipe's UUID-based URL (not /recipes/new or /recipes/import)
+  // Use the always-visible header "Save" button
+  await page.getByText("Save", { exact: true }).click();
   await page.waitForURL(/\/recipes\/[0-9a-f-]{36}$/, { timeout: 15_000 });
 
   return page.url();
@@ -87,7 +79,7 @@ async function createRecipe(
 test.describe("Recipes — create", () => {
   test("create a minimal private recipe", async ({ alicePage: page }) => {
     const url = await createRecipe(page, { title: "Minimal Test Recipe" });
-    await expect(page.getByRole("heading", { name: "Minimal Test Recipe" })).toBeVisible();
+    await expect(page.getByText("Minimal Test Recipe")).toBeVisible();
     await expect(page.getByText("Private")).toBeVisible();
     expect(url).toMatch(/\/recipes\/[^/]+$/);
   });
@@ -106,9 +98,9 @@ test.describe("Recipes — create", () => {
       tags: ["italian", "pasta"],
     });
 
-    await expect(page.getByRole("heading", { name: "Detailed Pasta Carbonara" })).toBeVisible();
+    await expect(page.getByText("Detailed Pasta Carbonara")).toBeVisible();
     await expect(page.getByText("Classic Roman pasta dish")).toBeVisible();
-    await expect(page.getByText("30 min")).toBeVisible(); // 10 + 20
+    await expect(page.getByText("30m")).toBeVisible();
     await expect(page.getByText("2 servings")).toBeVisible();
     await expect(page.getByText("italian", { exact: true })).toBeVisible();
     await expect(page.getByText("pasta", { exact: true })).toBeVisible();
@@ -119,47 +111,30 @@ test.describe("Recipes — create", () => {
       title: "Public Chocolate Cake",
       isPublic: true,
     });
-    await expect(page.getByRole("heading", { name: "Public Chocolate Cake" })).toBeVisible();
+    await expect(page.getByText("Public Chocolate Cake")).toBeVisible();
     await expect(page.getByText("Public", { exact: true })).toBeVisible();
   });
 
   test("add multiple ingredients and instructions", async ({
     alicePage: page,
   }) => {
-    await page.goto("/recipes/new");
-    await page.getByLabel("Title").fill("Multi-Step Recipe");
+    await page.goto("/new");
+    await page.getByPlaceholder("Recipe title").fill("Multi-Step Recipe");
 
-    // First ingredient
-    await page
-      .getByPlaceholder("e.g. 2 cups all-purpose flour")
-      .first()
-      .fill("2 cups flour");
+    await page.getByPlaceholder("Ingredient 1").fill("2 cups flour");
+    await page.getByText("Add ingredient").click();
+    await page.getByPlaceholder("Ingredient 2").fill("1 tsp salt");
+    await page.getByText("Add ingredient").click();
+    await page.getByPlaceholder("Ingredient 3").fill("2 eggs");
 
-    // Add second ingredient
-    await page.getByRole("button", { name: /^Add$/ }).first().click();
-    await page
-      .getByPlaceholder("e.g. 2 cups all-purpose flour")
-      .nth(1)
-      .fill("1 tsp salt");
+    await page.getByPlaceholder("Step 1").fill("Combine dry ingredients");
+    await page.getByText("Add step").click();
+    await page.getByPlaceholder("Step 2").fill("Add eggs and mix");
 
-    // Add third ingredient
-    await page.getByRole("button", { name: /^Add$/ }).first().click();
-    await page
-      .getByPlaceholder("e.g. 2 cups all-purpose flour")
-      .nth(2)
-      .fill("2 eggs");
-
-    // First instruction
-    await page.getByPlaceholder("Step 1...").first().fill("Combine dry ingredients");
-
-    // Add second step
-    await page.getByRole("button", { name: "Add step" }).click();
-    await page.getByPlaceholder("Step 2...").fill("Add eggs and mix");
-
-    await page.getByRole("button", { name: "Save recipe" }).click();
+    await page.getByText("Save", { exact: true }).click();
     await page.waitForURL(/\/recipes\/[0-9a-f-]{36}$/, { timeout: 15_000 });
 
-    await expect(page.getByRole("heading", { name: "Multi-Step Recipe" })).toBeVisible();
+    await expect(page.getByText("Multi-Step Recipe")).toBeVisible();
     await expect(page.getByText("2 cups flour")).toBeVisible();
     await expect(page.getByText("1 tsp salt")).toBeVisible();
     await expect(page.getByText("2 eggs")).toBeVisible();
@@ -170,36 +145,40 @@ test.describe("Recipes — create", () => {
   test("title is required — shows validation error", async ({
     alicePage: page,
   }) => {
-    await page.goto("/recipes/new");
-    await page.getByRole("button", { name: "Save recipe" }).click();
+    await page.goto("/new");
+    await page.getByText("Save", { exact: true }).click();
     await expect(page.getByText("Title is required")).toBeVisible();
   });
 });
 
 test.describe("Recipes — edit", () => {
   test("edit an existing recipe", async ({ alicePage: page }) => {
-    const recipeUrl = await createRecipe(page, { title: "Recipe To Edit" });
-    await page.goto(recipeUrl + "/edit");
-    await expect(page.getByRole("heading", { name: "Edit recipe" })).toBeVisible();
+    await createRecipe(page, { title: "Recipe To Edit" });
+    // Already on detail page — use testID for in-SPA navigation to edit
+    await page.locator('[data-testid="recipe-edit-btn"]').click();
+    await expect(page.getByText("Edit Recipe")).toBeVisible({ timeout: 10_000 });
 
-    await page.getByLabel("Title").clear();
-    await page.getByLabel("Title").fill("Recipe After Edit");
-    await page.getByRole("button", { name: "Save changes" }).click();
+    await page.getByPlaceholder("Recipe title").clear();
+    await page.getByPlaceholder("Recipe title").fill("Recipe After Edit");
+    await page.getByText("Save changes").click();
     await page.waitForURL(/\/recipes\/[0-9a-f-]{36}$/, { timeout: 15_000 });
 
-    await expect(page.getByRole("heading", { name: "Recipe After Edit" })).toBeVisible();
+    // edit.tsx uses router.replace — detail screen remounts with fresh data
+    await expect(page.getByText("Recipe After Edit")).toBeVisible({ timeout: 10_000 });
   });
 
   test("edit: toggle privacy from private to public", async ({
     alicePage: page,
   }) => {
-    const recipeUrl = await createRecipe(page, { title: "Privacy Toggle Recipe" });
-    await page.goto(recipeUrl + "/edit");
+    await createRecipe(page, { title: "Privacy Toggle Recipe" });
+    // Already on detail page
+    await page.locator('[data-testid="recipe-edit-btn"]').click();
+    await expect(page.getByText("Edit Recipe")).toBeVisible({ timeout: 10_000 });
     await page.getByRole("switch").click();
-    await expect(page.getByText("Public recipe")).toBeVisible();
-    await page.getByRole("button", { name: "Save changes" }).click();
+    await expect(page.getByText("Anyone can view this recipe")).toBeVisible();
+    await page.getByText("Save changes").click();
     await page.waitForURL(/\/recipes\/[0-9a-f-]{36}$/, { timeout: 15_000 });
-    await expect(page.getByText("Public")).toBeVisible();
+    await expect(page.getByText("Public", { exact: true })).toBeVisible();
   });
 });
 
@@ -208,48 +187,48 @@ test.describe("Recipes — delete", () => {
     alicePage: page,
   }) => {
     const recipeUrl = await createRecipe(page, { title: "Recipe To Delete" });
-    await page.goto(recipeUrl);
+    // Already on detail page
+    const recipeId = new URL(recipeUrl).pathname.split("/").pop()!;
 
-    // Open delete confirmation
-    await page.getByRole("button", { name: "Delete recipe" }).click();
-    await expect(page.getByText("Delete recipe?")).toBeVisible();
-    await page.getByRole("button", { name: "Delete" }).click();
+    await page.locator('[data-testid="recipe-delete-btn"]').click();
+    await expect(page.getByText("Delete recipe")).toBeVisible();
+    await page.getByText("Delete", { exact: true }).click();
 
-    // handleDelete calls router.push("/") after success
-    await page.waitForURL("/", { timeout: 10_000 });
+    // confirmDelete now routes to /(tabs)/recipes
+    await page.waitForURL(/\/recipes$/, { timeout: 10_000 });
   });
 });
 
 test.describe("Recipes — want-to-cook queue", () => {
   test("add a recipe to the queue", async ({ alicePage: page }) => {
-    const recipeUrl = await createRecipe(page, { title: "Queue Me Recipe" });
-    await page.goto(recipeUrl);
-
-    await page.getByRole("button", { name: "Want to cook" }).click();
-    await expect(page.getByRole("button", { name: "In queue" })).toBeVisible();
+    await createRecipe(page, { title: "Queue Me Recipe" });
+    // Already on detail page
+    await page.getByText("Want to cook").click();
+    await expect(page.getByText("In queue")).toBeVisible();
   });
 
   test("queued recipe appears on the /queue page", async ({
     alicePage: page,
   }) => {
-    const recipeUrl = await createRecipe(page, { title: "Queue Page Recipe" });
-    await page.goto(recipeUrl);
-    await page.getByRole("button", { name: "Want to cook" }).click();
-    await expect(page.getByRole("button", { name: "In queue" })).toBeVisible();
+    await createRecipe(page, { title: "Queue Page Recipe" });
+    // Already on detail page
+    await page.getByText("Want to cook").click();
+    await expect(page.getByText("In queue")).toBeVisible();
 
-    await page.goto("/queue");
-    await expect(page.getByText("Queue Page Recipe")).toBeVisible();
+    // Navigate to queue via tab bar (in-SPA navigation, no page reload)
+    await page.getByText("Queue", { exact: true }).click();
+    // Recipe title appears in nav stack (hidden) AND queue page (visible); .last() gets visible
+    await expect(page.getByText("Queue Page Recipe").last()).toBeVisible({ timeout: 10_000 });
   });
 
   test("remove a recipe from the queue", async ({ alicePage: page }) => {
-    const recipeUrl = await createRecipe(page, { title: "Dequeue Recipe" });
-    await page.goto(recipeUrl);
+    await createRecipe(page, { title: "Dequeue Recipe" });
+    // Already on detail page
+    await page.getByText("Want to cook").click();
+    await expect(page.getByText("In queue")).toBeVisible();
 
-    await page.getByRole("button", { name: "Want to cook" }).click();
-    await expect(page.getByRole("button", { name: "In queue" })).toBeVisible();
-
-    await page.getByRole("button", { name: "In queue" }).click();
-    await expect(page.getByRole("button", { name: "Want to cook" })).toBeVisible();
+    await page.getByText("In queue").click();
+    await expect(page.getByText("Want to cook")).toBeVisible();
   });
 });
 
@@ -258,8 +237,7 @@ test.describe("Recipes — list page", () => {
     alicePage: page,
   }) => {
     await page.goto("/recipes");
-    await expect(page).toHaveURL("/recipes");
-    // Page should not redirect to signin
-    await expect(page).not.toHaveURL(/\/auth\/signin/);
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 15_000 });
+    await expect(page).not.toHaveURL(/\/login/);
   });
 });

@@ -62,7 +62,7 @@ export default function QueueScreen() {
         const res = await fetch(`${API_URL}/api/queue`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (res.status === 401) {
+        if (res.status === 401 && token) {
           await signOut();
           return;
         }
