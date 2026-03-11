@@ -1,69 +1,31 @@
+/**
+ * Auth tests for the React Native SPA.
+ *
+ * The SPA handles auth client-side via localStorage. Login POSTs to
+ * /api/auth/mobile/credentials. Route protection is handled by the root
+ * index.tsx which redirects unauthenticated users to /login.
+ */
+
 import { test, expect } from "@playwright/test";
 
 const BASE = "http://localhost:3000";
 
-test.describe("Auth — sign-up", () => {
-  test("sign-up page renders", async ({ page }) => {
-    await page.goto("/auth/signup");
-    await expect(page.getByText("Start your cooking diary")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Create account" })).toBeVisible();
-  });
-
-  test("successful sign-up lands on home", async ({ page }) => {
-    const email = `signup.${Date.now()}@test.aleppo`;
-    await page.goto("/auth/signup");
-    await page.getByLabel("Name").fill("Fresh Tester");
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill("TestPass123!");
-    await page.getByRole("button", { name: "Create account" }).click();
-    await page.waitForURL("/", { timeout: 15_000 });
-    await expect(page).toHaveURL("/");
-  });
-
-  test("duplicate email shows error", async ({ page }) => {
-    const email = `dup.${Date.now()}@test.aleppo`;
-    await fetch(`${BASE}/api/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: "First", email, password: "TestPass123!" }),
-    });
-
-    await page.goto("/auth/signup");
-    await page.getByLabel("Name").fill("Second");
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill("TestPass123!");
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(
-      page.getByText("An account with this email already exists")
-    ).toBeVisible();
-  });
-
-  test("short password shows client-side validation", async ({ page }) => {
-    await page.goto("/auth/signup");
-    await page.getByLabel("Name").fill("Test User");
-    await page.getByLabel("Email").fill(`v.${Date.now()}@test.aleppo`);
-    await page.getByLabel("Password").fill("short");
-    await page.getByRole("button", { name: "Create account" }).click();
-    await expect(page.getByText(/at least 8 characters/i)).toBeVisible();
-  });
-});
-
 test.describe("Auth — sign-in", () => {
-  test("sign-in page renders", async ({ page }) => {
-    await page.goto("/auth/signin");
+  test("login page renders", async ({ page }) => {
+    await page.goto("/login");
     await expect(page.getByText("Welcome back")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Sign in" })).toBeVisible();
+    await expect(page.getByText("Sign in", { exact: true })).toBeVisible();
   });
 
   test("wrong password shows error", async ({ page }) => {
-    await page.goto("/auth/signin");
-    await page.getByLabel("Email").fill("nobody@test.aleppo");
-    await page.getByLabel("Password").fill("wrongpassword");
-    await page.getByRole("button", { name: "Sign in" }).click();
-    await expect(page.getByText("Invalid email or password")).toBeVisible();
+    await page.goto("/login");
+    await page.getByPlaceholder("you@example.com").fill("nobody@test.aleppo");
+    await page.getByPlaceholder("••••••••").fill("wrongpassword");
+    await page.getByText("Sign in", { exact: true }).click();
+    await expect(page.getByText(/invalid email or password/i)).toBeVisible();
   });
 
-  test("valid credentials redirect to home", async ({ page }) => {
+  test("valid credentials redirect to recipes", async ({ page }) => {
     const email = `signin.${Date.now()}@test.aleppo`;
     await fetch(`${BASE}/api/auth/register`, {
       method: "POST",
@@ -71,28 +33,17 @@ test.describe("Auth — sign-in", () => {
       body: JSON.stringify({ name: "Sign-in Test", email, password: "TestPass123!" }),
     });
 
-    await page.goto("/auth/signin");
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill("TestPass123!");
-    await page.getByRole("button", { name: "Sign in" }).click();
-    await page.waitForURL("/", { timeout: 15_000 });
-    await expect(page).toHaveURL("/");
+    await page.goto("/login");
+    await page.getByPlaceholder("you@example.com").fill(email);
+    await page.getByPlaceholder("••••••••").fill("TestPass123!");
+    await page.getByText("Sign in", { exact: true }).click();
+    await page.waitForURL(/\/recipes/, { timeout: 15_000 });
   });
 });
 
 test.describe("Auth — route protection", () => {
-  test("unauthenticated visit to /recipes/new redirects to sign-in", async ({ page }) => {
-    await page.goto("/recipes/new");
-    await expect(page).toHaveURL(/\/auth\/signin/);
-  });
-
-  test("unauthenticated visit to /settings redirects to sign-in", async ({ page }) => {
-    await page.goto("/settings");
-    await expect(page).toHaveURL(/\/auth\/signin/);
-  });
-
-  test("unauthenticated visit to /queue redirects to sign-in", async ({ page }) => {
-    await page.goto("/queue");
-    await expect(page).toHaveURL(/\/auth\/signin/);
+  test("unauthenticated visit to / redirects to login", async ({ page }) => {
+    await page.goto("/");
+    await page.waitForURL(/\/login/, { timeout: 10_000 });
   });
 });

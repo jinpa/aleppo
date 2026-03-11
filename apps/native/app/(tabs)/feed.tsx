@@ -118,12 +118,13 @@ export default function FeedScreen() {
         const res = await fetch(`${API_URL}/api/feed`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (res.status === 401) {
+        if (res.status === 401 && token) {
           await signOut();
           return;
         }
         if (!res.ok) throw new Error();
         setItems(await res.json());
+        setError(null);
       } catch {
         setError("Could not load feed");
       } finally {

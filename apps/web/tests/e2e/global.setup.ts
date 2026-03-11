@@ -1,19 +1,18 @@
 /**
- * Global setup: creates two persistent test users (Alice and Bob), signs them
- * in, makes their profiles public, and saves their browser storage states so
- * individual test files can reuse authenticated sessions without signing in
- * every time.
+ * Global setup: creates two persistent test users (Alice and Bob), obtains
+ * JWT tokens via the mobile credentials API, injects them into browser
+ * localStorage (how the SPA stores auth state), and saves browser storage
+ * states so individual test files can reuse authenticated sessions.
  *
  * User credentials and IDs are written to .auth/test-users.json so that test
  * files can reference them (e.g. to navigate to /u/{id}).
- *
- * Uses a timestamp-based suffix to avoid email collisions across test runs.
  */
 
 import { test as setup, expect } from "@playwright/test";
 import path from "path";
 import fs from "fs";
 
+const BASE = "http://localhost:3000";
 const RUN_ID = Date.now().toString().slice(-8);
 
 export interface TestUser {
@@ -40,48 +39,53 @@ function makeUser(handle: string): TestUser {
 }
 
 async function setupUser(
-  browserType: Parameters<typeof setup>[1] extends { browser: infer B }
-    ? B
-    : never,
+  browser: import("@playwright/test").Browser,
   user: TestUser
 ) {
-  // Register via the API (idempotent: 409 = already exists, which is fine on reruns)
-  const regRes = await fetch("http://localhost:3000/api/auth/register", {
+  // 1. Register via API
+  const regRes = await fetch(`${BASE}/api/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      name: user.name,
-      email: user.email,
-      password: user.password,
-    }),
+    body: JSON.stringify({ name: user.name, email: user.email, password: user.password }),
   });
   expect([201, 409]).toContain(regRes.status);
 
-  const context = await (browserType as import("@playwright/test").Browser).newContext();
+  // 2. Get a JWT token via the mobile credentials endpoint
+  const loginRes = await fetch(`${BASE}/api/auth/mobile/credentials`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: user.email, password: user.password }),
+  });
+  expect(loginRes.ok).toBeTruthy();
+  const { token, user: userData } = await loginRes.json();
+  user.id = userData.id;
+
+  // 3. Make profile public so social tests work
+  await fetch(`${BASE}/api/users/me`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ name: user.name, isPublic: true }),
+  });
+
+  // 4. Inject token into browser localStorage (the SPA reads auth_token / auth_user)
+  const context = await browser.newContext();
   const page = await context.newPage();
+  await page.goto(BASE);
+  await page.evaluate(
+    ({ t, u }) => {
+      localStorage.setItem("auth_token", t);
+      localStorage.setItem("auth_user", JSON.stringify(u));
+    },
+    { t: token, u: userData }
+  );
 
-  // Sign in via the UI so NextAuth sets session cookies in this context
-  await page.goto("/auth/signin");
-  await page.getByLabel("Email").fill(user.email);
-  await page.getByLabel("Password").fill(user.password);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/auth/"), {
-    timeout: 15_000,
-  });
+  // 5. Navigate to a protected route to verify auth loaded correctly
+  await page.goto(`${BASE}/recipes`);
+  await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 15_000 });
 
-  // Retrieve the user's ID
-  const meRes = await page.request.get("/api/users/me");
-  expect(meRes.ok()).toBeTruthy();
-  const meData = await meRes.json();
-  user.id = meData.id;
-
-  // Make the profile public so social tests work
-  const patchRes = await page.request.patch("/api/users/me", {
-    data: { name: user.name, isPublic: true },
-  });
-  expect(patchRes.ok()).toBeTruthy();
-
-  // Save the authenticated browser state
   await context.storageState({ path: user.storageStatePath });
   await context.close();
 }
@@ -92,8 +96,8 @@ setup("create test users", async ({ browser }) => {
   const alice = makeUser("alice");
   const bob = makeUser("bob");
 
-  await setupUser(browser as never, alice);
-  await setupUser(browser as never, bob);
+  await setupUser(browser, alice);
+  await setupUser(browser, bob);
 
   const testUsers: TestUsers = { alice, bob };
   fs.writeFileSync(

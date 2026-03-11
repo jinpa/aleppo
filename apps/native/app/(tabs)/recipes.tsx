@@ -122,7 +122,7 @@ export default function RecipesScreen() {
           { headers: { Authorization: `Bearer ${token}` } }
         );
 
-        if (res.status === 401) {
+        if (res.status === 401 && token) {
           await signOut();
           return;
         }

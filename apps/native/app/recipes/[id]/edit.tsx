@@ -194,7 +194,8 @@ export default function EditRecipeScreen() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
-      router.back();
+      // Replace with fresh detail screen so updated data loads immediately
+      router.replace(`/recipes/${id}`);
     } catch {
       setErrors({ _form: "Failed to save recipe. Please try again." });
     } finally {

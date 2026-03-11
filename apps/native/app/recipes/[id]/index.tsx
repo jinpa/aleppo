@@ -204,7 +204,7 @@ export default function RecipeDetailScreen() {
         const res = await fetch(`${API_URL}/api/recipes/${id}/detail`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (res.status === 401) {
+        if (res.status === 401 && token) {
           await signOut();
           return;
         }
@@ -339,7 +339,7 @@ export default function RecipeDetailScreen() {
       });
       if (res.ok) {
         setShowDeleteConfirm(false);
-        router.back();
+        router.replace("/(tabs)/recipes");
       }
     } catch {
       setDeleteLoading(false);
@@ -432,12 +432,14 @@ export default function RecipeDetailScreen() {
               <TouchableOpacity
                 style={styles.iconButton}
                 onPress={() => router.push(`/recipes/${id}/edit`)}
+                testID="recipe-edit-btn"
               >
                 <Ionicons name="pencil-outline" size={18} color="#78716c" />
               </TouchableOpacity>
               <TouchableOpacity
                 style={styles.iconButton}
                 onPress={() => setShowDeleteConfirm(true)}
+                testID="recipe-delete-btn"
               >
                 <Ionicons name="trash-outline" size={18} color="#b91c1c" />
               </TouchableOpacity>
