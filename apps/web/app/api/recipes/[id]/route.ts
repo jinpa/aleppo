@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@/auth";
+import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
 
@@ -66,7 +67,8 @@ export async function PATCH(
 ) {
   const { id } = await params;
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -82,7 +84,7 @@ export async function PATCH(
   const [updated] = await db
     .update(recipes)
     .set({ ...parsed.data, updatedAt: new Date() })
-    .where(and(eq(recipes.id, id), eq(recipes.userId, session.user.id)))
+    .where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
     .returning();
 
   if (!updated) {
@@ -93,18 +95,19 @@ export async function PATCH(
 }
 
 export async function DELETE(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const [deleted] = await db
     .delete(recipes)
-    .where(and(eq(recipes.id, id), eq(recipes.userId, session.user.id)))
+    .where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
     .returning({ id: recipes.id });
 
   if (!deleted) {

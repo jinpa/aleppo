@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -11,7 +11,7 @@ import {
   Platform,
 } from "react-native";
 import { Image } from "expo-image";
-import { useRouter } from "expo-router";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
@@ -139,9 +139,11 @@ export default function RecipesScreen() {
     [token, search, activeTag, signOut]
   );
 
-  useEffect(() => {
-    fetchRecipes();
-  }, [fetchRecipes]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchRecipes();
+    }, [fetchRecipes])
+  );
 
   const onRefresh = () => {
     setRefreshing(true);

@@ -2,14 +2,16 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, and, desc, max, sql } from "drizzle-orm";
 import { auth } from "@/auth";
+import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { wantToCook, recipes } from "@/db/schema";
 
 const schema = z.object({ recipeId: z.string() });
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -20,7 +22,7 @@ export async function GET() {
     })
     .from(wantToCook)
     .innerJoin(recipes, eq(wantToCook.recipeId, recipes.id))
-    .where(eq(wantToCook.userId, session.user.id))
+    .where(eq(wantToCook.userId, userId))
     .orderBy(wantToCook.position, desc(wantToCook.addedAt));
 
   return NextResponse.json(queue);
@@ -28,7 +30,8 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -53,12 +56,12 @@ export async function POST(req: Request) {
   const [{ maxPos }] = await db
     .select({ maxPos: max(wantToCook.position) })
     .from(wantToCook)
-    .where(eq(wantToCook.userId, session.user.id));
+    .where(eq(wantToCook.userId, userId));
 
   await db
     .insert(wantToCook)
     .values({
-      userId: session.user.id,
+      userId,
       recipeId: parsed.data.recipeId,
       position: (maxPos ?? -1) + 1,
     })
@@ -71,7 +74,8 @@ const reorderSchema = z.object({ order: z.array(z.string()) });
 
 export async function PATCH(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -91,7 +95,7 @@ export async function PATCH(req: Request) {
           .set({ position: index })
           .where(
             and(
-              eq(wantToCook.userId, session.user!.id!),
+              eq(wantToCook.userId, userId),
               eq(wantToCook.recipeId, recipeId)
             )
           )
@@ -104,7 +108,8 @@ export async function PATCH(req: Request) {
 
 export async function DELETE(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -118,7 +123,7 @@ export async function DELETE(req: Request) {
     .delete(wantToCook)
     .where(
       and(
-        eq(wantToCook.userId, session.user.id),
+        eq(wantToCook.userId, userId),
         eq(wantToCook.recipeId, parsed.data.recipeId)
       )
     );

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
 import { auth } from "@/auth";
+import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { cookLogs, recipes } from "@/db/schema";
 
@@ -13,7 +14,8 @@ const createSchema = z.object({
 
 export async function POST(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
     .where(
       and(
         eq(recipes.id, parsed.data.recipeId),
-        eq(recipes.userId, session.user.id)
+        eq(recipes.userId, userId)
       )
     )
     .limit(1);
@@ -43,7 +45,7 @@ export async function POST(req: Request) {
     .insert(cookLogs)
     .values({
       recipeId: parsed.data.recipeId,
-      userId: session.user.id,
+      userId,
       cookedOn: parsed.data.cookedOn,
       notes: parsed.data.notes,
     })
