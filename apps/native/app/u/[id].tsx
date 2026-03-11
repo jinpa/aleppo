@@ -14,6 +14,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
+import { UserAvatar } from "@/components/UserAvatar";
+import { TagRow } from "@/components/TagRow";
+import { formatTime } from "@/utils/format";
 
 type UserProfile = {
   id: string;
@@ -40,12 +43,6 @@ type PublicRecipe = {
   sourceName: string | null;
 };
 
-function formatTime(mins: number): string {
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m ? `${h}h ${m}m` : `${h}h`;
-}
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -142,13 +139,6 @@ export default function UserProfileScreen() {
     );
   }
 
-  const initials = profile.name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
   const listHeader = (
     <View>
       {/* Nav row */}
@@ -173,21 +163,7 @@ export default function UserProfileScreen() {
 
       {/* Identity */}
       <View style={styles.identity}>
-        {profile.image ? (
-          <Image
-            source={{ uri: profile.image }}
-            style={styles.avatar}
-            contentFit="cover"
-          />
-        ) : (
-          <View style={styles.avatarFallback}>
-            {initials ? (
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            ) : (
-              <Ionicons name="person" size={32} color="#a8a29e" />
-            )}
-          </View>
-        )}
+        <View style={{ marginBottom: 12 }}><UserAvatar name={profile.name} image={profile.image} size={80} /></View>
         <View style={styles.nameRow}>
           <Text style={styles.name}>{profile.name ?? "Unknown"}</Text>
           <View style={styles.visibilityBadge}>
@@ -317,18 +293,7 @@ export default function UserProfileScreen() {
                   {item.sourceName && <Text style={styles.recipeMetaText}>{item.sourceName}</Text>}
                 </View>
               )}
-              {item.tags.length > 0 && (
-                <View style={styles.tagRow}>
-                  {item.tags.slice(0, 3).map((tag) => (
-                    <View key={tag} style={styles.tag}>
-                      <Text style={styles.tagText}>{tag}</Text>
-                    </View>
-                  ))}
-                  {item.tags.length > 3 && (
-                    <Text style={styles.tagOverflow}>+{item.tags.length - 3}</Text>
-                  )}
-                </View>
-              )}
+              <TagRow tags={item.tags} />
             </View>
             <Ionicons name="chevron-forward" size={16} color="#d6d3d1" style={{ alignSelf: "center" }} />
           </TouchableOpacity>
@@ -370,12 +335,6 @@ const styles = StyleSheet.create({
   editButtonText: { fontSize: 14, fontWeight: "500", color: "#57534e" },
 
   identity: { alignItems: "center", paddingHorizontal: 24, paddingTop: 16, paddingBottom: 8 },
-  avatar: { width: 80, height: 80, borderRadius: 40, marginBottom: 12 },
-  avatarFallback: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: "#e7e5e4", justifyContent: "center", alignItems: "center", marginBottom: 12,
-  },
-  avatarInitials: { fontSize: 28, fontWeight: "600", color: "#57534e" },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 6 },
   name: { fontSize: 22, fontWeight: "700", color: "#1c1917" },
   visibilityBadge: {
@@ -431,8 +390,4 @@ const styles = StyleSheet.create({
   recipeTitle: { fontSize: 15, fontWeight: "600", color: "#1c1917", lineHeight: 20 },
   recipeMeta: { flexDirection: "row", gap: 8, marginTop: 2 },
   recipeMetaText: { fontSize: 11, color: "#a8a29e" },
-  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
-  tag: { backgroundColor: "#f5f5f4", borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
-  tagText: { fontSize: 10, color: "#57534e", fontWeight: "500" },
-  tagOverflow: { fontSize: 10, color: "#a8a29e", alignSelf: "center" },
 });

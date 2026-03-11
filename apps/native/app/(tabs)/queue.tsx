@@ -14,6 +14,9 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
+import { UserAvatar } from "@/components/UserAvatar";
+import { TagRow } from "@/components/TagRow";
+import { formatTime, formatRelativeDate } from "@/utils/format";
 
 type QueueRecipe = {
   id: string;
@@ -29,22 +32,6 @@ type QueueItem = {
   addedAt: string;
 };
 
-function formatTime(mins: number): string {
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m ? `${h}h ${m}m` : `${h}h`;
-}
-
-function formatRelativeDate(s: string): string {
-  const diff = Date.now() - new Date(s).getTime();
-  const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Today";
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days} days ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
-}
 
 export default function QueueScreen() {
   const router = useRouter();
@@ -116,13 +103,6 @@ export default function QueueScreen() {
     }
   };
 
-  const initials = user?.name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
   const listHeader = (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -133,17 +113,7 @@ export default function QueueScreen() {
         onPress={() => router.navigate("/profile")}
         style={styles.avatarButton}
       >
-        {user?.image ? (
-          <Image source={{ uri: user.image }} style={styles.avatar} contentFit="cover" />
-        ) : (
-          <View style={styles.avatarFallback}>
-            {initials ? (
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            ) : (
-              <Ionicons name="person" size={16} color="#78716c" />
-            )}
-          </View>
-        )}
+        <UserAvatar name={user?.name} image={user?.image} size={34} />
       </TouchableOpacity>
     </View>
   );
@@ -221,15 +191,7 @@ export default function QueueScreen() {
                   Added {formatRelativeDate(item.addedAt)}
                 </Text>
               </View>
-              {item.recipe.tags.length > 0 && (
-                <View style={styles.tagRow}>
-                  {item.recipe.tags.slice(0, 3).map((tag) => (
-                    <View key={tag} style={styles.tag}>
-                      <Text style={styles.tagText}>{tag}</Text>
-                    </View>
-                  ))}
-                </View>
-              )}
+              <TagRow tags={item.recipe.tags} />
             </View>
             <View style={styles.cardActions}>
               <TouchableOpacity
@@ -284,12 +246,6 @@ const styles = StyleSheet.create({
   heading: { fontSize: 28, fontWeight: "700", color: "#1c1917" },
   count: { fontSize: 14, color: "#78716c", marginTop: 4 },
   avatarButton: { borderRadius: 20 },
-  avatar: { width: 34, height: 34, borderRadius: 17 },
-  avatarFallback: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: "#e7e5e4", justifyContent: "center", alignItems: "center",
-  },
-  avatarInitials: { fontSize: 13, fontWeight: "600", color: "#57534e" },
   emptyContainer: {
     paddingTop: 80, alignItems: "center", gap: 12, paddingHorizontal: 32,
   },
@@ -317,12 +273,6 @@ const styles = StyleSheet.create({
   cardTitle: { fontSize: 15, fontWeight: "600", color: "#1c1917", lineHeight: 20 },
   cardMeta: { flexDirection: "row", gap: 8, marginTop: 2, flexWrap: "wrap" },
   cardMetaText: { fontSize: 11, color: "#a8a29e" },
-  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
-  tag: {
-    backgroundColor: "#f5f5f4", borderRadius: 4,
-    paddingHorizontal: 6, paddingVertical: 2,
-  },
-  tagText: { fontSize: 10, color: "#57534e", fontWeight: "500" },
   cardActions: {
     flexDirection: "column", justifyContent: "space-evenly",
     alignItems: "center", paddingHorizontal: 10,

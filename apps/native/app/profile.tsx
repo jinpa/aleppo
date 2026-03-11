@@ -5,10 +5,10 @@ import {
   StyleSheet,
   Platform,
 } from "react-native";
-import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
+import { UserAvatar } from "@/components/UserAvatar";
 
 type RowProps = {
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -40,13 +40,6 @@ export default function ProfileScreen() {
   const { user, signOut } = useAuth();
   const router = useRouter();
 
-  const initials = user?.name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
   const handleSignOut = async () => {
     await signOut();
     router.replace("/login");
@@ -66,21 +59,7 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.identity}>
-        {user?.image ? (
-          <Image
-            source={{ uri: user.image }}
-            style={styles.avatar}
-            contentFit="cover"
-          />
-        ) : (
-          <View style={styles.avatarFallback}>
-            {initials ? (
-              <Text style={styles.avatarInitials}>{initials}</Text>
-            ) : (
-              <Ionicons name="person" size={28} color="#a8a29e" />
-            )}
-          </View>
-        )}
+        <View style={{ marginBottom: 4 }}><UserAvatar name={user?.name} image={user?.image} size={72} /></View>
         {user ? (
           <>
             <Text style={styles.name}>{user.name ?? "—"}</Text>
@@ -141,26 +120,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     marginBottom: 32,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    marginBottom: 4,
-  },
-  avatarFallback: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: "#e7e5e4",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  avatarInitials: {
-    fontSize: 26,
-    fontWeight: "600",
-    color: "#57534e",
   },
   name: {
     fontSize: 20,

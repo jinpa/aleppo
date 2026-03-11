@@ -15,6 +15,9 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
+import { UserAvatar } from "@/components/UserAvatar";
+import { TagRow } from "@/components/TagRow";
+import { formatDate } from "@/utils/format";
 
 type FeedItem = {
   log: {
@@ -45,58 +48,6 @@ type SearchUser = {
   followLoading: boolean;
 };
 
-function formatDate(s: string): string {
-  return new Date(s).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function UserAvatar({
-  user,
-  size = 36,
-}: {
-  user: FeedItem["user"];
-  size?: number;
-}) {
-  const initials = user.name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
-  if (user.image) {
-    return (
-      <Image
-        source={{ uri: user.image }}
-        style={{ width: size, height: size, borderRadius: size / 2 }}
-        contentFit="cover"
-      />
-    );
-  }
-  return (
-    <View
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size / 2,
-        backgroundColor: "#e7e5e4",
-        justifyContent: "center",
-        alignItems: "center",
-      }}
-    >
-      {initials ? (
-        <Text style={{ fontSize: size * 0.35, fontWeight: "600", color: "#57534e" }}>
-          {initials}
-        </Text>
-      ) : (
-        <Ionicons name="person" size={size * 0.5} color="#a8a29e" />
-      )}
-    </View>
-  );
-}
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -211,13 +162,6 @@ export default function FeedScreen() {
     }
   };
 
-  const initials = user?.name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
   const listHeader = (
     <View>
       {/* Title row */}
@@ -226,17 +170,7 @@ export default function FeedScreen() {
           <Text style={styles.heading}>Following Feed</Text>
         </View>
         <TouchableOpacity onPress={() => router.navigate("/profile")} style={styles.avatarButton}>
-          {user?.image ? (
-            <Image source={{ uri: user.image }} style={styles.avatar} contentFit="cover" />
-          ) : (
-            <View style={styles.avatarFallback}>
-              {initials ? (
-                <Text style={styles.avatarInitials}>{initials}</Text>
-              ) : (
-                <Ionicons name="person" size={16} color="#78716c" />
-              )}
-            </View>
-          )}
+          <UserAvatar name={user?.name} image={user?.image} size={34} />
         </TouchableOpacity>
       </View>
 
@@ -260,7 +194,6 @@ export default function FeedScreen() {
         {searchResults.length > 0 && (
           <View style={styles.searchResults}>
             {searchResults.map((result) => {
-              const ri = result.name?.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
               return (
                 <View key={result.id} style={styles.searchResultRow}>
                   <TouchableOpacity
@@ -268,17 +201,7 @@ export default function FeedScreen() {
                     onPress={() => router.push(`/u/${result.id}`)}
                     activeOpacity={0.7}
                   >
-                    {result.image ? (
-                      <Image source={{ uri: result.image }} style={styles.searchResultAvatar} contentFit="cover" />
-                    ) : (
-                      <View style={styles.searchResultAvatarFallback}>
-                        {ri ? (
-                          <Text style={styles.searchResultInitials}>{ri}</Text>
-                        ) : (
-                          <Ionicons name="person" size={14} color="#a8a29e" />
-                        )}
-                      </View>
-                    )}
+                    <UserAvatar name={result.name} image={result.image} size={36} />
                     <View style={styles.searchResultInfo}>
                       <Text style={styles.searchResultName} numberOfLines={1}>{result.name ?? "Unknown"}</Text>
                       {result.bio ? <Text style={styles.searchResultBio} numberOfLines={1}>{result.bio}</Text> : null}
@@ -360,7 +283,7 @@ export default function FeedScreen() {
               style={styles.cardUserLeft}
               activeOpacity={0.7}
             >
-              <UserAvatar user={item.user} size={36} />
+              <UserAvatar name={item.user.name} image={item.user.image} size={36} />
               <View style={styles.cardUserInfo}>
                 <Text style={styles.cardUserName}>
                   {item.user.name ?? "Unknown"}
@@ -401,18 +324,7 @@ export default function FeedScreen() {
               <Text style={styles.recipeTitle} numberOfLines={2}>
                 {item.recipe.title}
               </Text>
-              {item.recipe.tags.length > 0 && (
-                <View style={styles.tagRow}>
-                  {item.recipe.tags.slice(0, 3).map((tag) => (
-                    <View key={tag} style={styles.tag}>
-                      <Text style={styles.tagText}>{tag}</Text>
-                    </View>
-                  ))}
-                  {item.recipe.tags.length > 3 && (
-                    <Text style={styles.tagOverflow}>+{item.recipe.tags.length - 3}</Text>
-                  )}
-                </View>
-              )}
+              <TagRow tags={item.recipe.tags} />
             </View>
             <Ionicons name="chevron-forward" size={16} color="#d6d3d1" style={{ alignSelf: "center" }} />
           </TouchableOpacity>
@@ -437,12 +349,6 @@ const styles = StyleSheet.create({
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   heading: { fontSize: 28, fontWeight: "700", color: "#1c1917" },
   avatarButton: { borderRadius: 20 },
-  avatar: { width: 34, height: 34, borderRadius: 17 },
-  avatarFallback: {
-    width: 34, height: 34, borderRadius: 17,
-    backgroundColor: "#e7e5e4", justifyContent: "center", alignItems: "center",
-  },
-  avatarInitials: { fontSize: 13, fontWeight: "600", color: "#57534e" },
   emptyContainer: {
     paddingTop: 80, alignItems: "center", gap: 12, paddingHorizontal: 32,
   },
@@ -507,13 +413,6 @@ const styles = StyleSheet.create({
   },
   recipeBody: { flex: 1 },
   recipeTitle: { fontSize: 14, fontWeight: "600", color: "#1c1917", lineHeight: 19 },
-  tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 4, marginTop: 4 },
-  tag: {
-    backgroundColor: "#f5f5f4", borderRadius: 4,
-    paddingHorizontal: 6, paddingVertical: 2,
-  },
-  tagText: { fontSize: 10, color: "#57534e", fontWeight: "500" },
-  tagOverflow: { fontSize: 10, color: "#a8a29e", alignSelf: "center" },
 
   // People search
   searchSection: {
@@ -558,12 +457,6 @@ const styles = StyleSheet.create({
     gap: 10,
     flex: 1,
   },
-  searchResultAvatar: { width: 36, height: 36, borderRadius: 18 },
-  searchResultAvatarFallback: {
-    width: 36, height: 36, borderRadius: 18,
-    backgroundColor: "#e7e5e4", justifyContent: "center", alignItems: "center",
-  },
-  searchResultInitials: { fontSize: 12, fontWeight: "600", color: "#57534e" },
   searchResultInfo: { flex: 1 },
   searchResultName: { fontSize: 14, fontWeight: "600", color: "#1c1917" },
   searchResultBio: { fontSize: 12, color: "#78716c", marginTop: 1 },

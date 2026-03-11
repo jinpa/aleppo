@@ -37,29 +37,12 @@ export async function GET(
     return NextResponse.json({ error: "Profile is private" }, { status: 403 });
   }
 
-  const [recipeCount] = await db
-    .select({ count: count() })
-    .from(recipes)
-    .where(
-      isOwner
-        ? eq(recipes.userId, id)
-        : and(eq(recipes.userId, id), eq(recipes.isPublic, true))
-    );
-
-  const [cookCount] = await db
-    .select({ count: count() })
-    .from(cookLogs)
-    .where(eq(cookLogs.userId, id));
-
-  const [followerCount] = await db
-    .select({ count: count() })
-    .from(follows)
-    .where(eq(follows.followingId, id));
-
-  const [followingCount] = await db
-    .select({ count: count() })
-    .from(follows)
-    .where(eq(follows.followerId, id));
+  const [[recipeCount], [cookCount], [followerCount], [followingCount]] = await Promise.all([
+    db.select({ count: count() }).from(recipes).where(isOwner ? eq(recipes.userId, id) : and(eq(recipes.userId, id), eq(recipes.isPublic, true))),
+    db.select({ count: count() }).from(cookLogs).where(eq(cookLogs.userId, id)),
+    db.select({ count: count() }).from(follows).where(eq(follows.followingId, id)),
+    db.select({ count: count() }).from(follows).where(eq(follows.followerId, id)),
+  ]);
 
   let isFollowing = false;
   if (viewerId && !isOwner) {
