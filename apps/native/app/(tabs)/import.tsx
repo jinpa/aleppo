@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { View, Text, StyleSheet, Platform, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, Platform, TouchableOpacity, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { PhotoPicker } from "@/components/PhotoPicker";
 
 export default function AddScreen() {
-  const [pickedFiles, setPickedFiles] = useState<string[]>([]);
+  const [, setPhotos] = useState<string[]>([]);
 
   return (
     <View style={styles.container}>
@@ -18,24 +18,32 @@ export default function AddScreen() {
         </Text>
         <Text style={styles.coming}>Coming soon</Text>
 
-        <PhotoPicker mode="multiple" onPhotos={setPickedFiles}>
-          {(open) => (
-            <TouchableOpacity style={styles.button} onPress={open}>
-              <Ionicons name="images-outline" size={18} color="#fff" style={styles.buttonIcon} />
-              <Text style={styles.buttonText}>Pick photos</Text>
-            </TouchableOpacity>
+        <PhotoPicker mode="single" onPhotos={setPhotos}>
+          {(open, pickedPhotos, removePhoto) => (
+            <View style={styles.photoRow}>
+              {/* Camera button — always first */}
+              <TouchableOpacity style={styles.cameraButton} onPress={open}>
+                <Ionicons name="camera" size={22} color="#78716c" />
+                <View style={styles.plusBadge}>
+                  <Ionicons name="add" size={11} color="#fff" />
+                </View>
+              </TouchableOpacity>
+
+              {/* Thumbnails */}
+              {pickedPhotos.map((uri, i) => (
+                <View key={uri} style={styles.thumbWrapper}>
+                  <Image source={{ uri }} style={styles.thumb} />
+                  <TouchableOpacity
+                    style={styles.removeButton}
+                    onPress={() => removePhoto(i)}
+                  >
+                    <Ionicons name="close-circle" size={18} color="#1c1917" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </View>
           )}
         </PhotoPicker>
-
-        {pickedFiles.length > 0 && (
-          <View style={styles.resultBox}>
-            {pickedFiles.map((uri, i) => (
-              <Text key={i} style={styles.resultLine} numberOfLines={1}>
-                {uri.split("/").pop()}
-              </Text>
-            ))}
-          </View>
-        )}
       </View>
     </View>
   );
@@ -79,35 +87,49 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 12,
   },
-  button: {
+  photoRow: {
     flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#1c1917",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 10,
+    flexWrap: "wrap",
+    alignItems: "flex-start",
     gap: 8,
-    marginTop: 4,
+    paddingVertical: 4,
   },
-  buttonIcon: {
-    marginRight: 2,
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 15,
-  },
-  resultBox: {
-    marginTop: 16,
+  cameraButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
     backgroundColor: "#f5f5f4",
-    borderRadius: 8,
-    padding: 12,
-    width: "100%",
-    gap: 4,
+    borderWidth: 1.5,
+    borderColor: "#d6d3d1",
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
   },
-  resultLine: {
-    fontSize: 13,
-    color: "#57534e",
-    fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+  plusBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#78716c",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  thumbWrapper: {
+    position: "relative",
+  },
+  thumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: "#f5f5f4",
+  },
+  removeButton: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#fff",
+    borderRadius: 9,
   },
 });

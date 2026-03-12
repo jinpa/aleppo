@@ -8,8 +8,7 @@ import {
   StyleSheet,
   Platform,
   Alert,
-  ScrollView,
-  Image,
+  ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
@@ -36,33 +35,53 @@ async function resizeIfNeeded(uri: string): Promise<string> {
 
 type PhotoPickerProps = {
   mode: "single" | "multiple";
+  /**
+   * Single mode: called once with [uri] as soon as the photo is picked.
+   * Multiple mode: called after every add/remove with the current list.
+   */
   onPhotos: (uris: string[]) => void;
-  children: (open: () => void) => React.ReactNode;
+  /**
+   * Render prop.
+   * - Single mode: children(open)
+   * - Multiple mode: children(open, photos, removePhoto)
+   *   — photos and removePhoto let the parent render thumbnails wherever it wants.
+   */
+  children: (
+    open: () => void,
+    photos: string[],
+    removePhoto: (index: number) => void,
+  ) => React.ReactNode;
 };
 
 export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
   const [visible, setVisible] = useState(false);
   const [accumulated, setAccumulated] = useState<string[]>([]);
+  const [showSpinner, setShowSpinner] = useState(false);
   const pendingAction = useRef<(() => void) | null>(null);
+  const spinnerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const updateAccumulated = (next: string[]) => {
+    setAccumulated(next);
+    onPhotos(next);
+  };
 
   const process = async (uris: string[]) => {
-    const resized = await Promise.all(uris.map(resizeIfNeeded));
-    if (mode === "single") {
-      onPhotos(resized);
-    } else {
-      setAccumulated((prev) => [...prev, ...resized]);
-      setVisible(true); // reopen sheet to add more or confirm
+    spinnerTimer.current = setTimeout(() => setShowSpinner(true), 1000);
+    try {
+      const resized = await Promise.all(uris.map(resizeIfNeeded));
+      if (mode === "single") {
+        onPhotos(resized);
+      } else {
+        updateAccumulated([...accumulated, ...resized]);
+      }
+    } finally {
+      if (spinnerTimer.current) clearTimeout(spinnerTimer.current);
+      setShowSpinner(false);
     }
   };
 
-  const handleDone = () => {
-    onPhotos(accumulated);
-    setAccumulated([]);
-    setVisible(false);
-  };
-
   const removePhoto = (index: number) => {
-    setAccumulated((prev) => prev.filter((_, i) => i !== index));
+    updateAccumulated(accumulated.filter((_, i) => i !== index));
   };
 
   // On iOS the modal slide animation must fully complete before a native picker
@@ -120,8 +139,8 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
     }
   };
 
-  // On web: camera and library are both just file pickers, so go directly to Browse Files
-  // On mobile: camera + photo library only (no file browser)
+  // On web: camera and library are both just file pickers, so go directly to Browse Files.
+  // On mobile: camera + photo library only (no file browser).
   const showCamera = Platform.OS !== "web";
   const showLibrary = Platform.OS !== "web";
   const showFiles = Platform.OS === "web";
@@ -136,7 +155,7 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
 
   return (
     <>
-      {children(open)}
+      {children(open, accumulated, removePhoto)}
       <Modal
         visible={visible}
         transparent
@@ -150,27 +169,6 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
         <Pressable style={styles.backdrop} onPress={() => setVisible(false)} />
         <View style={styles.sheet}>
           <View style={styles.handle} />
-
-          {mode === "multiple" && accumulated.length > 0 && (
-            <View style={styles.thumbnailSection}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.thumbnailRow}>
-                {accumulated.map((uri, i) => (
-                  <View key={i} style={styles.thumbnailWrapper}>
-                    <Image source={{ uri }} style={styles.thumbnail} />
-                    <TouchableOpacity style={styles.removeButton} onPress={() => removePhoto(i)}>
-                      <Ionicons name="close-circle" size={18} color="#1c1917" />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
-              <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
-                <Text style={styles.doneButtonText}>
-                  Done — {accumulated.length} {accumulated.length === 1 ? "photo" : "photos"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           <Text style={styles.title}>
             {mode === "multiple" && accumulated.length > 0 ? "Add more" : mode === "multiple" ? "Add photos" : "Add photo"}
           </Text>
@@ -207,6 +205,15 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      <Modal visible={showSpinner} transparent animationType="none">
+        <View style={styles.spinnerBackdrop}>
+          <View style={styles.spinnerCard}>
+            <ActivityIndicator size="large" color="#1c1917" />
+            <Text style={styles.spinnerText}>Processing…</Text>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }
@@ -235,42 +242,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#d6d3d1",
     alignSelf: "center",
     marginBottom: 16,
-  },
-  thumbnailSection: {
-    marginBottom: 16,
-    gap: 12,
-  },
-  thumbnailRow: {
-    flexDirection: "row",
-    gap: 8,
-    paddingVertical: 2,
-  },
-  thumbnailWrapper: {
-    position: "relative",
-  },
-  thumbnail: {
-    width: 72,
-    height: 72,
-    borderRadius: 8,
-    backgroundColor: "#f5f5f4",
-  },
-  removeButton: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    backgroundColor: "#fff",
-    borderRadius: 9,
-  },
-  doneButton: {
-    backgroundColor: "#1c1917",
-    borderRadius: 10,
-    paddingVertical: 13,
-    alignItems: "center",
-  },
-  doneButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 15,
   },
   title: {
     fontSize: 13,
@@ -309,5 +280,28 @@ const styles = StyleSheet.create({
   cancelText: {
     fontSize: 16,
     color: "#78716c",
+  },
+  spinnerBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.35)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  spinnerCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    paddingVertical: 28,
+    paddingHorizontal: 36,
+    alignItems: "center",
+    gap: 14,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  spinnerText: {
+    fontSize: 15,
+    color: "#57534e",
   },
 });
