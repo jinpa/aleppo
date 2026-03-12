@@ -20,11 +20,11 @@ import { API_URL } from "@/constants/api";
 // ─── Tab Bar ─────────────────────────────────────────────────────────────────
 
 const TAB_ITEMS = [
-  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes" },
-  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue" },
-  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed" },
+  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
+  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
+  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
   { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
-  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import" },
+  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
 ] as const;
 
 function TabBar() {
