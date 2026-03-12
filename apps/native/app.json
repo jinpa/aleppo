@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to take photos of your dishes.",
+        "NSPhotoLibraryUsageDescription": "Used to add photos to your recipes."
+      }
     },
     "android": {
       "adaptiveIcon": {
