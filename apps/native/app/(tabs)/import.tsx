@@ -9,7 +9,9 @@ import {
   Platform,
   Switch,
   Alert,
+  Image,
 } from "react-native";
+import { PhotoPicker } from "@/components/PhotoPicker";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -42,6 +44,7 @@ export default function ImportScreen() {
 
   const [mode, setMode] = useState<Mode>("url");
   const [step, setStep] = useState<Step>("url");
+  const [photos, setPhotos] = useState<string[]>([]);
 
   // ── URL step state ──────────────────────────────────────────────────────────
   const [url, setUrl] = useState("");
@@ -265,9 +268,36 @@ export default function ImportScreen() {
         )}
 
         {mode === "images" && (
-          <View style={styles.tbd}>
-            <Ionicons name="images-outline" size={32} color="#d6d3d1" />
-            <Text style={styles.tbdText}>Import from images — coming soon</Text>
+          <View style={styles.imagesMode}>
+            <Text style={styles.heading}>Import from photos</Text>
+            <Text style={styles.subheading}>
+              Add photos of a recipe — handwritten, printed, or a screenshot — and we'll extract it for you.
+            </Text>
+            <PhotoPicker mode="multiple" onPhotos={setPhotos}>
+              {(open, pickedPhotos, removePhoto) => (
+                <View style={styles.photoRow}>
+                  <TouchableOpacity style={styles.cameraButton} onPress={open}>
+                    <Ionicons name="camera" size={22} color="#78716c" />
+                    <View style={styles.plusBadge}>
+                      <Ionicons name="add" size={11} color="#fff" />
+                    </View>
+                  </TouchableOpacity>
+                  {pickedPhotos.map((uri, i) => (
+                    <View key={uri} style={styles.thumbWrapper}>
+                      <Image source={{ uri }} style={styles.thumb} />
+                      <TouchableOpacity style={styles.removeButton} onPress={() => removePhoto(i)}>
+                        <Ionicons name="close-circle" size={18} color="#1c1917" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </PhotoPicker>
+            {photos.length > 0 && (
+              <TouchableOpacity style={styles.fetchButton}>
+                <Text style={styles.fetchButtonText}>Extract recipe</Text>
+              </TouchableOpacity>
+            )}
           </View>
         )}
 
@@ -580,6 +610,49 @@ const styles = StyleSheet.create({
   tbdText: {
     fontSize: 14,
     color: "#a8a29e",
+  },
+  imagesMode: { gap: 16 },
+  photoRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingVertical: 4,
+  },
+  cameraButton: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: "#f5f5f4",
+    borderWidth: 1.5,
+    borderColor: "#d6d3d1",
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  plusBadge: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#78716c",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  thumbWrapper: { position: "relative" },
+  thumb: {
+    width: 72,
+    height: 72,
+    borderRadius: 10,
+    backgroundColor: "#f5f5f4",
+  },
+  removeButton: {
+    position: "absolute",
+    top: -6,
+    right: -6,
+    backgroundColor: "#fff",
+    borderRadius: 9,
   },
   heading: { fontSize: 24, fontWeight: "700", color: "#1c1917" },
   subheading: { fontSize: 14, color: "#78716c", lineHeight: 20 },
