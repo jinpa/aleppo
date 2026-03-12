@@ -16,6 +16,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 
+type Mode = "url" | "images" | "text";
 type Step = "url" | "review";
 
 type Ingredient = { raw: string };
@@ -39,6 +40,7 @@ export default function ImportScreen() {
   const router = useRouter();
   const { token } = useAuth();
 
+  const [mode, setMode] = useState<Mode>("url");
   const [step, setStep] = useState<Step>("url");
 
   // ── URL step state ──────────────────────────────────────────────────────────
@@ -185,6 +187,12 @@ export default function ImportScreen() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
+  const segments: { key: Mode; label: string; icon: string }[] = [
+    { key: "url",    label: "URL",    icon: "link-outline" },
+    { key: "images", label: "Images", icon: "images-outline" },
+    { key: "text",   label: "Text",   icon: "document-text-outline" },
+  ];
+
   if (step === "url") {
     return (
       <KeyboardAwareScrollView
@@ -192,42 +200,83 @@ export default function ImportScreen() {
         contentContainerStyle={styles.urlContent}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.heading}>Import Recipe</Text>
-        <Text style={styles.subheading}>
-          Paste a link to any recipe. We'll parse it — you review and edit before saving.
-        </Text>
-
-        <View style={styles.urlRow}>
-          <TextInput
-            style={[styles.input, styles.urlInput]}
-            value={url}
-            onChangeText={setUrl}
-            placeholder="https://..."
-            placeholderTextColor="#a8a29e"
-            autoCapitalize="none"
-            keyboardType="url"
-            autoCorrect={false}
-            returnKeyType="go"
-            onSubmitEditing={handleFetch}
-          />
-          <TouchableOpacity
-            style={[styles.fetchButton, (!url.trim() || fetching) && styles.fetchButtonDisabled]}
-            onPress={handleFetch}
-            disabled={!url.trim() || fetching}
-          >
-            {fetching
-              ? <ActivityIndicator size="small" color="#fff" />
-              : <Text style={styles.fetchButtonText}>Import</Text>
-            }
-          </TouchableOpacity>
+        {/* Segmented control */}
+        <View style={styles.segmentedControl}>
+          {segments.map((seg) => {
+            const active = mode === seg.key;
+            return (
+              <TouchableOpacity
+                key={seg.key}
+                style={[styles.segment, active && styles.segmentActive]}
+                onPress={() => setMode(seg.key)}
+              >
+                <Ionicons
+                  name={seg.icon as any}
+                  size={14}
+                  color={active ? "#1c1917" : "#a8a29e"}
+                />
+                <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
+                  {seg.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
-        <View style={styles.hintBox}>
-          <Text style={styles.hintTitle}>Works well with:</Text>
-          <Text style={styles.hintItem}>· AllRecipes, Simply Recipes, NYT Cooking</Text>
-          <Text style={styles.hintItem}>· Food Network, Epicurious, King Arthur</Text>
-          <Text style={styles.hintItem}>· Most sites using Schema.org recipe markup</Text>
-        </View>
+        {mode === "url" && (
+          <>
+            <Text style={styles.heading}>Import from URL</Text>
+            <Text style={styles.subheading}>
+              Paste a link to any recipe. We'll parse it — you review and edit before saving.
+            </Text>
+
+            <View style={styles.urlRow}>
+              <TextInput
+                style={[styles.input, styles.urlInput]}
+                value={url}
+                onChangeText={setUrl}
+                placeholder="https://..."
+                placeholderTextColor="#a8a29e"
+                autoCapitalize="none"
+                keyboardType="url"
+                autoCorrect={false}
+                returnKeyType="go"
+                onSubmitEditing={handleFetch}
+              />
+              <TouchableOpacity
+                style={[styles.fetchButton, (!url.trim() || fetching) && styles.fetchButtonDisabled]}
+                onPress={handleFetch}
+                disabled={!url.trim() || fetching}
+              >
+                {fetching
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.fetchButtonText}>Import</Text>
+                }
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.hintBox}>
+              <Text style={styles.hintTitle}>Works well with:</Text>
+              <Text style={styles.hintItem}>· AllRecipes, Simply Recipes, NYT Cooking</Text>
+              <Text style={styles.hintItem}>· Food Network, Epicurious, King Arthur</Text>
+              <Text style={styles.hintItem}>· Most sites using Schema.org recipe markup</Text>
+            </View>
+          </>
+        )}
+
+        {mode === "images" && (
+          <View style={styles.tbd}>
+            <Ionicons name="images-outline" size={32} color="#d6d3d1" />
+            <Text style={styles.tbdText}>Import from images — coming soon</Text>
+          </View>
+        )}
+
+        {mode === "text" && (
+          <View style={styles.tbd}>
+            <Ionicons name="document-text-outline" size={32} color="#d6d3d1" />
+            <Text style={styles.tbdText}>Import from text — coming soon</Text>
+          </View>
+        )}
       </KeyboardAwareScrollView>
     );
   }
@@ -489,6 +538,48 @@ const styles = StyleSheet.create({
     paddingTop: Platform.OS === "ios" ? 72 : 32,
     paddingBottom: 48,
     gap: 20,
+  },
+  segmentedControl: {
+    flexDirection: "row",
+    backgroundColor: "#e7e5e4",
+    borderRadius: 10,
+    padding: 3,
+  },
+  segment: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  segmentActive: {
+    backgroundColor: "#fff",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  segmentText: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#a8a29e",
+  },
+  segmentTextActive: {
+    color: "#1c1917",
+  },
+  tbd: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 12,
+    paddingVertical: 48,
+  },
+  tbdText: {
+    fontSize: 14,
+    color: "#a8a29e",
   },
   heading: { fontSize: 24, fontWeight: "700", color: "#1c1917" },
   subheading: { fontSize: 14, color: "#78716c", lineHeight: 20 },
