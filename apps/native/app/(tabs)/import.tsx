@@ -64,6 +64,7 @@ export default function ImportScreen() {
   const [isPublic, setIsPublic] = useState(false);
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -87,6 +88,7 @@ export default function ImportScreen() {
     setServings(recipe.servings ? String(recipe.servings) : "");
     setSourceUrl(recipe.sourceUrl ?? fetchedUrl);
     setSourceName(recipe.sourceName ?? "");
+    setImageUrl(recipe.imageUrl);
   };
 
   const handleFetch = async () => {
@@ -169,6 +171,7 @@ export default function ImportScreen() {
         isPublic,
         sourceUrl: sourceUrl.trim() || undefined,
         sourceName: sourceName.trim() || undefined,
+        imageUrl: imageUrl || undefined,
       };
       const res = await fetch(`${API_URL}/api/recipes`, {
         method: "POST",
@@ -356,6 +359,11 @@ export default function ImportScreen() {
         <View style={styles.formError}>
           <Text style={styles.formErrorText}>{errors._form}</Text>
         </View>
+      ) : null}
+
+      {/* Scraped image preview */}
+      {imageUrl ? (
+        <Image source={{ uri: imageUrl }} style={styles.imagePreview} resizeMode="cover" />
       ) : null}
 
       {/* Title */}
@@ -708,6 +716,11 @@ const styles = StyleSheet.create({
   },
   saveButtonDisabled: { opacity: 0.6 },
   saveButtonText: { fontSize: 14, fontWeight: "600", color: "#fff" },
+  imagePreview: {
+    width: "100%",
+    height: 200,
+    marginBottom: 16,
+  },
   bannerOk: {
     flexDirection: "row",
     gap: 8,

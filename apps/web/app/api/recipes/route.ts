@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
 import { getUserFromBearerToken } from "@/lib/mobile-auth";
+import { reuploadImageToR2 } from "@/lib/r2";
 
 const createSchema = z.object({
   title: z.string().min(1).max(300),
@@ -92,11 +93,17 @@ export async function POST(req: Request) {
     );
   }
 
+  let imageUrl = parsed.data.imageUrl;
+  if (imageUrl) {
+    imageUrl = await reuploadImageToR2(imageUrl, userId);
+  }
+
   const [recipe] = await db
     .insert(recipes)
     .values({
       ...parsed.data,
       userId,
+      imageUrl: imageUrl ?? null,
       sourceUrl: parsed.data.sourceUrl || null,
       sourceName: parsed.data.sourceName || null,
       prepTime: parsed.data.prepTime ?? null,
