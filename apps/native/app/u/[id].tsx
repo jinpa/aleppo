@@ -17,31 +17,7 @@ import { API_URL } from "@/constants/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { TagRow } from "@/components/TagRow";
 import { formatTime } from "@/utils/format";
-
-type UserProfile = {
-  id: string;
-  name: string | null;
-  image: string | null;
-  bio: string | null;
-  isPublic: boolean;
-  recipeCount: number;
-  cookCount: number;
-  followerCount: number;
-  followingCount: number;
-  isFollowing: boolean;
-  isOwner: boolean;
-};
-
-type PublicRecipe = {
-  id: string;
-  title: string;
-  imageUrl: string | null;
-  tags: string[];
-  prepTime: number | null;
-  cookTime: number | null;
-  isPublic: boolean;
-  sourceName: string | null;
-};
+import type { UserProfile, RecipeSummary } from "@aleppo/shared";
 
 
 export default function UserProfileScreen() {
@@ -50,7 +26,7 @@ export default function UserProfileScreen() {
   const { token, user: currentUser, signOut } = useAuth();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [recipes, setRecipes] = useState<PublicRecipe[]>([]);
+  const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +50,7 @@ export default function UserProfileScreen() {
         }
         if (!profileRes.ok) throw new Error("Profile not found");
         const profileData: UserProfile = await profileRes.json();
-        const recipesData: PublicRecipe[] = recipesRes.ok ? await recipesRes.json() : [];
+        const recipesData: RecipeSummary[] = recipesRes.ok ? await recipesRes.json() : [];
         setProfile(profileData);
         setIsFollowing(profileData.isFollowing);
         setFollowerCount(profileData.followerCount);

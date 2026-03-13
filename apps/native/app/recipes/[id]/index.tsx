@@ -20,56 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 import { scaleIngredient } from "@/lib/scale-ingredient";
-import type { Ingredient, InstructionStep } from "@aleppo/shared";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type CookLog = {
-  id: string;
-  recipeId: string;
-  userId: string;
-  cookedOn: string;
-  notes: string | null;
-  rating: number | null;
-  createdAt: string;
-};
-
-type Author = {
-  id: string;
-  name: string | null;
-  image: string | null;
-};
-
-type Recipe = {
-  id: string;
-  userId: string;
-  title: string;
-  description: string | null;
-  sourceUrl: string | null;
-  sourceName: string | null;
-  imageUrl: string | null;
-  ingredients: Ingredient[];
-  instructions: InstructionStep[];
-  tags: string[];
-  isPublic: boolean;
-  isAdapted: boolean;
-  commentsUrl: string | null;
-  notes: string | null;
-  prepTime: number | null;
-  cookTime: number | null;
-  servings: number | null;
-  createdAt: string;
-  updatedAt: string;
-  author: Author;
-};
-
-type DetailResponse = {
-  recipe: Recipe;
-  cookLogs: CookLog[];
-  cookCount: number;
-  inQueue: boolean;
-  isOwner: boolean;
-};
+import type { RecipeDetailResponse, CookLog } from "@aleppo/shared";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -158,7 +109,7 @@ export default function RecipeDetailScreen() {
   const router = useRouter();
   const { token, user, signOut } = useAuth();
 
-  const [detail, setDetail] = useState<DetailResponse | null>(null);
+  const [detail, setDetail] = useState<RecipeDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -197,7 +148,7 @@ export default function RecipeDetailScreen() {
           return;
         }
         if (!res.ok) throw new Error("Failed to load recipe");
-        const data: DetailResponse = await res.json();
+        const data: RecipeDetailResponse = await res.json();
         console.log("[recipe detail]", JSON.stringify(data, null, 2));
         setDetail(data);
         setInQueue(data.inQueue);

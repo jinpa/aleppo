@@ -16,6 +16,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
+import type { Recipe } from "@aleppo/shared";
 
 // ─── Tab Bar ─────────────────────────────────────────────────────────────────
 
@@ -63,22 +64,6 @@ const tabStyles = StyleSheet.create({
 type Ingredient = { raw: string };
 type Instruction = { step: number; text: string };
 
-type RecipeDetail = {
-  id: string;
-  title: string;
-  description: string | null;
-  ingredients: { raw: string; amount?: string; unit?: string; name?: string; notes?: string }[];
-  instructions: { step: number; text: string }[];
-  tags: string[];
-  prepTime: number | null;
-  cookTime: number | null;
-  servings: number | null;
-  isPublic: boolean;
-  notes: string | null;
-  sourceUrl: string | null;
-  sourceName: string | null;
-};
-
 export default function EditRecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -109,7 +94,7 @@ export default function EditRecipeScreen() {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      const r: RecipeDetail = data.recipe;
+      const r: Recipe = data.recipe;
       setTitle(r.title);
       setDescription(r.description ?? "");
       setIngredients(r.ingredients.length > 0 ? r.ingredients.map((i) => ({ raw: i.raw })) : [{ raw: "" }]);
