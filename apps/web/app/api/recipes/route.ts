@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
 import { getUserFromBearerToken } from "@/lib/mobile-auth";
+import { parseIngredients } from "@/lib/parse-ingredients";
 
 const createSchema = z.object({
   title: z.string().min(1).max(300),
@@ -12,17 +13,7 @@ const createSchema = z.object({
   sourceUrl: z.string().url().optional().or(z.literal("")),
   sourceName: z.string().max(200).optional(),
   imageUrl: z.string().optional(),
-  ingredients: z
-    .array(
-      z.object({
-        raw: z.string(),
-        amount: z.string().optional(),
-        unit: z.string().optional(),
-        name: z.string().optional(),
-        notes: z.string().optional(),
-      })
-    )
-    .default([]),
+  ingredients: z.array(z.object({ raw: z.string() })).default([]),
   instructions: z
     .array(z.object({ step: z.number(), text: z.string() }))
     .default([]),
@@ -92,10 +83,13 @@ export async function POST(req: Request) {
     );
   }
 
+  const ingredients = parseIngredients(parsed.data.ingredients.map((i) => i.raw));
+
   const [recipe] = await db
     .insert(recipes)
     .values({
       ...parsed.data,
+      ingredients,
       userId,
       sourceUrl: parsed.data.sourceUrl || null,
       sourceName: parsed.data.sourceName || null,
