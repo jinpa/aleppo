@@ -34,7 +34,7 @@ import { CookLogDialog } from "./cook-log-dialog";
 import { formatDate, formatMinutes } from "@/lib/utils";
 import { toast } from "@/lib/use-toast";
 import { scaleIngredient } from "@/lib/scale-ingredient";
-import type { Ingredient, InstructionStep } from "@/db/schema";
+import type { Ingredient, InstructionStep } from "@aleppo/shared";
 
 interface CookLog {
   id: string;

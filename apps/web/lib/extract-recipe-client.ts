@@ -5,7 +5,7 @@
  */
 
 import type { ScrapedRecipe } from "@/lib/recipe-scraper";
-import type { InstructionStep } from "@/db/schema";
+import type { InstructionStep } from "@aleppo/shared";
 import { parseIngredients } from "@/lib/parse-ingredients";
 import keywordBlocklist from "@/config/keyword-blocklist.json";
 

@@ -126,6 +126,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@aleppo/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@auth/drizzle-adapter':
         specifier: ^1.7.4
         version: 1.11.1

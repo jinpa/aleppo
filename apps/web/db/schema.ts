@@ -11,6 +11,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import type { Ingredient, InstructionStep, NutritionalInfo } from "@aleppo/shared";
 
 // ─── Auth.js required tables ────────────────────────────────────────────────
 
@@ -91,28 +92,9 @@ export const passwordResetTokens = pgTable("passwordResetTokens", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
-// ─── Ingredient type ─────────────────────────────────────────────────────────
+// ─── Shared types (re-exported for consumers that import from @/db/schema) ────
 
-export type Ingredient = {
-  raw: string;
-  amount?: string;
-  unit?: string;
-  name?: string;
-  notes?: string;
-};
-
-export type InstructionStep = {
-  step: number;
-  text: string;
-};
-
-export type NutritionalInfo = {
-  calories?: number;
-  protein?: number;
-  fat?: number;
-  carbohydrates?: number;
-  fiber?: number;
-};
+export type { Ingredient, InstructionStep, NutritionalInfo };
 
 // ─── Recipes ─────────────────────────────────────────────────────────────────
 

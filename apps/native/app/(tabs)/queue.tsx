@@ -17,20 +17,7 @@ import { API_URL } from "@/constants/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { TagRow } from "@/components/TagRow";
 import { formatTime, formatRelativeDate } from "@/utils/format";
-
-type QueueRecipe = {
-  id: string;
-  title: string;
-  imageUrl: string | null;
-  tags: string[];
-  prepTime: number | null;
-  cookTime: number | null;
-};
-
-type QueueItem = {
-  recipe: QueueRecipe;
-  addedAt: string;
-};
+import type { QueueItem } from "@aleppo/shared";
 
 
 export default function QueueScreen() {

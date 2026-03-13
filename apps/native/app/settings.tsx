@@ -15,17 +15,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
-
-type UserSettings = {
-  id: string;
-  name: string | null;
-  email: string;
-  image: string | null;
-  bio: string | null;
-  isPublic: boolean;
-  defaultTagsEnabled: boolean;
-  defaultRecipeIsPublic: boolean;
-};
+import type { UserSettings } from "@aleppo/shared";
 
 export default function SettingsScreen() {
   const router = useRouter();

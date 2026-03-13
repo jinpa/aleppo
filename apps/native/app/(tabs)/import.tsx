@@ -19,6 +19,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
+import type { ScrapedRecipe } from "@aleppo/shared";
 
 type Mode = "url" | "images" | "text" | "paprika";
 type Step = "url" | "review";
@@ -38,20 +39,6 @@ type PaprikaItem = {
 
 type Ingredient = { raw: string };
 type Instruction = { step: number; text: string };
-
-type ScrapedRecipe = {
-  title?: string;
-  description?: string;
-  ingredients?: { raw: string }[];
-  instructions?: { text: string }[];
-  tags?: string[];
-  prepTime?: number | null;
-  cookTime?: number | null;
-  servings?: number | null;
-  sourceUrl?: string;
-  sourceName?: string;
-  imageUrl?: string;
-};
 
 export default function ImportScreen() {
   const router = useRouter();

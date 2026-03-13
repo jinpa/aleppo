@@ -18,26 +18,7 @@ import { API_URL } from "@/constants/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { TagRow } from "@/components/TagRow";
 import { formatDate } from "@/utils/format";
-
-type FeedItem = {
-  log: {
-    id: string;
-    cookedOn: string;
-    notes: string | null;
-    createdAt: string;
-  };
-  recipe: {
-    id: string;
-    title: string;
-    imageUrl: string | null;
-    tags: string[];
-  };
-  user: {
-    id: string;
-    name: string | null;
-    image: string | null;
-  };
-};
+import type { FeedItem } from "@aleppo/shared";
 
 type SearchUser = {
   id: string;

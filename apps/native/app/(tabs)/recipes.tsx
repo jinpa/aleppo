@@ -15,19 +15,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
-
-type Recipe = {
-  id: string;
-  title: string;
-  description: string | null;
-  imageUrl: string | null;
-  tags: string[];
-  prepTime: number | null;
-  cookTime: number | null;
-  isPublic: boolean;
-  sourceName: string | null;
-  createdAt: string;
-};
+import type { Recipe } from "@aleppo/shared";
 
 function totalTime(recipe: Recipe): string | null {
   const mins = (recipe.prepTime ?? 0) + (recipe.cookTime ?? 0);
