@@ -1,5 +1,5 @@
 import { parse } from "node-html-parser";
-import type { Ingredient, InstructionStep } from "@/db/schema";
+import type { Ingredient, InstructionStep } from "@aleppo/shared";
 import commentAnchors from "@/config/comment-anchors.json";
 import keywordBlocklist from "@/config/keyword-blocklist.json";
 import { parseIngredients } from "@/lib/parse-ingredients";

@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RecipeCard } from "./recipe-card";
 import { toast } from "@/lib/use-toast";
-import type { Ingredient, InstructionStep } from "@/db/schema";
+import type { Ingredient, InstructionStep } from "@aleppo/shared";
 
 interface Recipe {
   id: string;

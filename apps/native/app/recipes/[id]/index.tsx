@@ -20,21 +20,9 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 import { scaleIngredient } from "@/lib/scale-ingredient";
+import type { Ingredient, InstructionStep } from "@aleppo/shared";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-
-type Ingredient = {
-  raw: string;
-  amount?: string;
-  unit?: string;
-  name?: string;
-  notes?: string;
-};
-
-type InstructionStep = {
-  step: number;
-  text: string;
-};
 
 type CookLog = {
   id: string;
@@ -210,6 +198,7 @@ export default function RecipeDetailScreen() {
         }
         if (!res.ok) throw new Error("Failed to load recipe");
         const data: DetailResponse = await res.json();
+        console.log("[recipe detail]", JSON.stringify(data, null, 2));
         setDetail(data);
         setInQueue(data.inQueue);
         setIsPublic(data.recipe.isPublic);

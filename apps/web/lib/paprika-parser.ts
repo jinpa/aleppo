@@ -10,7 +10,7 @@ import AdmZip from "adm-zip";
 import sharp from "sharp";
 import { parseIngredients } from "@/lib/parse-ingredients";
 import { uploadImageToR2 } from "@/lib/r2";
-import type { Ingredient, InstructionStep } from "@/db/schema";
+import type { Ingredient, InstructionStep } from "@aleppo/shared";
 
 // ── Raw JSON shape from Paprika's export ─────────────────────────────────────
 

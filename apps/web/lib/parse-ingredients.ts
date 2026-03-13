@@ -3,7 +3,7 @@
  * Used by lib/recipe-scraper.ts, lib/extract-recipe-client.ts, and lib/paprika-parser.ts.
  */
 
-import type { Ingredient } from "@/db/schema";
+import type { Ingredient } from "@aleppo/shared";
 
 // Restricts the unit field to a known cooking vocabulary so we don't greedily
 // capture adjectives as the unit (e.g. "tablespoon Dijon" or "cup extra").

@@ -1,4 +1,13 @@
-// Shared utilities will be exported here as they are extracted from apps/web/lib/
-// Example future exports:
-// export { formatMinutes, formatDate } from "./utils"
-// export { scaleIngredient } from "./scale-ingredient"
+export type Ingredient = {
+  raw: string;
+  amount?: string;
+  quantity?: number;
+  unit?: string;
+  name?: string;
+  notes?: string;
+};
+
+export type InstructionStep = {
+  step: number;
+  text: string;
+};

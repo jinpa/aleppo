@@ -1,5 +1,5 @@
 import Fraction from "fraction.js";
-import type { Ingredient } from "@/db/schema";
+import type { Ingredient } from "@aleppo/shared";
 
 // Maps Unicode vulgar fractions to their ASCII slash equivalents.
 const UNICODE_FRACTION_MAP: Record<string, string> = {

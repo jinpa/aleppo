@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { RecipeCard } from "@/components/recipes/recipe-card";
 import { toast } from "@/lib/use-toast";
-import type { Ingredient, InstructionStep } from "@/db/schema";
+import type { Ingredient, InstructionStep } from "@aleppo/shared";
 
 interface ProfileRecipe {
   id: string;
