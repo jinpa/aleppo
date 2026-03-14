@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import sharp from "sharp";
 
@@ -64,6 +64,28 @@ export async function reuploadImageToR2(
   } catch {
     return sourceUrl;
   }
+}
+
+export async function listStorageByUser(): Promise<Map<string, number>> {
+  const map = new Map<string, number>();
+  let continuationToken: string | undefined;
+  do {
+    const res = await r2Client.send(
+      new ListObjectsV2Command({
+        Bucket: BUCKET_NAME,
+        Prefix: "recipes/",
+        ContinuationToken: continuationToken,
+      })
+    );
+    for (const obj of res.Contents ?? []) {
+      const userId = obj.Key?.split("/")[1];
+      if (userId && obj.Size) {
+        map.set(userId, (map.get(userId) ?? 0) + obj.Size);
+      }
+    }
+    continuationToken = res.IsTruncated ? res.NextContinuationToken : undefined;
+  } while (continuationToken);
+  return map;
 }
 
 export async function getPresignedUploadUrl(
