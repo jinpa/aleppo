@@ -9,9 +9,9 @@ import { reuploadImageToR2 } from "@/lib/r2";
 
 const createSchema = z.object({
   title: z.string().min(1).max(300),
-  description: z.string().max(2000).optional(),
-  sourceUrl: z.string().url().optional().or(z.literal("")),
-  sourceName: z.string().max(200).optional(),
+  description: z.string().max(2000).optional().nullable(),
+  sourceUrl: z.string().url().optional().or(z.literal("")).nullable(),
+  sourceName: z.string().max(200).optional().nullable(),
   imageUrl: z.string().optional(),
   ingredients: z
     .array(
@@ -29,11 +29,13 @@ const createSchema = z.object({
     .default([]),
   tags: z.array(z.string()).default([]),
   isPublic: z.boolean().default(false),
-  notes: z.string().max(5000).optional(),
+  notes: z.string().max(5000).optional().nullable(),
   prepTime: z.number().int().positive().optional().nullable(),
   cookTime: z.number().int().positive().optional().nullable(),
   servings: z.number().int().positive().optional().nullable(),
   commentsUrl: z.string().url().optional().nullable(),
+  isAdapted: z.boolean().default(false),
+  forkedFromRecipeId: z.string().optional(),
 });
 
 export async function GET(req: Request) {
@@ -93,6 +95,23 @@ export async function POST(req: Request) {
     );
   }
 
+  // Validate forkedFromRecipeId if provided
+  let forkedFromRecipeId: string | null = null;
+  if (parsed.data.forkedFromRecipeId) {
+    const [source] = await db
+      .select({ id: recipes.id, isPublic: recipes.isPublic, userId: recipes.userId })
+      .from(recipes)
+      .where(eq(recipes.id, parsed.data.forkedFromRecipeId))
+      .limit(1);
+    if (!source || (!source.isPublic && source.userId !== userId)) {
+      return NextResponse.json(
+        { error: "Source recipe not found" },
+        { status: 404 }
+      );
+    }
+    forkedFromRecipeId = source.id;
+  }
+
   let imageUrl = parsed.data.imageUrl;
   if (imageUrl) {
     imageUrl = await reuploadImageToR2(imageUrl, userId);
@@ -110,6 +129,8 @@ export async function POST(req: Request) {
       cookTime: parsed.data.cookTime ?? null,
       servings: parsed.data.servings ?? null,
       commentsUrl: parsed.data.commentsUrl ?? null,
+      isAdapted: parsed.data.isAdapted,
+      forkedFromRecipeId,
     })
     .returning();
 

@@ -9,6 +9,7 @@ import {
   date,
   primaryKey,
   index,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
@@ -135,6 +136,10 @@ export const recipes = pgTable(
     tags: text("tags").array().default([]),
     isPublic: boolean("isPublic").default(false).notNull(),
     isAdapted: boolean("isAdapted").default(false).notNull(),
+    forkedFromRecipeId: text("forkedFromRecipeId").references(
+      (): AnyPgColumn => recipes.id,
+      { onDelete: "set null" }
+    ),
     commentsUrl: text("commentsUrl"),
     notes: text("notes"),
     prepTime: integer("prepTime"),

@@ -65,11 +65,25 @@ export async function GET(
     inQueue = !!queueRow;
   }
 
+  // Fetch forkedFrom info if present
+  let forkedFrom: { recipeId: string; recipeTitle: string } | null = null;
+  if (row.recipe.forkedFromRecipeId) {
+    const [forkedRow] = await db
+      .select({ id: recipes.id, title: recipes.title })
+      .from(recipes)
+      .where(eq(recipes.id, row.recipe.forkedFromRecipeId))
+      .limit(1);
+    if (forkedRow) {
+      forkedFrom = { recipeId: forkedRow.id, recipeTitle: forkedRow.title };
+    }
+  }
+
   return NextResponse.json({
     recipe: { ...row.recipe, author: row.author },
     cookLogs: logs,
     cookCount,
     inQueue,
     isOwner,
+    forkedFrom,
   });
 }

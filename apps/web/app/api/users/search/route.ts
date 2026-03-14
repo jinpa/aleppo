@@ -3,7 +3,7 @@ import { ilike, eq, and } from "drizzle-orm";
 import { auth } from "@/auth";
 import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { users, follows } from "@/db/schema";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -35,5 +35,21 @@ export async function GET(req: Request) {
     )
     .limit(20);
 
-  return NextResponse.json(results);
+  // Look up which of these users the caller already follows
+  const followedIds = new Set<string>();
+  if (results.length > 0) {
+    const rows = await db
+      .select({ followingId: follows.followingId })
+      .from(follows)
+      .where(eq(follows.followerId, userId));
+    for (const row of rows) followedIds.add(row.followingId);
+  }
+
+  return NextResponse.json(
+    results.map((u) => ({
+      ...u,
+      isFollowing: followedIds.has(u.id),
+      isSelf: u.id === userId,
+    }))
+  );
 }

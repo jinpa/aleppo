@@ -63,7 +63,7 @@ const tabStyles = StyleSheet.create({
 type Ingredient = { raw: string };
 type Instruction = { step: number; text: string };
 
-type RecipeDetail = {
+type SourceRecipe = {
   id: string;
   title: string;
   description: string | null;
@@ -74,18 +74,21 @@ type RecipeDetail = {
   cookTime: number | null;
   servings: number | null;
   isPublic: boolean;
+  isAdapted: boolean;
   notes: string | null;
   sourceUrl: string | null;
   sourceName: string | null;
-  forkedFromRecipeId: string | null;
+  imageUrl: string | null;
+  author: { id: string; name: string | null; image: string | null };
 };
 
-export default function EditRecipeScreen() {
+export default function SaveRecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { token, user } = useAuth();
 
   const [loadingRecipe, setLoadingRecipe] = useState(true);
+  const [sourceRecipe, setSourceRecipe] = useState<SourceRecipe | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [ingredients, setIngredients] = useState<Ingredient[]>([{ raw: "" }]);
@@ -99,8 +102,7 @@ export default function EditRecipeScreen() {
   const [notes, setNotes] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
-
-  const [hasSourceAttribution, setHasSourceAttribution] = useState(false);
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -112,7 +114,8 @@ export default function EditRecipeScreen() {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      const r: RecipeDetail = data.recipe;
+      const r: SourceRecipe = data.recipe;
+      setSourceRecipe(r);
       setTitle(r.title);
       setDescription(r.description ?? "");
       setIngredients(r.ingredients.length > 0 ? r.ingredients.map((i) => ({ raw: i.raw })) : [{ raw: "" }]);
@@ -121,13 +124,19 @@ export default function EditRecipeScreen() {
       setPrepTime(r.prepTime ? String(r.prepTime) : "");
       setCookTime(r.cookTime ? String(r.cookTime) : "");
       setServings(r.servings ? String(r.servings) : "");
-      setIsPublic(r.isPublic);
-      setNotes(r.notes ?? "");
-      setSourceUrl(r.sourceUrl ?? "");
-      setSourceName(r.sourceName ?? "");
-      setHasSourceAttribution(!!(r.forkedFromRecipeId || r.sourceUrl || r.sourceName));
+      setIsPublic(false); // Always default to private
+      setNotes(""); // Notes don't carry over
+      setImageUrl(r.imageUrl);
+      // Carry over source attribution or set to author name
+      if (r.sourceUrl) {
+        setSourceUrl(r.sourceUrl);
+        setSourceName(r.sourceName ?? "");
+      } else {
+        setSourceUrl("");
+        setSourceName(r.author.name ?? "");
+      }
     } catch {
-      setErrors({ _load: "Could not load recipe for editing." });
+      setErrors({ _load: "Could not load recipe." });
     } finally {
       setLoadingRecipe(false);
     }
@@ -147,7 +156,7 @@ export default function EditRecipeScreen() {
 
   const addIngredient = () => setIngredients((p) => [...p, { raw: "" }]);
   const updateIngredient = (i: number, v: string) =>
-    setIngredients((p) => p.map((ing, idx) => idx === i ? { raw: v } : ing));
+    setIngredients((p) => p.map((ing, idx) => (idx === i ? { raw: v } : ing)));
   const removeIngredient = (i: number) => {
     if (ingredients.length === 1) { setIngredients([{ raw: "" }]); return; }
     setIngredients((p) => p.filter((_, idx) => idx !== i));
@@ -156,7 +165,7 @@ export default function EditRecipeScreen() {
   const addInstruction = () =>
     setInstructions((p) => [...p, { step: p.length + 1, text: "" }]);
   const updateInstruction = (i: number, v: string) =>
-    setInstructions((p) => p.map((ins, idx) => idx === i ? { ...ins, text: v } : ins));
+    setInstructions((p) => p.map((ins, idx) => (idx === i ? { ...ins, text: v } : ins)));
   const removeInstruction = (i: number) => {
     if (instructions.length === 1) { setInstructions([{ step: 1, text: "" }]); return; }
     setInstructions((p) => p.filter((_, idx) => idx !== i).map((ins, idx) => ({ ...ins, step: idx + 1 })));
@@ -168,11 +177,30 @@ export default function EditRecipeScreen() {
     setTagInput("");
   };
 
+  const hasContentChanged = (): boolean => {
+    if (!sourceRecipe) return false;
+    const srcIngs = sourceRecipe.ingredients.map((i) => i.raw).join("\n");
+    const curIngs = ingredients.filter((i) => i.raw.trim()).map((i) => i.raw).join("\n");
+    const srcSteps = sourceRecipe.instructions.map((i) => i.text).join("\n");
+    const curSteps = instructions.filter((i) => i.text.trim()).map((i) => i.text).join("\n");
+    return (
+      title.trim() !== sourceRecipe.title ||
+      (description.trim() || null) !== (sourceRecipe.description ?? null) ||
+      srcIngs !== curIngs ||
+      srcSteps !== curSteps ||
+      JSON.stringify(tags) !== JSON.stringify(sourceRecipe.tags) ||
+      (prepTime ? parseInt(prepTime, 10) : null) !== sourceRecipe.prepTime ||
+      (cookTime ? parseInt(cookTime, 10) : null) !== sourceRecipe.cookTime ||
+      (servings ? parseInt(servings, 10) : null) !== sourceRecipe.servings
+    );
+  };
+
   const handleSave = async () => {
-    if (!validate()) return;
+    if (!validate() || !sourceRecipe) return;
     setSaving(true);
     try {
-      const body: Record<string, unknown> = {
+      const isAdapted = sourceRecipe.isAdapted || hasContentChanged();
+      const body = {
         title: title.trim(),
         description: description.trim() || null,
         ingredients: ingredients.filter((i) => i.raw.trim()),
@@ -187,14 +215,13 @@ export default function EditRecipeScreen() {
         notes: notes.trim() || null,
         sourceUrl: sourceUrl.trim() || null,
         sourceName: sourceName.trim() || null,
+        imageUrl: imageUrl ?? undefined,
+        isAdapted,
+        forkedFromRecipeId: id,
       };
-      // Any edit to a recipe with source attribution marks it as adapted
-      if (hasSourceAttribution) {
-        body.isAdapted = true;
-      }
 
-      const res = await fetch(`${API_URL}/api/recipes/${id}`, {
-        method: "PATCH",
+      const res = await fetch(`${API_URL}/api/recipes`, {
+        method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
@@ -202,8 +229,8 @@ export default function EditRecipeScreen() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
-      // Replace with fresh detail screen so updated data loads immediately
-      router.replace(`/recipes/${id}`);
+      const newRecipe = await res.json();
+      router.replace(`/recipes/${newRecipe.id}`);
     } catch {
       setErrors({ _form: "Failed to save recipe. Please try again." });
     } finally {
@@ -246,7 +273,7 @@ export default function EditRecipeScreen() {
           <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={24} color="#1c1917" />
           </TouchableOpacity>
-          <Text style={styles.heading}>Edit Recipe</Text>
+          <Text style={styles.heading}>Save to My Recipes</Text>
           <View style={styles.headerRight}>
             <TouchableOpacity onPress={() => router.navigate("/profile")} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               {user?.image ? (
@@ -451,7 +478,7 @@ export default function EditRecipeScreen() {
             {saving ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : (
-              <Text style={styles.bottomSaveButtonText}>Save changes</Text>
+              <Text style={styles.bottomSaveButtonText}>Save to my recipes</Text>
             )}
           </TouchableOpacity>
         </View>

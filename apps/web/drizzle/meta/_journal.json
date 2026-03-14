@@ -43,6 +43,13 @@
       "when": 1772479611053,
       "tag": "0005_strange_mach_iv",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773498721301,
+      "tag": "0006_black_wolfpack",
+      "breakpoints": true
     }
   ]
 }

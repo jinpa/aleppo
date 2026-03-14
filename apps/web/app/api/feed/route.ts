@@ -12,16 +12,27 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const following = await db
+  // Get who this user follows
+  const followingRows = await db
     .select({ followingId: follows.followingId })
     .from(follows)
     .where(eq(follows.followerId, userId));
 
-  if (following.length === 0) {
-    return NextResponse.json([]);
+  if (followingRows.length === 0) {
+    return NextResponse.json({ items: [], following: [] });
   }
 
-  const followingIds = following.map((f) => f.followingId);
+  const followingIds = followingRows.map((f) => f.followingId);
+
+  // Fetch followed user profiles
+  const followedUsers = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      image: users.image,
+    })
+    .from(users)
+    .where(inArray(users.id, followingIds));
 
   const feed = await db
     .select({
@@ -56,5 +67,5 @@ export async function GET(req: Request) {
     .orderBy(desc(cookLogs.createdAt))
     .limit(50);
 
-  return NextResponse.json(feed);
+  return NextResponse.json({ items: feed, following: followedUsers });
 }
