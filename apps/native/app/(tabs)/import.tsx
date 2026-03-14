@@ -197,22 +197,35 @@ export default function ImportScreen() {
       setWaitingForBookmarklet(false);
 
       const payload = e.data.payload;
+      // Read token fresh from localStorage — the closure may have captured a
+      // null value if auth hadn't finished loading when the effect first ran.
+      const currentToken =
+        Platform.OS === "web" ? localStorage.getItem("auth_token") : token;
       try {
         const res = await fetch(`${API_URL}/api/import/bookmarklet`, {
           method: "POST",
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${currentToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(payload),
         });
         const data = await res.json();
+        if (!res.ok) {
+          setParseError(
+            res.status === 401
+              ? "Authentication error — please reload and try again."
+              : data.error ?? "Import failed. Please fill in the details manually."
+          );
+          setStep("review");
+          return;
+        }
         if (data.recipe) populateForm(data.recipe, payload?.url ?? "");
         else setParseError("No recipe structured data found on that page. Please fill in the details manually.");
         setUrl(payload?.url ?? "");
         setStep("review");
       } catch {
-        setParseError("Failed to parse recipe data.");
+        setParseError("Failed to connect to server.");
         setStep("review");
       }
     }
