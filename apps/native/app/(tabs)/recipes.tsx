@@ -84,6 +84,18 @@ function RecipeCard({ recipe }: { recipe: Recipe }) {
   );
 }
 
+type SortKey = "date" | "title" | "cooks" | "lastCooked" | "updated" | "totalTime";
+type SortDir = "asc" | "desc";
+
+const SORT_OPTIONS: { key: SortKey; label: string; defaultDir: SortDir }[] = [
+  { key: "date", label: "Date added", defaultDir: "desc" },
+  { key: "title", label: "A-Z", defaultDir: "asc" },
+  { key: "cooks", label: "# Cooked", defaultDir: "desc" },
+  { key: "lastCooked", label: "Last cooked", defaultDir: "desc" },
+  { key: "updated", label: "Updated", defaultDir: "desc" },
+  { key: "totalTime", label: "Total time", defaultDir: "asc" },
+];
+
 export default function RecipesScreen() {
   const { token, user, signOut } = useAuth();
   const router = useRouter();
@@ -94,6 +106,8 @@ export default function RecipesScreen() {
   const [search, setSearch] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [tagsExpanded, setTagsExpanded] = useState(false);
+  const [sortKey, setSortKey] = useState<SortKey>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   const fetchRecipes = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -103,6 +117,8 @@ export default function RecipesScreen() {
         const params = new URLSearchParams();
         if (search) params.set("search", search);
         if (activeTag) params.set("tag", activeTag);
+        params.set("sort", sortKey);
+        params.set("dir", sortDir);
         const qs = params.toString();
 
         const res = await fetch(
@@ -124,7 +140,7 @@ export default function RecipesScreen() {
         setRefreshing(false);
       }
     },
-    [token, search, activeTag, signOut]
+    [token, search, activeTag, sortKey, sortDir, signOut]
   );
 
   useFocusEffect(
@@ -186,6 +202,41 @@ export default function RecipesScreen() {
           autoCorrect={false}
           clearButtonMode="while-editing"
         />
+      </View>
+
+      <View style={styles.sortRow}>
+        <Text style={styles.sortLabel}>Sort by:</Text>
+        {SORT_OPTIONS.map((opt) => {
+          const isActive = sortKey === opt.key;
+          return (
+            <TouchableOpacity
+              key={opt.key}
+              style={[styles.sortPill, isActive && styles.sortPillActive]}
+              onPress={() => {
+                if (isActive) {
+                  setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+                } else {
+                  setSortKey(opt.key);
+                  setSortDir(opt.defaultDir);
+                }
+              }}
+            >
+              <Text
+                style={[
+                  styles.sortPillText,
+                  isActive && styles.sortPillTextActive,
+                ]}
+              >
+                {opt.label}
+              </Text>
+              {isActive && (
+                <Text style={styles.sortArrow}>
+                  {sortDir === "asc" ? "↑" : "↓"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
 
       {allTags.length > 0 ? (
@@ -339,6 +390,47 @@ const styles = StyleSheet.create({
     paddingVertical: 9,
     fontSize: 15,
     color: "#1c1917",
+  },
+  sortRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 6,
+  },
+  sortLabel: {
+    fontSize: 12,
+    color: "#a8a29e",
+    fontWeight: "500",
+    marginRight: 2,
+  },
+  sortPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#d6d3d1",
+    backgroundColor: "transparent",
+  },
+  sortPillActive: {
+    backgroundColor: "#44403c",
+    borderColor: "#44403c",
+  },
+  sortPillText: {
+    fontSize: 11,
+    color: "#78716c",
+    fontWeight: "500",
+  },
+  sortPillTextActive: {
+    color: "#fff",
+  },
+  sortArrow: {
+    fontSize: 11,
+    color: "#fff",
+    marginLeft: 3,
   },
   tagFilterRow: {
     flexDirection: "row",

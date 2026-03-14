@@ -1,11 +1,23 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, asc, and, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
 import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { reuploadImageToR2 } from "@/lib/r2";
+
+const SORT_KEYS = ["date", "title", "cooks", "lastCooked", "updated", "totalTime"] as const;
+type SortKey = (typeof SORT_KEYS)[number];
+
+const DEFAULT_DIR: Record<SortKey, "asc" | "desc"> = {
+  date: "desc",
+  title: "asc",
+  cooks: "desc",
+  lastCooked: "desc",
+  updated: "desc",
+  totalTime: "asc",
+};
 
 const createSchema = z.object({
   title: z.string().min(1).max(300),
@@ -49,6 +61,15 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search");
   const tag = searchParams.get("tag");
+  const sortParam = searchParams.get("sort") as SortKey | null;
+  const sortKey: SortKey | null = sortParam && SORT_KEYS.includes(sortParam) ? sortParam : null;
+  const dirParam = searchParams.get("dir");
+  const dir: "asc" | "desc" =
+    dirParam === "asc" || dirParam === "desc"
+      ? dirParam
+      : sortKey
+        ? DEFAULT_DIR[sortKey]
+        : "desc";
 
   const conditions = [eq(recipes.userId, userId)];
 
@@ -64,15 +85,75 @@ export async function GET(req: Request) {
     );
   }
 
+  const dirFn = dir === "asc" ? asc : desc;
+
+  // Default to relevance when searching without explicit sort
+  if (!sortKey && search) {
+    const result = await db
+      .select()
+      .from(recipes)
+      .where(and(...conditions))
+      .orderBy(sql`ts_rank("search_tsv", websearch_to_tsquery('english', ${search})) DESC`);
+    return NextResponse.json(result);
+  }
+
+  const effectiveSort = sortKey ?? "date";
+
+  // Sorts requiring JOIN with cookLogs
+  if (effectiveSort === "cooks") {
+    const orderExpr = dir === "asc"
+      ? sql`COALESCE(COUNT("cookLogs".id), 0) ASC`
+      : sql`COALESCE(COUNT("cookLogs".id), 0) DESC`;
+    const result = await db.execute(sql`
+      SELECT "recipes".*
+      FROM "recipes"
+      LEFT JOIN "cookLogs" ON "cookLogs"."recipeId" = "recipes".id
+      WHERE ${and(...conditions)}
+      GROUP BY "recipes".id
+      ORDER BY ${orderExpr}
+    `);
+    return NextResponse.json(result);
+  }
+
+  if (effectiveSort === "lastCooked") {
+    const orderExpr = dir === "asc"
+      ? sql`MAX("cookLogs"."cookedOn") ASC NULLS FIRST`
+      : sql`MAX("cookLogs"."cookedOn") DESC NULLS LAST`;
+    const result = await db.execute(sql`
+      SELECT "recipes".*
+      FROM "recipes"
+      LEFT JOIN "cookLogs" ON "cookLogs"."recipeId" = "recipes".id
+      WHERE ${and(...conditions)}
+      GROUP BY "recipes".id
+      ORDER BY ${orderExpr}
+    `);
+    return NextResponse.json(result);
+  }
+
+  // totalTime: recipes with no times sort last
+  if (effectiveSort === "totalTime") {
+    const bothNull = sql`CASE WHEN "prepTime" IS NULL AND "cookTime" IS NULL THEN 1 ELSE 0 END`;
+    const totalTimeExpr = sql`COALESCE("prepTime", 0) + COALESCE("cookTime", 0)`;
+    const result = await db
+      .select()
+      .from(recipes)
+      .where(and(...conditions))
+      .orderBy(asc(bothNull), dirFn(totalTimeExpr));
+    return NextResponse.json(result);
+  }
+
+  // Simple column sorts: date, title, updated
+  const columnMap = {
+    date: recipes.createdAt,
+    title: recipes.title,
+    updated: recipes.updatedAt,
+  } as const;
+
   const result = await db
     .select()
     .from(recipes)
     .where(and(...conditions))
-    .orderBy(
-      search
-        ? sql`ts_rank("search_tsv", websearch_to_tsquery('english', ${search})) DESC`
-        : desc(recipes.createdAt)
-    );
+    .orderBy(dirFn(columnMap[effectiveSort as keyof typeof columnMap]));
   return NextResponse.json(result);
 }
 
