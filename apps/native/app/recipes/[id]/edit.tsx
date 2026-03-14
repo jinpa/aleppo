@@ -85,6 +85,7 @@ export default function EditRecipeScreen() {
   const [sourceName, setSourceName] = useState("");
 
   const [hasSourceAttribution, setHasSourceAttribution] = useState(false);
+  const [originalContent, setOriginalContent] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -110,6 +111,12 @@ export default function EditRecipeScreen() {
       setSourceUrl(r.sourceUrl ?? "");
       setSourceName(r.sourceName ?? "");
       setHasSourceAttribution(!!(r.forkedFromRecipeId || r.sourceUrl || r.sourceName));
+      setOriginalContent(JSON.stringify({
+        title: r.title,
+        description: r.description ?? "",
+        ingredients: r.ingredients.length > 0 ? r.ingredients.map((i: Ingredient) => i.raw) : [],
+        instructions: r.instructions.length > 0 ? r.instructions.map((i: Instruction) => i.text) : [],
+      }));
     } catch {
       setErrors({ _load: "Could not load recipe for editing." });
     } finally {
@@ -172,9 +179,17 @@ export default function EditRecipeScreen() {
         sourceUrl: sourceUrl.trim() || null,
         sourceName: sourceName.trim() || null,
       };
-      // Any edit to a recipe with source attribution marks it as adapted
+      // Only mark as adapted when recipe content (not just metadata) changes
       if (hasSourceAttribution) {
-        body.isAdapted = true;
+        const currentContent = JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || "",
+          ingredients: ingredients.filter((i) => i.raw.trim()).map((i) => i.raw.trim()),
+          instructions: instructions.filter((i) => i.text.trim()).map((i) => i.text.trim()),
+        });
+        if (currentContent !== originalContent) {
+          body.isAdapted = true;
+        }
       }
 
       const res = await fetch(`${API_URL}/api/recipes/${id}`, {
