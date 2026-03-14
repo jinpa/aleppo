@@ -21,6 +21,7 @@ type Fixtures = {
   testUsers: TestUsers;
   alicePage: Page;
   bobPage: Page;
+  carolPage: Page;
 };
 
 export const test = base.extend<Fixtures>({
@@ -42,6 +43,16 @@ export const test = base.extend<Fixtures>({
     const users = getTestUsers();
     const ctx = await browser.newContext({
       storageState: users.bob.storageStatePath,
+    });
+    const page = await ctx.newPage();
+    await use(page);
+    await ctx.close();
+  },
+
+  carolPage: async ({ browser }, use) => {
+    const users = getTestUsers();
+    const ctx = await browser.newContext({
+      storageState: users.carol.storageStatePath,
     });
     const page = await ctx.newPage();
     await use(page);

@@ -130,6 +130,16 @@ export default function ProfileScreen() {
           />
         </View>
 
+        {user?.isAdmin && (
+          <View style={styles.section}>
+            <Row
+              icon="shield-outline"
+              label="Admin"
+              onPress={() => router.push("/admin")}
+            />
+          </View>
+        )}
+
         <View style={styles.section}>
           <Row
             icon="log-out-outline"
