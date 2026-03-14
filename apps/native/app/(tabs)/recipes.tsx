@@ -9,80 +9,16 @@ import {
   ActivityIndicator,
   RefreshControl,
   Platform,
+  Modal,
+  Pressable,
 } from "react-native";
 import { Image } from "expo-image";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
+import { RecipeCard } from "@/components/RecipeCard";
 import type { Recipe } from "@aleppo/shared";
-
-function totalTime(recipe: Recipe): string | null {
-  const mins = (recipe.prepTime ?? 0) + (recipe.cookTime ?? 0);
-  if (!mins) return null;
-  if (mins < 60) return `${mins}m`;
-  const h = Math.floor(mins / 60);
-  const m = mins % 60;
-  return m ? `${h}h ${m}m` : `${h}h`;
-}
-
-function RecipeCard({ recipe }: { recipe: Recipe }) {
-  const router = useRouter();
-  const time = totalTime(recipe);
-
-  return (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => router.push(`/recipes/${recipe.id}`)}
-      activeOpacity={0.7}
-    >
-      {recipe.imageUrl ? (
-        <Image
-          source={{ uri: recipe.imageUrl }}
-          style={styles.cardImage}
-          contentFit="cover"
-          transition={200}
-        />
-      ) : (
-        <View style={styles.cardImagePlaceholder}>
-          <Text style={styles.cardImagePlaceholderText}>🍳</Text>
-        </View>
-      )}
-      <View style={styles.cardBody}>
-        <Text style={styles.cardTitle} numberOfLines={2}>
-          {recipe.title}
-        </Text>
-        {recipe.description ? (
-          <Text style={styles.cardDescription} numberOfLines={2}>
-            {recipe.description}
-          </Text>
-        ) : null}
-        <View style={styles.cardMeta}>
-          {time ? (
-            <Text style={styles.cardMetaText}>{time}</Text>
-          ) : null}
-          {recipe.sourceName ? (
-            <Text style={styles.cardMetaText} numberOfLines={1}>
-              {recipe.sourceName}
-            </Text>
-          ) : null}
-        </View>
-        {recipe.tags.length > 0 ? (
-          <View style={styles.tagRow}>
-            {recipe.tags.slice(0, 3).map((tag) => (
-              <View key={tag} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
-            ))}
-            {recipe.tags.length > 3 ? (
-              <Text style={styles.tagOverflow}>+{recipe.tags.length - 3}</Text>
-            ) : null}
-          </View>
-        ) : null}
-      </View>
-    </TouchableOpacity>
-  );
-}
 
 type SortKey = "date" | "title" | "cooks" | "lastCooked" | "updated" | "totalTime";
 type SortDir = "asc" | "desc";
@@ -108,6 +44,12 @@ export default function RecipesScreen() {
   const [tagsExpanded, setTagsExpanded] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // Edit mode state
+  const [editMode, setEditMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const fetchRecipes = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -154,6 +96,54 @@ export default function RecipesScreen() {
     fetchRecipes({ silent: true });
   };
 
+  const exitEditMode = () => {
+    setSelectedIds(new Set());
+    setEditMode(false);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(recipes.map((r) => r.id)));
+  };
+
+  const deselectAll = () => {
+    setSelectedIds(new Set());
+  };
+
+  const allSelected = recipes.length > 0 && recipes.every((r) => selectedIds.has(r.id));
+
+  const handleBulkDelete = async () => {
+    setDeleting(true);
+    const ids = Array.from(selectedIds);
+    setRecipes((prev) => prev.filter((r) => !selectedIds.has(r.id)));
+    try {
+      const res = await fetch(`${API_URL}/api/recipes/batch`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      fetchRecipes({ silent: true });
+    } finally {
+      setSelectedIds(new Set());
+      setEditMode(false);
+      setDeleting(false);
+      setShowBulkDeleteConfirm(false);
+    }
+  };
+
   const allTags = Array.from(new Set(recipes.flatMap((r) => r.tags))).sort();
   const TAG_COLLAPSE_THRESHOLD = 5;
   const shouldCollapse = allTags.length > TAG_COLLAPSE_THRESHOLD;
@@ -163,33 +153,59 @@ export default function RecipesScreen() {
   const listHeader = (
     <View>
       <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={styles.heading}>My Recipes</Text>
-          <Text style={styles.count}>{recipes.length}</Text>
-        </View>
-        <TouchableOpacity
-          onPress={() => router.navigate("/profile")}
-          style={styles.avatarButton}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          {user?.image ? (
-            <Image
-              source={{ uri: user.image }}
-              style={styles.avatar}
-              contentFit="cover"
-            />
-          ) : (
-            <View style={styles.avatarFallback}>
-              {user?.name ? (
-                <Text style={styles.avatarInitials}>
-                  {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
-                </Text>
-              ) : (
-                <Ionicons name="person" size={16} color="#78716c" />
-              )}
+        {editMode ? (
+          <>
+            <TouchableOpacity onPress={exitEditMode}>
+              <Text style={styles.editModeButton}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={styles.editModeTitle}>
+              {selectedIds.size} selected
+            </Text>
+            <TouchableOpacity onPress={allSelected ? deselectAll : selectAll}>
+              <Text style={styles.editModeButton}>
+                {allSelected ? "Deselect All" : "Select All"}
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <View style={styles.headerLeft}>
+              <Text style={styles.heading}>My Recipes</Text>
+              <Text style={styles.count}>{recipes.length}</Text>
+              {recipes.length > 0 ? (
+                <TouchableOpacity
+                  onPress={() => setEditMode(true)}
+                  style={styles.editButton}
+                >
+                  <Text style={styles.editButtonText}>Edit</Text>
+                </TouchableOpacity>
+              ) : null}
             </View>
-          )}
-        </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.navigate("/profile")}
+              style={styles.avatarButton}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              {user?.image ? (
+                <Image
+                  source={{ uri: user.image }}
+                  style={styles.avatar}
+                  contentFit="cover"
+                />
+              ) : (
+                <View style={styles.avatarFallback}>
+                  {user?.name ? (
+                    <Text style={styles.avatarInitials}>
+                      {user.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                    </Text>
+                  ) : (
+                    <Ionicons name="person" size={16} color="#78716c" />
+                  )}
+                </View>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
       </View>
 
       <View style={styles.searchWrapper}>
@@ -301,24 +317,98 @@ export default function RecipesScreen() {
   );
 
   return (
-    <FlatList
-      style={styles.container}
-      data={recipes}
-      keyExtractor={(r) => r.id}
-      renderItem={({ item }) => <RecipeCard recipe={item} />}
-      ListHeaderComponent={listHeader}
-      ListEmptyComponent={listEmpty}
-      ItemSeparatorComponent={() => <View style={styles.separator} />}
-      contentContainerStyle={styles.list}
-      showsVerticalScrollIndicator={false}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor="#1c1917"
+    <>
+      <FlatList
+        style={styles.container}
+        data={recipes}
+        keyExtractor={(r) => r.id}
+        renderItem={({ item }) => (
+          <RecipeCard
+            recipe={item}
+            onPress={() => router.push(`/recipes/${item.id}`)}
+            editMode={editMode}
+            selected={selectedIds.has(item.id)}
+            onToggleSelect={() => toggleSelect(item.id)}
+          />
+        )}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={listEmpty}
+        ItemSeparatorComponent={() => <View style={styles.separator} />}
+        contentContainerStyle={[
+          styles.list,
+          editMode && selectedIds.size > 0 && { paddingBottom: 100 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#1c1917"
+          />
+        }
+      />
+
+      {/* Bottom action bar */}
+      {editMode && selectedIds.size > 0 ? (
+        <View style={styles.bottomBar}>
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => setShowBulkDeleteConfirm(true)}
+          >
+            <Ionicons name="trash-outline" size={18} color="#fff" />
+            <Text style={styles.deleteButtonText}>
+              Delete ({selectedIds.size})
+            </Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+
+      {/* Bulk delete confirmation modal */}
+      <Modal
+        visible={showBulkDeleteConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => !deleting && setShowBulkDeleteConfirm(false)}
+      >
+        <Pressable
+          style={styles.centeredModalBackdrop}
+          onPress={() => !deleting && setShowBulkDeleteConfirm(false)}
         />
-      }
-    />
+        <View style={styles.centeredModalWrapper} pointerEvents="box-none">
+          <View style={styles.centeredModalCard}>
+            <Text style={styles.centeredModalTitle}>
+              Delete {selectedIds.size} recipe{selectedIds.size === 1 ? "" : "s"}
+            </Text>
+            <Text style={styles.centeredModalBody}>
+              This cannot be undone.
+            </Text>
+            <View style={styles.centeredModalActions}>
+              <TouchableOpacity
+                style={styles.centeredModalCancel}
+                onPress={() => setShowBulkDeleteConfirm(false)}
+                disabled={deleting}
+              >
+                <Text style={styles.centeredModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.centeredModalDestructive,
+                  deleting && styles.buttonDisabled,
+                ]}
+                onPress={handleBulkDelete}
+                disabled={deleting}
+              >
+                {deleting ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.centeredModalDestructiveText}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </>
   );
 }
 
@@ -355,6 +445,25 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#78716c",
     marginTop: 4,
+  },
+  editButton: {
+    marginLeft: 4,
+    marginTop: 4,
+  },
+  editButtonText: {
+    fontSize: 14,
+    color: "#78716c",
+    fontWeight: "500",
+  },
+  editModeButton: {
+    fontSize: 15,
+    color: "#1c1917",
+    fontWeight: "600",
+  },
+  editModeTitle: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#1c1917",
   },
   avatarButton: {
     borderRadius: 20,
@@ -487,77 +596,6 @@ const styles = StyleSheet.create({
   separator: {
     height: 12,
   },
-  card: {
-    marginHorizontal: 16,
-    backgroundColor: "#fff",
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#e7e5e4",
-    overflow: "hidden",
-    flexDirection: "row",
-  },
-  cardImage: {
-    width: 90,
-    height: 90,
-  },
-  cardImagePlaceholder: {
-    width: 90,
-    height: 90,
-    backgroundColor: "#fef3c7",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  cardImagePlaceholderText: {
-    fontSize: 28,
-  },
-  cardBody: {
-    flex: 1,
-    padding: 10,
-    gap: 3,
-    justifyContent: "center",
-  },
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#1c1917",
-    lineHeight: 20,
-  },
-  cardDescription: {
-    fontSize: 12,
-    color: "#78716c",
-    lineHeight: 16,
-  },
-  cardMeta: {
-    flexDirection: "row",
-    gap: 8,
-    marginTop: 2,
-  },
-  cardMetaText: {
-    fontSize: 11,
-    color: "#a8a29e",
-  },
-  tagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-    marginTop: 4,
-  },
-  tag: {
-    backgroundColor: "#f5f5f4",
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  tagText: {
-    fontSize: 10,
-    color: "#57534e",
-    fontWeight: "500",
-  },
-  tagOverflow: {
-    fontSize: 10,
-    color: "#a8a29e",
-    alignSelf: "center",
-  },
   errorText: {
     fontSize: 15,
     color: "#b91c1c",
@@ -583,5 +621,99 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: "#78716c",
     textAlign: "center",
+  },
+  // Bottom action bar
+  bottomBar: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: "#fff",
+    borderTopWidth: 1,
+    borderTopColor: "#e7e5e4",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === "ios" ? 32 : 16,
+  },
+  deleteButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    backgroundColor: "#b91c1c",
+    borderRadius: 10,
+    paddingVertical: 13,
+  },
+  deleteButtonText: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  // Confirmation modal
+  centeredModalBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.45)",
+  },
+  centeredModalWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 32,
+  },
+  centeredModalCard: {
+    backgroundColor: "#fff",
+    borderRadius: 16,
+    padding: 20,
+    width: "100%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  centeredModalTitle: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#1c1917",
+    marginBottom: 8,
+  },
+  centeredModalBody: {
+    fontSize: 14,
+    color: "#57534e",
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  centeredModalActions: {
+    flexDirection: "row",
+    gap: 10,
+    justifyContent: "flex-end",
+  },
+  centeredModalCancel: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "#e7e5e4",
+  },
+  centeredModalCancelText: {
+    fontSize: 14,
+    fontWeight: "500",
+    color: "#57534e",
+  },
+  centeredModalDestructive: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: "#b91c1c",
+    minWidth: 70,
+    alignItems: "center",
+  },
+  centeredModalDestructiveText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#fff",
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });
