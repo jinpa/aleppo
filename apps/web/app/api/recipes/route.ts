@@ -87,10 +87,23 @@ export async function GET(req: Request) {
 
   const dirFn = dir === "asc" ? asc : desc;
 
+  const listColumns = {
+    id: recipes.id,
+    title: recipes.title,
+    description: recipes.description,
+    imageUrl: recipes.imageUrl,
+    tags: recipes.tags,
+    prepTime: recipes.prepTime,
+    cookTime: recipes.cookTime,
+    sourceName: recipes.sourceName,
+  };
+
+  const listColumnsSql = `"recipes"."id", "recipes"."title", "recipes"."description", "recipes"."imageUrl", "recipes"."tags", "recipes"."prepTime", "recipes"."cookTime", "recipes"."sourceName"`;
+
   // Default to relevance when searching without explicit sort
   if (!sortKey && search) {
     const result = await db
-      .select()
+      .select(listColumns)
       .from(recipes)
       .where(and(...conditions))
       .orderBy(sql`ts_rank("search_tsv", websearch_to_tsquery('english', ${search})) DESC`);
@@ -105,7 +118,7 @@ export async function GET(req: Request) {
       ? sql`COALESCE(COUNT("cookLogs".id), 0) ASC`
       : sql`COALESCE(COUNT("cookLogs".id), 0) DESC`;
     const result = await db.execute(sql`
-      SELECT "recipes".*
+      SELECT ${sql.raw(listColumnsSql)}
       FROM "recipes"
       LEFT JOIN "cookLogs" ON "cookLogs"."recipeId" = "recipes".id
       WHERE ${and(...conditions)}
@@ -120,7 +133,7 @@ export async function GET(req: Request) {
       ? sql`MAX("cookLogs"."cookedOn") ASC NULLS FIRST`
       : sql`MAX("cookLogs"."cookedOn") DESC NULLS LAST`;
     const result = await db.execute(sql`
-      SELECT "recipes".*
+      SELECT ${sql.raw(listColumnsSql)}
       FROM "recipes"
       LEFT JOIN "cookLogs" ON "cookLogs"."recipeId" = "recipes".id
       WHERE ${and(...conditions)}
@@ -135,7 +148,7 @@ export async function GET(req: Request) {
     const bothNull = sql`CASE WHEN "prepTime" IS NULL AND "cookTime" IS NULL THEN 1 ELSE 0 END`;
     const totalTimeExpr = sql`COALESCE("prepTime", 0) + COALESCE("cookTime", 0)`;
     const result = await db
-      .select()
+      .select(listColumns)
       .from(recipes)
       .where(and(...conditions))
       .orderBy(asc(bothNull), dirFn(totalTimeExpr));
@@ -150,7 +163,7 @@ export async function GET(req: Request) {
   } as const;
 
   const result = await db
-    .select()
+    .select(listColumns)
     .from(recipes)
     .where(and(...conditions))
     .orderBy(dirFn(columnMap[effectiveSort as keyof typeof columnMap]));
