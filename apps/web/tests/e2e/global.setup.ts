@@ -30,7 +30,7 @@ export interface TestUsers {
 
 function makeUser(handle: string): TestUser {
   return {
-    name: `${handle.charAt(0).toUpperCase() + handle.slice(1)} Aleppo`,
+    name: `${handle.charAt(0).toUpperCase() + handle.slice(1)} Aleppo ${RUN_ID}`,
     email: `${handle}.${RUN_ID}@test.aleppo`,
     password: "TestPass123!",
     storageStatePath: path.join(process.cwd(), `.auth/${handle}.json`),
