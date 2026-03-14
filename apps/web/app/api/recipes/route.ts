@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { eq, desc, and, ilike, sql } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { auth } from "@/auth";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
@@ -50,32 +50,29 @@ export async function GET(req: Request) {
   const search = searchParams.get("search");
   const tag = searchParams.get("tag");
 
-  let query = db
-    .select()
-    .from(recipes)
-    .where(eq(recipes.userId, userId))
-    .orderBy(desc(recipes.createdAt))
-    .$dynamic();
+  const conditions = [eq(recipes.userId, userId)];
 
   if (search) {
-    query = query.where(
-      and(
-        eq(recipes.userId, userId),
-        ilike(recipes.title, `%${search}%`)
-      )
+    conditions.push(
+      sql`"search_tsv" @@ websearch_to_tsquery('english', ${search})`
     );
   }
 
   if (tag) {
-    query = query.where(
-      and(
-        eq(recipes.userId, userId),
-        sql`${recipes.tags} @> ARRAY[${tag}]::text[]`
-      )
+    conditions.push(
+      sql`${recipes.tags} @> ARRAY[${tag}]::text[]`
     );
   }
 
-  const result = await query;
+  const result = await db
+    .select()
+    .from(recipes)
+    .where(and(...conditions))
+    .orderBy(
+      search
+        ? sql`ts_rank("search_tsv", websearch_to_tsquery('english', ${search})) DESC`
+        : desc(recipes.createdAt)
+    );
   return NextResponse.json(result);
 }
 
