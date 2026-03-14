@@ -17,6 +17,49 @@ import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 import type { UserSettings } from "@aleppo/shared";
 
+// ─── Tab Bar ─────────────────────────────────────────────────────────────────
+
+const TAB_ITEMS = [
+  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
+  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
+  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
+  { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
+  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
+] as const;
+
+function TabBar() {
+  const router = useRouter();
+  return (
+    <View style={tabStyles.bar}>
+      {TAB_ITEMS.map((item) => (
+        <TouchableOpacity
+          key={item.name}
+          style={tabStyles.tab}
+          onPress={() => router.navigate(item.route)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={item.icon} size={24} color={item.amber ? "#d97706" : "#a8a29e"} />
+          <Text style={[tabStyles.label, item.amber && tabStyles.labelAmber]}>{item.name}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+const tabStyles = StyleSheet.create({
+  bar: {
+    flexDirection: "row",
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: "#e7e5e4",
+    paddingBottom: Platform.OS === "ios" ? 28 : 8,
+    paddingTop: 8,
+  },
+  tab: { flex: 1, alignItems: "center", gap: 2 },
+  label: { fontSize: 11, fontWeight: "500", color: "#a8a29e" },
+  labelAmber: { color: "#d97706" },
+});
+
 export default function SettingsScreen() {
   const router = useRouter();
   const { token } = useAuth();
@@ -93,13 +136,17 @@ export default function SettingsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1c1917" />
+      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#1c1917" />
+        </View>
+        <TabBar />
       </View>
     );
   }
 
   return (
+    <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -127,7 +174,10 @@ export default function SettingsScreen() {
             {saving ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : saved ? (
-              <Ionicons name="checkmark" size={16} color="#fff" />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Ionicons name="checkmark" size={16} color="#fff" />
+                <Text style={styles.saveButtonText}>Saved</Text>
+              </View>
             ) : (
               <Text style={styles.saveButtonText}>Save</Text>
             )}
@@ -250,6 +300,8 @@ export default function SettingsScreen() {
         <View style={{ height: 48 }} />
       </ScrollView>
     </KeyboardAvoidingView>
+    <TabBar />
+    </View>
   );
 }
 
