@@ -225,10 +225,13 @@ test.describe("Recipes — want-to-cook queue", () => {
     await createRecipe(page, { title: "Dequeue Recipe" });
     // Already on detail page
     await page.getByText("Want to cook").click();
-    await expect(page.getByText("In queue")).toBeVisible();
+    await expect(page.getByText("In queue")).toBeVisible({ timeout: 10_000 });
+
+    // Wait for the POST to finish (queueLoading guard prevents clicks while loading)
+    await page.waitForTimeout(1_000);
 
     await page.getByText("In queue").click();
-    await expect(page.getByText("Want to cook")).toBeVisible();
+    await expect(page.getByText("Want to cook")).toBeVisible({ timeout: 10_000 });
   });
 });
 
