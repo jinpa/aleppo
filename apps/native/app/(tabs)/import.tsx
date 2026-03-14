@@ -19,7 +19,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
-import type { ScrapedRecipe } from "@aleppo/shared";
+import type { Ingredient, InstructionStep, ScrapedRecipe } from "@aleppo/shared";
 import { RecipeWebExtractor } from "@/components/RecipeWebExtractor";
 
 type Mode = "url" | "images" | "text" | "paprika";
@@ -38,8 +38,7 @@ type PaprikaItem = {
   duplicateRecipeTitle?: string;
 };
 
-type Ingredient = { raw: string };
-type Instruction = { step: number; text: string };
+type RawIngredient = Pick<Ingredient, "raw">;
 
 export default function ImportScreen() {
   const router = useRouter();
@@ -70,8 +69,8 @@ export default function ImportScreen() {
   // ── Review step state ───────────────────────────────────────────────────────
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [ingredients, setIngredients] = useState<Ingredient[]>([{ raw: "" }]);
-  const [instructions, setInstructions] = useState<Instruction[]>([{ step: 1, text: "" }]);
+  const [ingredients, setIngredients] = useState<RawIngredient[]>([{ raw: "" }]);
+  const [instructions, setInstructions] = useState<InstructionStep[]>([{ step: 1, text: "" }]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [prepTime, setPrepTime] = useState("");
