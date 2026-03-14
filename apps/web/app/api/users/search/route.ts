@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { ilike, eq, and } from "drizzle-orm";
+import { ilike, eq, and, or } from "drizzle-orm";
 import { auth } from "@/auth";
 import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
@@ -30,7 +30,10 @@ export async function GET(req: Request) {
     .where(
       and(
         eq(users.isPublic, true),
-        ilike(users.name, `%${q}%`)
+        or(
+          ilike(users.name, `%${q}%`),
+          ilike(users.email, `%${q}%`)
+        )
       )
     )
     .limit(20);
