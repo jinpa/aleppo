@@ -8,13 +8,14 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { returnTo } = useLocalSearchParams<{ returnTo?: string }>();
   const { signIn } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -42,7 +43,7 @@ export default function LoginScreen() {
       }
 
       await signIn(data.token, data.user);
-      router.replace("/");
+      router.replace((returnTo as any) ?? "/");
     } catch {
       setError("Could not connect to server");
     } finally {
