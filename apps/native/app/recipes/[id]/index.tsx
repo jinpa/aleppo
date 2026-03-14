@@ -15,7 +15,7 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { Image } from "expo-image";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
@@ -168,7 +168,16 @@ const tabStyles = StyleSheet.create({
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const { token, user, signOut } = useAuth();
+
+  const goBack = () => {
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/recipes");
+    }
+  };
 
   const [detail, setDetail] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -379,7 +388,7 @@ export default function RecipeDetailScreen() {
           <TouchableOpacity style={styles.retryButton} onPress={() => fetchDetail()}>
             <Text style={styles.retryText}>Try again</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.retryButton, { marginTop: 8 }]} onPress={() => router.back()}>
+          <TouchableOpacity style={[styles.retryButton, { marginTop: 8 }]} onPress={goBack}>
             <Text style={styles.retryText}>Go back</Text>
           </TouchableOpacity>
         </View>
@@ -399,7 +408,7 @@ export default function RecipeDetailScreen() {
       {/* Back button + profile avatar */}
       <View style={styles.backRow}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={goBack}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={styles.backButton}
         >

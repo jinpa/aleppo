@@ -19,6 +19,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
+import { RecipeWebExtractor } from "@/components/RecipeWebExtractor";
 
 type Mode = "url" | "images" | "text" | "paprika";
 type Step = "url" | "review";
@@ -56,11 +57,16 @@ type ScrapedRecipe = {
 export default function ImportScreen() {
   const router = useRouter();
   const { token } = useAuth();
-  const { mode: modeParam } = useLocalSearchParams<{ mode?: string }>();
+  const { mode: modeParam, shareUrl } = useLocalSearchParams<{ mode?: string; shareUrl?: string }>();
 
   const [mode, setMode] = useState<Mode>("url");
   const [step, setStep] = useState<Step>("url");
   const [photos, setPhotos] = useState<string[]>([]);
+
+  // ── Share sheet extraction (native) ───────────────────────────────────────
+  const [extracting, setExtracting] = useState(!!shareUrl);
+  const [extractionUrl, setExtractionUrl] = useState(shareUrl ?? "");
+  const extractionDone = useRef(false);
 
   // ── Bookmarklet mode ────────────────────────────────────────────────────────
   const [waitingForBookmarklet, setWaitingForBookmarklet] = useState(
@@ -248,6 +254,93 @@ export default function ImportScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modeParam]);
 
+  // ── Share sheet extraction callbacks ────────────────────────────────────────
+
+  const handleExtractResult = async (payload: {
+    jsonld: unknown[];
+    url: string;
+    title: string;
+    ogImage: string;
+    siteName: string;
+    commentsUrl: string | null;
+  }) => {
+    if (extractionDone.current) return;
+    extractionDone.current = true;
+
+    // Read token fresh — same pattern as bookmarklet handler
+    const currentToken =
+      Platform.OS === "web" ? localStorage.getItem("auth_token") : token;
+    try {
+      const res = await fetch(`${API_URL}/api/import/bookmarklet`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setParseError(
+          res.status === 401
+            ? "Authentication error — please try again."
+            : data.error ?? "Import failed. Please fill in the details manually."
+        );
+        setStep("review");
+      } else if (data.recipe) {
+        populateForm(data.recipe, payload?.url ?? "");
+        setUrl(payload?.url ?? "");
+        setStep("review");
+      } else {
+        setParseError("No recipe structured data found on that page. Please fill in the details manually.");
+        setUrl(payload?.url ?? "");
+        setStep("review");
+      }
+    } catch {
+      setParseError("Failed to connect to server.");
+      setUrl(payload?.url ?? "");
+      setStep("review");
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const handleExtractError = async (_message: string) => {
+    if (extractionDone.current) return;
+    extractionDone.current = true;
+    const currentUrl = extractionUrl;
+    // Stop the WebView, pre-fill the URL field, show fetch spinner
+    setExtracting(false);
+    setExtractionUrl("");
+    setUrl(currentUrl);
+    setFetching(true);
+    setParseError(null);
+    // Automatically fall back to server-side scraping (has Playwright fallback)
+    try {
+      const res = await fetch(`${API_URL}/api/import`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: currentUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        Alert.alert("Error", data.error ?? "Failed to fetch URL");
+        return;
+      }
+      if (data.parseError) setParseError(data.parseError);
+      if (data.recipe) populateForm(data.recipe, currentUrl);
+      else populateForm({}, currentUrl);
+      setStep("review");
+    } catch {
+      Alert.alert("Error", "Could not connect to server");
+    } finally {
+      setFetching(false);
+    }
+  };
+
   // ── URL step ────────────────────────────────────────────────────────────────
 
   const populateForm = (recipe: ScrapedRecipe, fetchedUrl: string) => {
@@ -270,33 +363,14 @@ export default function ImportScreen() {
     setImageUrl(recipe.imageUrl);
   };
 
-  const handleFetch = async () => {
+  const handleFetch = () => {
     if (!url.trim()) return;
-    setFetching(true);
     setParseError(null);
-    try {
-      const res = await fetch(`${API_URL}/api/import`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: url.trim() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        Alert.alert("Error", data.error ?? "Failed to fetch URL");
-        return;
-      }
-      if (data.parseError) setParseError(data.parseError);
-      if (data.recipe) populateForm(data.recipe, url.trim());
-      else populateForm({}, url.trim());
-      setStep("review");
-    } catch {
-      Alert.alert("Error", "Could not connect to server");
-    } finally {
-      setFetching(false);
-    }
+    // Always use client-side WebView extraction first; handleExtractError
+    // falls back to server-side scraping if the WebView fails.
+    extractionDone.current = false;
+    setExtractionUrl(url.trim());
+    setExtracting(true);
   };
 
   // ── Review step ─────────────────────────────────────────────────────────────
@@ -371,6 +445,24 @@ export default function ImportScreen() {
   };
 
   // ── Render ──────────────────────────────────────────────────────────────────
+
+  if (extracting && extractionUrl) {
+    let hostname = "";
+    try { hostname = new URL(extractionUrl).hostname; } catch {}
+    return (
+      <View style={styles.bookmarkletWaiting}>
+        <ActivityIndicator size="large" color="#d97706" />
+        <Text style={styles.bookmarkletWaitingText}>
+          Extracting recipe from {hostname || "page"}…
+        </Text>
+        <RecipeWebExtractor
+          url={extractionUrl}
+          onResult={handleExtractResult}
+          onError={handleExtractError}
+        />
+      </View>
+    );
+  }
 
   if (waitingForBookmarklet) {
     return (
