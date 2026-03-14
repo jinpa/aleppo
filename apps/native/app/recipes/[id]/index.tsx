@@ -200,7 +200,7 @@ export default function RecipeDetailScreen() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [showLogModal, setShowLogModal] = useState(false);
-  const [logDate, setLogDate] = useState(todayString);
+  const [logDate, setLogDate] = useState(todayString());
   const [logNotes, setLogNotes] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
