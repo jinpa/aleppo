@@ -1,0 +1,9 @@
+I have my own JSON representation for baking recipes.  I'm going to
+give you a few examples of JSON objects that represent my recipes.
+
+Then I'll give you either a URL, some images, or a piece of text
+prefixed by "INPUT:" and you will look for a recipe in this input and
+generate its JSON representation.
+
+If you do not find a recipe in this input, just respond with {"error"
+: "AI found no recipe"}.

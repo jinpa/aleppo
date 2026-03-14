@@ -32,6 +32,10 @@ export default function ImportScreen() {
   const [step, setStep] = useState<Step>("url");
   const [photos, setPhotos] = useState<string[]>([]);
 
+  // ── Text mode state ──────────────────────────────────────────────────────────
+  const [textInput, setTextInput] = useState("");
+  const [importing, setImporting] = useState(false);
+
   // ── URL step state ──────────────────────────────────────────────────────────
   const [url, setUrl] = useState("");
   const [fetching, setFetching] = useState(false);
@@ -53,6 +57,30 @@ export default function ImportScreen() {
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // ── Text mode ───────────────────────────────────────────────────────────────
+
+  const handleTextImport = async () => {
+    if (!textInput.trim()) return;
+    setImporting(true);
+    try {
+      const body = new FormData();
+      body.append("text", textInput.trim());
+      const res = await fetch(`${API_URL}/api/import/images`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        Alert.alert("Error", data.error ?? "Import failed");
+      }
+    } catch {
+      Alert.alert("Error", "Could not connect to server");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   // ── URL step ────────────────────────────────────────────────────────────────
 
@@ -288,9 +316,31 @@ export default function ImportScreen() {
         )}
 
         {mode === "text" && (
-          <View style={styles.tbd}>
-            <Ionicons name="document-text-outline" size={32} color="#d6d3d1" />
-            <Text style={styles.tbdText}>Import from text — coming soon</Text>
+          <View style={styles.textMode}>
+            <Text style={styles.heading}>Import from text</Text>
+            <Text style={styles.subheading}>
+              Paste the recipe text below and we'll extract it for you.
+            </Text>
+            <TextInput
+              style={[styles.input, styles.textModeInput]}
+              value={textInput}
+              onChangeText={setTextInput}
+              placeholder="Paste recipe text here…"
+              placeholderTextColor="#a8a29e"
+              multiline
+              textAlignVertical="top"
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              style={[styles.fetchButton, (!textInput.trim() || importing) && styles.fetchButtonDisabled]}
+              onPress={handleTextImport}
+              disabled={!textInput.trim() || importing}
+            >
+              {importing
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={styles.fetchButtonText}>Import</Text>
+              }
+            </TouchableOpacity>
           </View>
         )}
       </KeyboardAwareScrollView>
@@ -598,6 +648,8 @@ const styles = StyleSheet.create({
     color: "#a8a29e",
   },
   imagesMode: { gap: 16 },
+  textMode: { gap: 16 },
+  textModeInput: { height: 200, paddingTop: 10 },
   photoRow: {
     flexDirection: "row",
     flexWrap: "wrap",

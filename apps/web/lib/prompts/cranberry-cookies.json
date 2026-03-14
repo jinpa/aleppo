@@ -1,0 +1,114 @@
+{
+  "title": "Cranberry-Wine Swirl Cookies",
+  "description": "These pinwheel-style cookies use a classic sugar dough, rolled around\na layer of quick cranberry jam made with red wine. The cranberries’\nacidity plays so well with the tannins in the wine, and their pectin\nfirms up the jam so that it doesn’t seep out when baked. While I’d\nnever recommend baking (or cooking) with your best bottle, you can\ncertainly serve these cookies alongside glasses of the good\nstuff. They’re not too sweet and just as at home on a cheese plate as\nthey are after dinner.\n",
+  "ingredients": [
+    {
+      "raw": "baking powder ½ tsp",
+      "name": "baking powder",
+      "unit": "teaspoons",
+      "amount": "½"
+    },
+    {
+      "raw": "all-purpose flour 1¾ cups",
+      "name": "all-purpose flour",
+      "unit": "cups",
+      "amount": "1¾"
+    },
+    {
+      "raw": "kosher salt ½ tsp",
+      "name": "kosher salt",
+      "unit": "teaspoons",
+      "amount": "½"
+    },
+    {
+      "raw": "granulated sugar ⅞ cups",
+      "name": "granulated sugar",
+      "unit": "cups",
+      "amount": "⅞"
+    },
+    {
+      "raw": "orange 1",
+      "name": "orange",
+      "unit": "count",
+      "amount": "1"
+    },
+    {
+      "raw": "unsalted butter ⅝ cups",
+      "name": "unsalted butter",
+      "unit": "cups",
+      "amount": "⅝"
+    },
+    {
+      "raw": "egg yolk 1",
+      "name": "egg yolk",
+      "unit": "count",
+      "amount": "1"
+    },
+    {
+      "raw": "vanilla extract 1½ tsp",
+      "name": "vanilla extract",
+      "unit": "teaspoons",
+      "amount": "1½"
+    },
+    {
+      "raw": "cranberries 1¼ cups",
+      "name": "cranberries",
+      "unit": "cups",
+      "amount": "1¼"
+    },
+    {
+      "raw": "red wine 1 cups",
+      "name": "red wine",
+      "unit": "cups",
+      "amount": "1"
+    },
+    {
+      "raw": "egg white 1",
+      "name": "egg white",
+      "unit": "count",
+      "amount": "1"
+    },
+    {
+      "raw": "sanding sugar 1",
+      "name": "sanding sugar",
+      "unit": "count",
+      "amount": "1"
+    }
+  ],
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Whisk baking powder, all-purpose flour, and kosher salt in a small bowl; set aside."
+    },
+    {
+      "step": 1,
+      "text": "Place granulated sugar in a large bowl. Finely grate zest from orange into bowl and massage into sugar. Add unsalted butter and beat until smooth and creamy. Add egg yolk and vanilla extract and beat to combine. Add reserved dry ingredients and mix just until a crumbly dough forms."
+    },
+    {
+      "step": 2,
+      "text": "Place a large sheet of plastic wrap on a surface. Turn out dough onto plastic and pat into a rectangle. Wrap dough up to enclose and chill 30 minutes."
+    },
+    {
+      "step": 3,
+      "text": "Halve and juice reserved orange; pour into a medium saucepan. Add cranberries, red wine, remaining granulated sugar, and a big pinch of kosher salt. Cook, stirring and smashing cranberries, until mixture thickens; let jam cool."
+    },
+    {
+      "step": 4,
+      "text": "Unwrap dough. Place dough on a lightly floured sheet of parchment paper and dust lightly with flour. Let sit 5 minutes, then roll out to a 14x10\" rectangle. Trim sides to straighten."
+    },
+    {
+      "step": 5,
+      "text": "Spread a thin layer of jam over dough, leaving a 1\" border on top. Roll up dough to form a log. Wrap in parchment and plastic and freeze 1 hour."
+    },
+    {
+      "step": 6,
+      "text": "Place racks in upper and lower thirds of oven; preheat to 375°. Whisk egg white in a small bowl. Spread out sanding sugar on parchment. Unwrap dough and lightly brush egg white all over outside of log; roll in sanding sugar to coat. Slice into rounds."
+    },
+    {
+      "step": 7,
+      "text": "Bake cookies, rotating baking sheets halfway through, until golden brown, 18–20 minutes. Let cool on baking sheets 5 minutes, then transfer to a wire rack; let cool completely."
+    }
+  ],
+  "servings": 18,
+  "servingName": "cookies"
+}

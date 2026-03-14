@@ -1,0 +1,191 @@
+{
+  "title": "Pollo al Mole",
+  "description": "El mole se considera muy preciado y se prepara sobre todo en ocasiones\nespeciales y festividades, como el Día de Muertos o para celebrar la\nIndependencia de México. Es un plato muy singular y complejo, y se\npueden encontrar muchas recetas de mole, no sólo de mole con pollo, en\ntodo el país. Se cree que hoy en día en México se pueden encontrar\nunos 50 tipos diferentes de mole, pero quizá algunos de los más\nconocidos sean: mole poblano, mole negro, mole verde, mole\nmanchamanteles, mole amarillo y mole coloradito.\n",
+  "ingredients": [
+    {
+      "raw": "pechugas de pollo 5",
+      "name": "pechugas de pollo",
+      "unit": "count",
+      "amount": "5"
+    },
+    {
+      "raw": "cebolla blanca ½",
+      "name": "cebolla blanca",
+      "unit": "count",
+      "amount": "½"
+    },
+    {
+      "raw": "diente de ajo 1",
+      "name": "diente de ajo",
+      "unit": "count",
+      "amount": "1"
+    },
+    {
+      "raw": "hoja de laurel 1",
+      "name": "hoja de laurel",
+      "unit": "count",
+      "amount": "1"
+    },
+    {
+      "raw": "sal 1 Tbsp",
+      "name": "sal",
+      "unit": "tablespoons",
+      "amount": "1"
+    },
+    {
+      "raw": "pimienta negra en grano 2 tsp",
+      "name": "pimienta negra en grano",
+      "unit": "teaspoons",
+      "amount": "2"
+    },
+    {
+      "raw": "agua 1.2 L",
+      "name": "agua",
+      "unit": "liters",
+      "amount": "1.2"
+    },
+    {
+      "raw": "Aceite de oliva ",
+      "name": "Aceite de oliva",
+      "unit": "some",
+      "amount": ""
+    },
+    {
+      "raw": "tomates 5",
+      "name": "tomates",
+      "unit": "count",
+      "amount": "5"
+    },
+    {
+      "raw": "cebolla blanca (picada) 1",
+      "name": "cebolla blanca (picada)",
+      "unit": "count",
+      "amount": "1"
+    },
+    {
+      "raw": "dientes de ajo (pelados) 2",
+      "name": "dientes de ajo (pelados)",
+      "unit": "count",
+      "amount": "2"
+    },
+    {
+      "raw": "cacahuates 150 g",
+      "name": "cacahuates",
+      "unit": "grams",
+      "amount": "150"
+    },
+    {
+      "raw": "semillas de ajonjolí ⅓ cups",
+      "name": "semillas de ajonjolí",
+      "unit": "cups",
+      "amount": "⅓"
+    },
+    {
+      "raw": "trozo pequeño de pan blanco duro 1",
+      "name": "trozo pequeño de pan blanco duro",
+      "unit": "count",
+      "amount": "1"
+    },
+    {
+      "raw": "rama de canela 1",
+      "name": "rama de canela",
+      "unit": "count",
+      "amount": "1"
+    },
+    {
+      "raw": "clavo molido ¼ tsp",
+      "name": "clavo molido",
+      "unit": "teaspoons",
+      "amount": "¼"
+    },
+    {
+      "raw": "semillas de cilantro 1 Tbsp",
+      "name": "semillas de cilantro",
+      "unit": "tablespoons",
+      "amount": "1"
+    },
+    {
+      "raw": "plátano verde 1",
+      "name": "plátano verde",
+      "unit": "count",
+      "amount": "1"
+    },
+    {
+      "raw": "pasas 150 g",
+      "name": "pasas",
+      "unit": "grams",
+      "amount": "150"
+    },
+    {
+      "raw": "pasta de chipotle Gran Luchito 2 Tbsp",
+      "name": "pasta de chipotle Gran Luchito",
+      "unit": "tablespoons",
+      "amount": "2"
+    },
+    {
+      "raw": "caldo de pollo 1.0 L",
+      "name": "caldo de pollo",
+      "unit": "liters",
+      "amount": "1.0"
+    },
+    {
+      "raw": "chocolate negro 120 g",
+      "name": "chocolate negro",
+      "unit": "grams",
+      "amount": "120"
+    },
+    {
+      "raw": "Sal y pimienta negra recién molida ",
+      "name": "Sal y pimienta negra recién molida",
+      "unit": "some",
+      "amount": ""
+    },
+    {
+      "raw": "ajonjolí tostado ",
+      "name": "ajonjolí tostado",
+      "unit": "some",
+      "amount": ""
+    },
+    {
+      "raw": "Arroz mexicano 1",
+      "name": "Arroz mexicano",
+      "unit": "count",
+      "amount": "1"
+    }
+  ],
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Empieza escalfando el pollo. En una cacerola grande coloca las pechugas de pollo crudas, la cebolla blanca, el diente de ajo, hoja de laurel, sal y cúbrelo con el agua. Déjalo cocer a fuego medio entre 30 y 40 minutos."
+    },
+    {
+      "step": 1,
+      "text": "Cuando el pollo esté cocido y el caldo concentrado, retira el pollo cocido de la cazuela y desmenuza la carne con la ayuda de dos tenedores. Cuela el caldo restante y resérvalo. Debes tener aproximadamente caldo para el mole."
+    },
+    {
+      "step": 2,
+      "text": "Empieza a preparar los ingredientes del mole en una sartén. Añade aceite de oliva y, cuando esté bien caliente, añade los tomates, la cebolla y los dientes de ajo. Deja que las verduras tomen un poco de color y revuélvelas de vez en cuando. Cuando los tomates y la cebolla estén blandos, saca las verduras de la sartén, colócalas en un tazón grande y resérvalas."
+    },
+    {
+      "step": 3,
+      "text": "En la misma sartén, añadir un poco más de aceite y tostar suavemente los cacahuates, las semillas de ajonjolí, el pan duro, la canela en rama, los granos de pimienta, el clavo y las semillas de cilantro. Se revuelven y se cocinan durante uno o dos minutos, luego se retiran de la sartén y se colocan en el tazón con el resto de los ingredientes cocidos."
+    },
+    {
+      "step": 4,
+      "text": "Por último, añade un poco más de aceite en la misma sartén y, una vez bien caliente, añade el plátano y las pasas. Deja que el plátano se caramelice y una vez listo retíralo de la sartén, colócalo con el resto de los ingredientes cocidos del mole."
+    },
+    {
+      "step": 5,
+      "text": "Ahora en una licuadora coloca los ingredientes del mole frito, la pasta de chipotle (un poco del caldo para ayudar a licuar) y licua suavemente, si tu licuadora no es lo suficientemente grande puedes hacerlo en dos partes. Una vez que tu mezcla de mole esté lista, pon el mole en una cacerola grande a fuego medio con un poco de aceite de oliva y revuelve de 2 a 3 minutos."
+    },
+    {
+      "step": 6,
+      "text": "Agrega el caldo de pollo e integra a la salsa. Una vez que el mole comience a hervir a fuego lento, agrega el chocolate oscuro partido en trozos más pequeños y revuelve hasta que se integre por completo. Sazona con sal y pimienta recién molida y cuece a fuego lento durante 40 minutos cubierto con una tapa."
+    },
+    {
+      "step": 7,
+      "text": "Puedes añadir el pollo desmenuzado en el mole y mezclar. Sirve con una guarnición de arroz mexicano y adorna con una pizca de ajonjolí tostado por encima. ¡Buen provecho!"
+    }
+  ],
+  "servings": 5
+}
