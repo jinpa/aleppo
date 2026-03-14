@@ -1,0 +1,2 @@
+ALTER TABLE "recipes" ADD COLUMN "forkedFromRecipeId" text;--> statement-breakpoint
+ALTER TABLE "recipes" ADD CONSTRAINT "recipes_forkedFromRecipeId_recipes_id_fk" FOREIGN KEY ("forkedFromRecipeId") REFERENCES "public"."recipes"("id") ON DELETE set null ON UPDATE no action;

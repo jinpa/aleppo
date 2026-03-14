@@ -429,13 +429,22 @@ export default function RecipeDetailScreen() {
           ) : null}
         </View>
 
-        {/* Source link */}
+        {/* Source attribution */}
         {recipe.sourceUrl ? (
           <TouchableOpacity onPress={() => Linking.openURL(recipe.sourceUrl!)} style={styles.sourceLink}>
             <Ionicons name="link-outline" size={13} color="#78716c" />
-            <Text style={styles.sourceLinkText} numberOfLines={1}>{recipe.sourceName ?? "Source"}</Text>
+            <Text style={styles.sourceLinkText} numberOfLines={1}>
+              {recipe.isAdapted ? "adapted from " : "from "}{recipe.sourceName ?? "Source"}
+            </Text>
             <Ionicons name="open-outline" size={12} color="#a8a29e" />
           </TouchableOpacity>
+        ) : recipe.sourceName ? (
+          <View style={styles.sourceLink}>
+            <Ionicons name="person-outline" size={13} color="#78716c" />
+            <Text style={styles.sourceLinkText} numberOfLines={1}>
+              {recipe.isAdapted ? "adapted from " : "from "}{recipe.sourceName}
+            </Text>
+          </View>
         ) : null}
 
         {/* Tags */}
@@ -475,7 +484,15 @@ export default function RecipeDetailScreen() {
               <Ionicons name="restaurant-outline" size={16} color="#fff" />
               <Text style={styles.actionButtonFilledText}>Log a cook</Text>
             </TouchableOpacity>
-          ) : null}
+          ) : (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => router.push(`/recipes/${id}/save`)}
+            >
+              <Ionicons name="copy-outline" size={16} color="#1c1917" />
+              <Text style={styles.actionButtonText}>Save to mine</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Description */}

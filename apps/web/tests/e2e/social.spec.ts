@@ -179,6 +179,120 @@ test.describe("Social — feed", () => {
   });
 });
 
+test.describe("Social — follow persistence", () => {
+  test("follow persists after navigating away and back to profile", async ({
+    alicePage: page,
+    testUsers,
+  }) => {
+    // Alice follows Bob
+    await page.goto(`/u/${testUsers.bob.id}`);
+    await expect(page.getByText(testUsers.bob.name)).toBeVisible({ timeout: 10_000 });
+    if (await page.getByText("Follow", { exact: true }).isVisible()) {
+      await page.getByText("Follow", { exact: true }).click();
+      await expect(page.getByText("Following", { exact: true })).toHaveCount(2, { timeout: 10_000 });
+    }
+
+    // Navigate away to recipes page
+    await page.goto("/recipes");
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 10_000 });
+
+    // Navigate back to Bob's profile
+    await page.goto(`/u/${testUsers.bob.id}`);
+    await expect(page.getByText(testUsers.bob.name)).toBeVisible({ timeout: 10_000 });
+
+    // Should still show "Following" (count=2: stats label + button)
+    await expect(page.getByText("Following", { exact: true })).toHaveCount(2, { timeout: 10_000 });
+
+    // Cleanup
+    await unfollowViaAPI(page, testUsers.bob.id);
+  });
+
+  test("searching for a followed user shows 'Following' button on feed", async ({
+    alicePage: page,
+    bobPage,
+    testUsers,
+  }) => {
+    // Bob creates a recipe and logs a cook so there's feed content
+    const recipeTitle = `Follow Persist Feed ${Date.now()}`;
+    await createPublicRecipeAndLog(bobPage, recipeTitle);
+
+    // Alice follows Bob via profile
+    await page.goto(`/u/${testUsers.bob.id}`);
+    await expect(page.getByText(testUsers.bob.name)).toBeVisible({ timeout: 10_000 });
+    if (await page.getByText("Follow", { exact: true }).isVisible()) {
+      await page.getByText("Follow", { exact: true }).click();
+      await expect(page.getByText("Following", { exact: true })).toHaveCount(2, { timeout: 10_000 });
+    }
+
+    // Go to feed — should show Bob's cook log
+    await page.goto("/feed");
+    await expect(page.getByText("Following Feed")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(recipeTitle)).toBeVisible({ timeout: 15_000 });
+
+    // Search for Bob in the people search — should show "Following" not "Follow"
+    await page.getByPlaceholder("Find people to follow").fill(testUsers.bob.name);
+    await expect(page.getByText("Following", { exact: true })).toBeVisible({ timeout: 10_000 });
+
+    // Cleanup
+    await unfollowViaAPI(page, testUsers.bob.id);
+  });
+
+  test("feed shows content after follow + navigation to other screens and back", async ({
+    alicePage: page,
+    bobPage,
+    testUsers,
+  }) => {
+    const recipeTitle = `Sticky Follow Feed ${Date.now()}`;
+    await createPublicRecipeAndLog(bobPage, recipeTitle);
+
+    // Alice follows Bob
+    await page.goto(`/u/${testUsers.bob.id}`);
+    await expect(page.getByText(testUsers.bob.name)).toBeVisible({ timeout: 10_000 });
+    if (await page.getByText("Follow", { exact: true }).isVisible()) {
+      await page.getByText("Follow", { exact: true }).click();
+      await expect(page.getByText("Following", { exact: true })).toHaveCount(2, { timeout: 10_000 });
+    }
+
+    // Navigate through several pages to verify follow persists
+    await page.goto("/recipes");
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 10_000 });
+
+    await page.goto("/queue");
+    await expect(page.getByText("Want to Cook")).toBeVisible({ timeout: 10_000 });
+
+    // Navigate to feed — should still show Bob's content
+    await page.goto("/feed");
+    await expect(page.getByText("Following Feed")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(recipeTitle)).toBeVisible({ timeout: 15_000 });
+
+    // Cleanup
+    await unfollowViaAPI(page, testUsers.bob.id);
+  });
+});
+
+test.describe("Social — feed shows followed user", () => {
+  test("feed page shows followed user's name after following", async ({
+    alicePage: page,
+    testUsers,
+  }) => {
+    // Alice follows Bob via profile
+    await page.goto(`/u/${testUsers.bob.id}`);
+    await expect(page.getByText(testUsers.bob.name)).toBeVisible({ timeout: 10_000 });
+    if (await page.getByText("Follow", { exact: true }).isVisible()) {
+      await page.getByText("Follow", { exact: true }).click();
+      await expect(page.getByText("Following", { exact: true })).toHaveCount(2, { timeout: 10_000 });
+    }
+
+    // Go to feed — Bob's name should appear somewhere (in feed cards or following list)
+    await page.goto("/feed");
+    await expect(page.getByText("Following Feed")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(testUsers.bob.name).first()).toBeVisible({ timeout: 10_000 });
+
+    // Cleanup
+    await unfollowViaAPI(page, testUsers.bob.id);
+  });
+});
+
 test.describe("Social — settings", () => {
   test("settings page renders profile toggle", async ({
     alicePage: page,
