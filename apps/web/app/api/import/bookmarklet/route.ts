@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/auth";
+import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { recipeImports } from "@/db/schema";
 import { extractFromJsonLdArray } from "@/lib/recipe-scraper";
@@ -15,7 +16,8 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -36,7 +38,7 @@ export async function POST(req: Request) {
   const [importRecord] = await db
     .insert(recipeImports)
     .values({
-      userId: session.user.id,
+      userId,
       importType: "bookmarklet",
       sourceUrl: url ?? null,
       rawPayload: { jsonld, url, title, ogImage, siteName },
