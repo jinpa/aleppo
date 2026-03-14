@@ -99,5 +99,30 @@ export async function POST(req: Request) {
 
   console.log("[import/images] Gemini raw response:\n", responseText);
 
-  return NextResponse.json({ ok: true });
+  // Strip optional markdown code fences (```json ... ```)
+  const cleaned = responseText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch {
+    return NextResponse.json({ error: "AI returned invalid JSON" }, { status: 502 });
+  }
+
+  // Pick only the fields that belong to ScrapedRecipe
+  const recipe = {
+    ...(typeof parsed.title === "string" && { title: parsed.title }),
+    ...(typeof parsed.description === "string" && { description: parsed.description }),
+    ...(Array.isArray(parsed.ingredients) && { ingredients: parsed.ingredients }),
+    ...(Array.isArray(parsed.instructions) && { instructions: parsed.instructions }),
+    ...(Array.isArray(parsed.tags) && { tags: parsed.tags }),
+    ...(parsed.prepTime != null && { prepTime: Number(parsed.prepTime) }),
+    ...(parsed.cookTime != null && { cookTime: Number(parsed.cookTime) }),
+    ...(parsed.servings != null && { servings: Number(parsed.servings) }),
+    ...(typeof parsed.sourceUrl === "string" && { sourceUrl: parsed.sourceUrl }),
+    ...(typeof parsed.sourceName === "string" && { sourceName: parsed.sourceName }),
+    ...(typeof parsed.imageUrl === "string" && { imageUrl: parsed.imageUrl }),
+  };
+
+  return NextResponse.json({ recipe });
 }

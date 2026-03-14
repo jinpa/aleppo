@@ -71,10 +71,13 @@ export default function ImportScreen() {
         headers: { Authorization: `Bearer ${token}` },
         body,
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
         Alert.alert("Error", data.error ?? "Import failed");
+        return;
       }
+      populateForm(data.recipe ?? {}, "");
+      setStep("review");
     } catch {
       Alert.alert("Error", "Could not connect to server");
     } finally {
