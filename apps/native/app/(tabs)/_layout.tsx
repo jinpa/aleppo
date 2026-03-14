@@ -15,28 +15,24 @@ const ACTIVE_COLOR   = "#1c1917";
 const INACTIVE_COLOR = "#a8a29e";
 const AMBER_COLOR    = "#d97706";
 
-function TabScreens() {
-  return (
-    <>
-      {TABS.map((t) => (
-        <Tabs.Screen
-          key={t.name}
-          name={t.name}
-          options={{
-            title: t.title,
-            ...(t.amber && {
-              tabBarActiveTintColor: AMBER_COLOR,
-              tabBarInactiveTintColor: AMBER_COLOR,
-            }),
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name={t.icon} size={size} color={color} />
-            ),
-          }}
-        />
-      ))}
-    </>
-  );
-}
+// Tabs.Screen must be direct children of Tabs (not wrapped in a component)
+// so we build the array here and spread it inline.
+const TAB_SCREENS = TABS.map((t) => (
+  <Tabs.Screen
+    key={t.name}
+    name={t.name}
+    options={{
+      title: t.title,
+      ...(t.amber && {
+        tabBarActiveTintColor: AMBER_COLOR,
+        tabBarInactiveTintColor: AMBER_COLOR,
+      }),
+      tabBarIcon: ({ color, size }) => (
+        <Ionicons name={t.icon} size={size} color={color} />
+      ),
+    }}
+  />
+));
 
 function TopNav() {
   const segments = useSegments();
@@ -130,7 +126,7 @@ export default function TabLayout() {
         <SidebarNav />
         <View style={{ flex: 1 }}>
           <Tabs screenOptions={{ headerShown: false, tabBarStyle: { display: "none" } }}>
-            <TabScreens />
+            {TAB_SCREENS}
           </Tabs>
         </View>
       </View>
@@ -142,7 +138,7 @@ export default function TabLayout() {
       <View style={{ flex: 1 }}>
         <TopNav />
         <Tabs screenOptions={{ headerShown: false, tabBarStyle: { display: "none" } }}>
-          <TabScreens />
+          {TAB_SCREENS}
         </Tabs>
       </View>
     );
@@ -166,7 +162,7 @@ export default function TabLayout() {
         },
       }}
     >
-      <TabScreens />
+      {TAB_SCREENS}
     </Tabs>
   );
 }
