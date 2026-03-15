@@ -345,7 +345,7 @@ export default function ImportScreen() {
             </PhotoPicker>
             {photos.length > 0 && (
               <TouchableOpacity
-                style={[styles.fetchButton, importing && styles.fetchButtonDisabled]}
+                style={[styles.importButton, importing && styles.fetchButtonDisabled]}
                 onPress={handleImagesImport}
                 disabled={importing}
               >
@@ -375,7 +375,7 @@ export default function ImportScreen() {
               autoCorrect={false}
             />
             <TouchableOpacity
-              style={[styles.fetchButton, (!textInput.trim() || importing) && styles.fetchButtonDisabled]}
+              style={[styles.importButton, (!textInput.trim() || importing) && styles.fetchButtonDisabled]}
               onPress={handleTextImport}
               disabled={!textInput.trim() || importing}
             >
@@ -746,6 +746,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     minWidth: 72,
+  },
+  importButton: {
+    backgroundColor: "#1c1917",
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: "center",
   },
   fetchButtonDisabled: { opacity: 0.5 },
   fetchButtonText: { color: "#fff", fontWeight: "600", fontSize: 14 },
