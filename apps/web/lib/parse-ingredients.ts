@@ -4,6 +4,7 @@
  */
 
 import type { Ingredient } from "@aleppo/shared";
+import { parseFractionString } from "@/lib/scale-ingredient";
 
 // Restricts the unit field to a known cooking vocabulary so we don't greedily
 // capture adjectives as the unit (e.g. "tablespoon Dijon" or "cup extra").
@@ -31,7 +32,8 @@ export function parseIngredients(raw: string[]): Ingredient[] {
         const amount = match[1]?.trim() || undefined;
         const unit = match[2]?.trim() || undefined;
         const name = match[3]?.trim() || forParsing;
-        return { raw: cleaned, amount, unit, name };
+        const quantity = amount ? (parseFractionString(amount)?.valueOf() ?? undefined) : undefined;
+        return { raw: cleaned, amount, quantity, unit, name };
       }
       return { raw: cleaned, name: cleaned };
     });

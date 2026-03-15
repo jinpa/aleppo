@@ -138,7 +138,7 @@ function scaleParentheticals(text: string, factor: number): string {
  * Parses a string like "1/2", "2", "1 1/4", or "½" into a Fraction.
  * Returns null if the string can't be parsed as a positive number.
  */
-function parseFractionString(str: string): Fraction | null {
+export function parseFractionString(str: string): Fraction | null {
   const s = normalizeUnicodeFractions(str.trim());
 
   // Mixed numbers: "1 1/2", "2 3/4", etc.

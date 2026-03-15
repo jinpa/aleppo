@@ -19,7 +19,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
-import type { ScrapedRecipe } from "@aleppo/shared";
+import type { Ingredient, InstructionStep, ScrapedRecipe } from "@aleppo/shared";
 import { RecipeWebExtractor } from "@/components/RecipeWebExtractor";
 
 type Mode = "url" | "images" | "text" | "paprika";
@@ -38,8 +38,7 @@ type PaprikaItem = {
   duplicateRecipeTitle?: string;
 };
 
-type Ingredient = { raw: string };
-type Instruction = { step: number; text: string };
+type RawIngredient = Pick<Ingredient, "raw">;
 
 export default function ImportScreen() {
   const router = useRouter();
@@ -49,6 +48,10 @@ export default function ImportScreen() {
   const [mode, setMode] = useState<Mode>("url");
   const [step, setStep] = useState<Step>("url");
   const [photos, setPhotos] = useState<string[]>([]);
+
+  // ── Text mode state ──────────────────────────────────────────────────────────
+  const [textInput, setTextInput] = useState("");
+  const [importing, setImporting] = useState(false);
 
   // ── Share sheet extraction (native) ───────────────────────────────────────
   const [extracting, setExtracting] = useState(!!shareUrl);
@@ -67,24 +70,6 @@ export default function ImportScreen() {
   const [fetching, setFetching] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
 
-  // ── Review step state ───────────────────────────────────────────────────────
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [ingredients, setIngredients] = useState<Ingredient[]>([{ raw: "" }]);
-  const [instructions, setInstructions] = useState<Instruction[]>([{ step: 1, text: "" }]);
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState("");
-  const [prepTime, setPrepTime] = useState("");
-  const [cookTime, setCookTime] = useState("");
-  const [servings, setServings] = useState("");
-  const [isPublic, setIsPublic] = useState(false);
-  const [sourceUrl, setSourceUrl] = useState("");
-  const [sourceName, setSourceName] = useState("");
-  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
-
-  const [saving, setSaving] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
   // ── Paprika state ────────────────────────────────────────────────────────────
   const [paprikaStep, setPaprikaStep] = useState<PaprikaStep>("upload");
   const [paprikaFile, setPaprikaFile] = useState<{ uri: string; name: string; file?: File } | null>(null);
@@ -95,6 +80,80 @@ export default function ImportScreen() {
   const [paprikaError, setPaprikaError] = useState<string | null>(null);
   const [paprikaSaved, setPaprikaSaved] = useState(0);
   const [paprikaFailed, setPaprikaFailed] = useState(0);
+
+  // ── Review step state ───────────────────────────────────────────────────────
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [ingredients, setIngredients] = useState<RawIngredient[]>([{ raw: "" }]);
+  const [instructions, setInstructions] = useState<InstructionStep[]>([{ step: 1, text: "" }]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
+  const [prepTime, setPrepTime] = useState("");
+  const [cookTime, setCookTime] = useState("");
+  const [servings, setServings] = useState("");
+  const [isPublic, setIsPublic] = useState(false);
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [sourceName, setSourceName] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // ── Text mode ───────────────────────────────────────────────────────────────
+
+  const handleImagesImport = async () => {
+    if (photos.length === 0) return;
+    setImporting(true);
+    try {
+      const body = new FormData();
+      await Promise.all(
+        photos.map(async (uri, i) => {
+          const blob = await fetch(uri).then((r) => r.blob());
+          body.append("images", blob, `photo${i}.jpg`);
+        })
+      );
+      const res = await fetch(`${API_URL}/api/import/images`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        Alert.alert("Error", data.error ?? "Import failed");
+        return;
+      }
+      populateForm(data.recipe ?? {}, "");
+      setStep("review");
+    } catch {
+      Alert.alert("Error", "Could not connect to server");
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleTextImport = async () => {
+    if (!textInput.trim()) return;
+    setImporting(true);
+    try {
+      const body = new FormData();
+      body.append("text", textInput.trim());
+      const res = await fetch(`${API_URL}/api/import/images`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        Alert.alert("Error", data.error ?? "Import failed");
+        return;
+      }
+      populateForm(data.recipe ?? {}, "");
+      setStep("review");
+    } catch {
+      Alert.alert("Error", "Could not connect to server");
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const pickPaprikaFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -320,9 +379,6 @@ export default function ImportScreen() {
       if (data.parseError) setParseError(data.parseError);
       if (data.recipe) populateForm(data.recipe, currentUrl);
       else populateForm({}, currentUrl);
-      setStep("review");
-    } catch {
-      Alert.alert("Error", "Could not connect to server");
     } finally {
       setFetching(false);
     }
@@ -331,6 +387,7 @@ export default function ImportScreen() {
   // ── URL step ────────────────────────────────────────────────────────────────
 
   const populateForm = (recipe: ScrapedRecipe, fetchedUrl: string) => {
+    setImageUrl(recipe.imageUrl ?? undefined);
     setTitle(recipe.title ?? "");
     setDescription(recipe.description ?? "");
     setIngredients(
@@ -409,9 +466,9 @@ export default function ImportScreen() {
         cookTime: cookTime ? parseInt(cookTime, 10) : undefined,
         servings: servings ? parseInt(servings, 10) : undefined,
         isPublic,
+        imageUrl: imageUrl || undefined,
         sourceUrl: sourceUrl.trim() || undefined,
         sourceName: sourceName.trim() || undefined,
-        imageUrl: imageUrl || undefined,
       };
       const res = await fetch(`${API_URL}/api/recipes`, {
         method: "POST",
@@ -567,8 +624,15 @@ export default function ImportScreen() {
               )}
             </PhotoPicker>
             {photos.length > 0 && (
-              <TouchableOpacity style={styles.fetchButton}>
-                <Text style={styles.fetchButtonText}>Extract recipe</Text>
+              <TouchableOpacity
+                style={[styles.importButton, importing && styles.fetchButtonDisabled]}
+                onPress={handleImagesImport}
+                disabled={importing}
+              >
+                {importing
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.fetchButtonText}>Import</Text>
+                }
               </TouchableOpacity>
             )}
           </View>
@@ -715,9 +779,31 @@ export default function ImportScreen() {
         )}
 
         {mode === "text" && (
-          <View style={styles.tbd}>
-            <Ionicons name="document-text-outline" size={32} color="#d6d3d1" />
-            <Text style={styles.tbdText}>Import from text — coming soon</Text>
+          <View style={styles.textMode}>
+            <Text style={styles.heading}>Import from text</Text>
+            <Text style={styles.subheading}>
+              Paste the recipe text below and we'll extract it for you.
+            </Text>
+            <TextInput
+              style={[styles.input, styles.textModeInput]}
+              value={textInput}
+              onChangeText={setTextInput}
+              placeholder="Paste recipe text here…"
+              placeholderTextColor="#a8a29e"
+              multiline
+              textAlignVertical="top"
+              autoCorrect={false}
+            />
+            <TouchableOpacity
+              style={[styles.importButton, (!textInput.trim() || importing) && styles.fetchButtonDisabled]}
+              onPress={handleTextImport}
+              disabled={!textInput.trim() || importing}
+            >
+              {importing
+                ? <ActivityIndicator size="small" color="#fff" />
+                : <Text style={styles.fetchButtonText}>Import</Text>
+              }
+            </TouchableOpacity>
           </View>
         )}
       </KeyboardAwareScrollView>
@@ -1152,6 +1238,8 @@ const styles = StyleSheet.create({
     color: "#a8a29e",
   },
   imagesMode: { gap: 16 },
+  textMode: { gap: 16 },
+  textModeInput: { height: 200, paddingTop: 10 },
   photoRow: {
     flexDirection: "row",
     flexWrap: "wrap",
@@ -1205,6 +1293,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     minWidth: 72,
+  },
+  importButton: {
+    backgroundColor: "#1c1917",
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: "center",
   },
   fetchButtonDisabled: { opacity: 0.5 },
   fetchButtonText: { color: "#fff", fontWeight: "600", fontSize: 14 },
