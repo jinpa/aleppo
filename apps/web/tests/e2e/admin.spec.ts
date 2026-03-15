@@ -1,6 +1,6 @@
 import { test, expect } from "./fixtures";
 
-const BASE = "http://localhost:3000";
+const BASE = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
 
 test.describe("Admin", () => {
   test("Admin link visible on profile for admin user", async ({ carolPage }) => {

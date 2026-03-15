@@ -105,7 +105,7 @@ function useApi() {
 }
 
 export default function AdminScreen() {
-  const { user, token } = useAuth();
+  const { user, token, updateUser } = useAuth();
   const router = useRouter();
   const apiFetch = useApi();
 
@@ -114,12 +114,24 @@ export default function AdminScreen() {
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [bootstrapping, setBootstrapping] = useState(false);
 
-  // Guard: non-admin users get redirected
+  // Guard: non-admin users attempt bootstrap (works if ADMIN_EMAIL matches),
+  // then redirect away if it fails.
   useEffect(() => {
-    if (user && !user.isAdmin) {
-      router.replace("/(tabs)/recipes");
-    }
+    if (!user || user.isAdmin) return;
+
+    setBootstrapping(true);
+    apiFetch("/api/admin/bootstrap", { method: "POST" })
+      .then(async (res) => {
+        if (res.ok) {
+          await updateUser({ isAdmin: true });
+        } else {
+          router.replace("/(tabs)/recipes");
+        }
+      })
+      .catch(() => router.replace("/(tabs)/recipes"))
+      .finally(() => setBootstrapping(false));
   }, [user]);
 
   const fetchData = useCallback(
@@ -314,7 +326,7 @@ export default function AdminScreen() {
     </>
   );
 
-  if (loading) {
+  if (loading || bootstrapping) {
     return (
       <View style={{ flex: 1, backgroundColor: "#fafaf9", justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#78716c" />
