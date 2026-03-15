@@ -12,7 +12,7 @@ import { test as setup, expect } from "@playwright/test";
 import path from "path";
 import fs from "fs";
 
-const BASE = "http://localhost:3000";
+const BASE = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
 const RUN_ID = Date.now().toString().slice(-8);
 
 export interface TestUser {

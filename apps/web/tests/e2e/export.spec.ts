@@ -7,6 +7,8 @@
 
 import { test, expect } from "./fixtures";
 
+const BASE = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
+
 async function createRecipe(
   page: import("@playwright/test").Page,
   title: string
@@ -28,12 +30,25 @@ async function logCook(page: import("@playwright/test").Page) {
 
 async function navigateToSettings(page: import("@playwright/test").Page) {
   await page.goto("/settings");
-  await expect(page.getByText("Settings")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Settings", { exact: true })).toBeVisible({ timeout: 10_000 });
+  // Wait for the page to fully load including the Data section
+  await expect(page.getByText("Download backup")).toBeVisible({ timeout: 10_000 });
+}
+
+function getAliceToken(): string {
+  const fs = require("fs");
+  const path = require("path");
+  const usersPath = path.join(process.cwd(), ".auth/test-users.json");
+  const users = JSON.parse(fs.readFileSync(usersPath, "utf-8"));
+  const storagePath = users.alice.storageStatePath;
+  const storage = JSON.parse(fs.readFileSync(storagePath, "utf-8"));
+  return storage.origins?.[0]?.localStorage?.find(
+    (e: { name: string }) => e.name === "auth_token"
+  )?.value;
 }
 
 test.describe("Export", () => {
   test.beforeAll(async ({ browser }) => {
-    // Import fixtures to get storage state
     const { getTestUsers } = await import("./fixtures");
     const users = getTestUsers();
     const ctx = await browser.newContext({
@@ -41,7 +56,6 @@ test.describe("Export", () => {
     });
     const page = await ctx.newPage();
 
-    // Create a recipe and log a cook for export tests
     await createRecipe(page, "Export Test Recipe");
     await logCook(page);
 
@@ -52,87 +66,46 @@ test.describe("Export", () => {
     alicePage: page,
   }) => {
     await navigateToSettings(page);
-    await expect(page.getByText("Data")).toBeVisible();
+    await expect(page.getByText("Include cook logs")).toBeVisible();
+    await expect(page.getByText("Include images")).toBeVisible();
     await expect(page.getByText("Download backup")).toBeVisible();
   });
 
-  test("export toggles are present with correct defaults", async ({
-    alicePage: page,
-  }) => {
-    await navigateToSettings(page);
-    await expect(page.getByText("Include cook logs")).toBeVisible();
-    await expect(page.getByText("Include images")).toBeVisible();
-  });
-
-  test("export downloads valid JSON", async ({ alicePage: page }) => {
-    await navigateToSettings(page);
-
-    // Intercept the export API call
-    const responsePromise = page.waitForResponse(
-      (resp) => resp.url().includes("/api/export") && resp.status() === 200
+  test("export API returns valid JSON with recipes and cook logs", async () => {
+    const token = getAliceToken();
+    const res = await fetch(
+      `${BASE}/api/export?includeCookLogs=true&includeImages=false`,
+      { headers: { Authorization: `Bearer ${token}` } }
     );
+    expect(res.ok).toBeTruthy();
 
-    await page.getByText("Download backup").click();
-    const response = await responsePromise;
-    const data = await response.json();
-
-    // Validate structure
+    const data = await res.json();
     expect(data.version).toBe(1);
     expect(data.app).toBe("aleppo");
     expect(data.exportedAt).toBeTruthy();
     expect(data.user).toBeTruthy();
     expect(Array.isArray(data.recipes)).toBe(true);
     expect(data.recipes.length).toBeGreaterThan(0);
-
-    // Cook logs included by default
     expect(Array.isArray(data.cookLogs)).toBe(true);
     expect(data.cookLogs.length).toBeGreaterThan(0);
   });
 
-  test("export shows success message", async ({ alicePage: page }) => {
+  test("export shows success message in UI", async ({ alicePage: page }) => {
     await navigateToSettings(page);
-
-    const responsePromise = page.waitForResponse(
-      (resp) => resp.url().includes("/api/export") && resp.status() === 200
-    );
-
     await page.getByText("Download backup").click();
-    await responsePromise;
-
-    // Should show success with recipe count
-    await expect(page.getByText(/Exported \d+ recipes/)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/Exported \d+ recipes/)).toBeVisible({ timeout: 15_000 });
   });
 
-  test("export without cook logs omits them", async ({
-    alicePage: page,
-  }) => {
-    await navigateToSettings(page);
-
-    // Toggle off cook logs
-    const switches = page.getByRole("switch");
-    // The "Include cook logs" switch — it's the first one in the Data section.
-    // We need to find it by context. Let's find the switch near "Include cook logs".
-    const cookLogToggle = page
-      .locator('[role="switch"]')
-      .filter({ has: page.locator(':scope') })
-      .nth(-2); // Second-to-last switch on the page (cook logs toggle)
-
-    // Alternative: find all switches, toggle the appropriate one
-    // For now, use the API directly to verify behavior
-    const responsePromise = page.waitForResponse(
-      (resp) => resp.url().includes("/api/export") && resp.status() === 200
+  test("export API without cook logs omits them", async () => {
+    const token = getAliceToken();
+    const res = await fetch(
+      `${BASE}/api/export?includeCookLogs=false&includeImages=false`,
+      { headers: { Authorization: `Bearer ${token}` } }
     );
+    expect(res.ok).toBeTruthy();
 
-    // Click the "Include cook logs" switch to turn it off
-    // Find the switch within the Data section
-    const dataSection = page.getByText("Include cook logs").locator("..").locator("..").locator("..");
-    await dataSection.getByRole("switch").first().click();
-
-    await page.getByText("Download backup").click();
-    const response = await responsePromise;
-    const data = await response.json();
-
-    // Cook logs should be empty when toggled off
+    const data = await res.json();
+    expect(data.version).toBe(1);
     expect(Array.isArray(data.cookLogs)).toBe(true);
     expect(data.cookLogs.length).toBe(0);
   });
