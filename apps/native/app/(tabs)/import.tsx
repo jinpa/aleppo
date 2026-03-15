@@ -55,6 +55,7 @@ export default function ImportScreen() {
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
 
+  const [imageUrl, setImageUrl] = useState<string | undefined>(undefined);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -118,6 +119,7 @@ export default function ImportScreen() {
   // ── URL step ────────────────────────────────────────────────────────────────
 
   const populateForm = (recipe: ScrapedRecipe, fetchedUrl: string) => {
+    setImageUrl(recipe.imageUrl ?? undefined);
     setTitle(recipe.title ?? "");
     setDescription(recipe.description ?? "");
     setIngredients(
@@ -214,6 +216,7 @@ export default function ImportScreen() {
         cookTime: cookTime ? parseInt(cookTime, 10) : undefined,
         servings: servings ? parseInt(servings, 10) : undefined,
         isPublic,
+        imageUrl: imageUrl || undefined,
         sourceUrl: sourceUrl.trim() || undefined,
         sourceName: sourceName.trim() || undefined,
       };

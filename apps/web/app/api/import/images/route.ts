@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getUserFromBearerToken } from "@/lib/mobile-auth";
+import { uploadImageToR2 } from "@/lib/r2";
 import { GoogleGenAI } from "@google/genai";
+import sharp from "sharp";
 import fs from "fs";
 import path from "path";
 
@@ -67,6 +69,9 @@ export async function POST(req: Request) {
     { text: prompt },
   ];
 
+  let firstImageBuffer: Buffer | null = null;
+  let firstImageMime = "image/jpeg";
+
   for (const entry of imageEntries) {
     if (!(entry instanceof File)) {
       return NextResponse.json(
@@ -74,28 +79,51 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    const buffer = await entry.arrayBuffer();
-    const base64 = Buffer.from(buffer).toString("base64");
+    const buffer = Buffer.from(await entry.arrayBuffer());
     const mimeType = entry.type || "image/jpeg";
-    parts.push({ inlineData: { mimeType, data: base64 } });
+    if (!firstImageBuffer) {
+      firstImageBuffer = buffer;
+      firstImageMime = mimeType;
+    }
+    parts.push({ inlineData: { mimeType, data: buffer.toString("base64") } });
   }
 
   const client = new GoogleGenAI({ apiKey });
   const modelId = "gemini-3.1-flash-lite-preview";
 
-  // Stream response, accumulate text
-  const stream = await client.models.generateContentStream({
-    model: modelId,
-    contents: [{ role: "user", parts }],
-    config: { thinkingConfig: { thinkingBudget: 0 } },
-  });
-
-  let responseText = "";
-  for await (const chunk of stream) {
-    if (chunk.text) {
-      responseText += chunk.text;
+  // Run Gemini and R2 upload in parallel
+  const geminiPromise = (async () => {
+    const stream = await client.models.generateContentStream({
+      model: modelId,
+      contents: [{ role: "user", parts }],
+      config: { thinkingConfig: { thinkingBudget: 0 } },
+    });
+    let text = "";
+    for await (const chunk of stream) {
+      if (chunk.text) text += chunk.text;
     }
-  }
+    return text;
+  })();
+
+  const imageUrlPromise = (async (): Promise<string | null> => {
+    if (!firstImageBuffer) return null;
+    try {
+      const processed = await sharp(firstImageBuffer)
+        .resize(1200, 900, { fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 85 })
+        .toBuffer();
+      if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID) {
+        return `data:image/webp;base64,${processed.toString("base64")}`;
+      }
+      const key = `recipes/${userId}/${Date.now()}.webp`;
+      return await uploadImageToR2(processed, key, "image/webp");
+    } catch (err) {
+      console.error("[import/images] R2 upload failed:", err);
+      return null;
+    }
+  })();
+
+  const [responseText, uploadedImageUrl] = await Promise.all([geminiPromise, imageUrlPromise]);
 
   console.log("[import/images] Gemini raw response:\n", responseText);
 
@@ -121,7 +149,9 @@ export async function POST(req: Request) {
     ...(parsed.servings != null && { servings: Number(parsed.servings) }),
     ...(typeof parsed.sourceUrl === "string" && { sourceUrl: parsed.sourceUrl }),
     ...(typeof parsed.sourceName === "string" && { sourceName: parsed.sourceName }),
-    ...(typeof parsed.imageUrl === "string" && { imageUrl: parsed.imageUrl }),
+    ...(uploadedImageUrl
+      ? { imageUrl: uploadedImageUrl }
+      : typeof parsed.imageUrl === "string" && { imageUrl: parsed.imageUrl }),
   };
 
   return NextResponse.json({ recipe });
