@@ -60,6 +60,36 @@ export default function ImportScreen() {
 
   // ── Text mode ───────────────────────────────────────────────────────────────
 
+  const handleImagesImport = async () => {
+    if (photos.length === 0) return;
+    setImporting(true);
+    try {
+      const body = new FormData();
+      await Promise.all(
+        photos.map(async (uri, i) => {
+          const blob = await fetch(uri).then((r) => r.blob());
+          body.append("images", blob, `photo${i}.jpg`);
+        })
+      );
+      const res = await fetch(`${API_URL}/api/import/images`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        Alert.alert("Error", data.error ?? "Import failed");
+        return;
+      }
+      populateForm(data.recipe ?? {}, "");
+      setStep("review");
+    } catch {
+      Alert.alert("Error", "Could not connect to server");
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const handleTextImport = async () => {
     if (!textInput.trim()) return;
     setImporting(true);
@@ -311,8 +341,15 @@ export default function ImportScreen() {
               )}
             </PhotoPicker>
             {photos.length > 0 && (
-              <TouchableOpacity style={styles.fetchButton}>
-                <Text style={styles.fetchButtonText}>Extract recipe</Text>
+              <TouchableOpacity
+                style={[styles.fetchButton, importing && styles.fetchButtonDisabled]}
+                onPress={handleImagesImport}
+                disabled={importing}
+              >
+                {importing
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.fetchButtonText}>Import</Text>
+                }
               </TouchableOpacity>
             )}
           </View>
