@@ -11,6 +11,10 @@
 import { test as setup, expect } from "@playwright/test";
 import path from "path";
 import fs from "fs";
+import { config } from "dotenv";
+
+// Load .env.local so DATABASE_URL etc. are available in this Node process
+config({ path: path.join(process.cwd(), ".env.local") });
 
 const BASE = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
 const RUN_ID = Date.now().toString().slice(-8);
@@ -102,24 +106,13 @@ setup("create test users", async ({ browser }) => {
   await setupUser(browser, bob);
   await setupUser(browser, carol);
 
-  // Bootstrap Carol as admin (only works when no admins exist yet)
-  const carolToken = JSON.parse(
-    fs.readFileSync(carol.storageStatePath, "utf-8")
-  ).origins?.[0]?.localStorage?.find(
-    (e: { name: string }) => e.name === "auth_token"
-  )?.value;
-
-  if (carolToken) {
-    const bootstrapRes = await fetch(`${BASE}/api/admin/bootstrap`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${carolToken}`,
-      },
-    });
-    // 200 = bootstrapped, 403 = admin already exists (re-run)
-    expect([200, 403]).toContain(bootstrapRes.status);
-  }
+  // Promote Carol to admin directly via DB.
+  // The bootstrap endpoint now requires ADMIN_EMAIL to match the target user,
+  // which won't be Carol's dynamic test email, so we update the DB directly.
+  const { default: postgres } = await import("postgres");
+  const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
+  await sql`UPDATE users SET "isAdmin" = true WHERE id = ${carol.id}`;
+  await sql.end();
 
   // Re-login Carol to get updated isAdmin in token/user
   const carolLoginRes = await fetch(`${BASE}/api/auth/mobile/credentials`, {
@@ -129,7 +122,6 @@ setup("create test users", async ({ browser }) => {
   });
   if (carolLoginRes.ok) {
     const { token: newToken, user: userData } = await carolLoginRes.json();
-    // Update Carol's storage state with admin token
     const context = await browser.newContext();
     const page = await context.newPage();
     await page.goto(BASE);

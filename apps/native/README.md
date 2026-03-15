@@ -36,6 +36,21 @@ Run the commands from the repo root:
    pnpm --filter native ios
    ```
 
+## Admin Bootstrapping
+
+To grant admin access to a user without touching the database:
+
+1. Set `ADMIN_EMAIL` in `apps/web/.env.local`:
+   ```
+   ADMIN_EMAIL=you@example.com
+   ```
+
+2. Sign in as that user and navigate to `/admin`.
+
+The admin screen automatically calls the bootstrap endpoint. If your email matches `ADMIN_EMAIL`, you'll be promoted to admin and the dashboard will load. If it doesn't match or the variable isn't set, you'll be redirected away.
+
+Without `ADMIN_EMAIL`, admins must be set directly in the database.
+
 ## E2E Tests (Playwright)
 
 Tests run against the SPA served by the Next.js dev server. You need the SPA built and the server running before running tests.
