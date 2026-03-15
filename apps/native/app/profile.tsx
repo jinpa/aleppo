@@ -1,13 +1,17 @@
+import { useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Share,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
+import { API_URL } from "@/constants/api";
 import { UserAvatar } from "@/components/UserAvatar";
 
 // ─── Tab Bar ─────────────────────────────────────────────────────────────────
@@ -80,8 +84,30 @@ function Row({ icon, label, onPress, destructive }: RowProps) {
 }
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { user, token, signOut } = useAuth();
   const router = useRouter();
+  const [inviteLoading, setInviteLoading] = useState(false);
+
+  const handleInviteLink = async () => {
+    setInviteLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/invite-link`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const { url } = await res.json();
+      if (Platform.OS === "web") {
+        await navigator.clipboard.writeText(url);
+        alert("Invite link copied!");
+      } else {
+        await Share.share({ message: `Join me on Aleppo! ${url}`, url });
+      }
+    } catch {
+      // ignore
+    } finally {
+      setInviteLoading(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -128,6 +154,16 @@ export default function ProfileScreen() {
             label="View public profile"
             onPress={() => user?.id && router.push(`/u/${user.id}`)}
           />
+          <View style={styles.divider} />
+          <TouchableOpacity style={styles.row} onPress={handleInviteLink} activeOpacity={0.6} disabled={inviteLoading}>
+            <Ionicons name="link-outline" size={20} color="#57534e" style={styles.rowIcon} />
+            <Text style={styles.rowLabel}>Invite link</Text>
+            {inviteLoading ? (
+              <ActivityIndicator size="small" color="#a8a29e" />
+            ) : (
+              <Ionicons name="chevron-forward" size={16} color="#d6d3d1" />
+            )}
+          </TouchableOpacity>
         </View>
 
         {user?.isAdmin && (

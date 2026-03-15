@@ -56,7 +56,7 @@ const tabStyles = StyleSheet.create({
   labelAmber: { color: "#d97706" },
 });
 
-type Totals = { users: number; recipes: number; cookLogs: number; follows: number };
+type Totals = { users: number; recipes: number; cookLogs: number; follows: number; totalStorageBytes: number };
 
 type AdminUserRow = {
   id: string;
@@ -67,8 +67,17 @@ type AdminUserRow = {
   isSuspended: boolean;
   recipeCount: number;
   cookLogCount: number;
+  storageBytes: number;
   createdAt: string;
 };
+
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  const value = bytes / Math.pow(1024, i);
+  return `${value < 10 ? value.toFixed(1) : Math.round(value)} ${units[i]}`;
+}
 
 function useApi() {
   const { token } = useAuth();
@@ -212,7 +221,7 @@ export default function AdminScreen() {
             </View>
             <Text style={styles.userEmail} numberOfLines={1}>{item.email}</Text>
             <Text style={styles.userMeta}>
-              {item.recipeCount} recipes · {item.cookLogCount} cooks · Joined{" "}
+              {item.recipeCount} recipes · {item.cookLogCount} cooks · {formatBytes(item.storageBytes)} · Joined{" "}
               {new Date(item.createdAt).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
@@ -263,6 +272,7 @@ export default function AdminScreen() {
         { label: "Recipes", value: totals.recipes },
         { label: "Cook Logs", value: totals.cookLogs },
         { label: "Follows", value: totals.follows },
+        { label: "Storage", value: formatBytes(totals.totalStorageBytes), raw: true },
       ]
     : [];
 
@@ -273,7 +283,9 @@ export default function AdminScreen() {
         {statsCards.map((s) => (
           <View key={s.label} style={styles.statCard}>
             <Text style={styles.statLabel}>{s.label}</Text>
-            <Text style={styles.statValue}>{s.value.toLocaleString()}</Text>
+            <Text style={styles.statValue}>
+              {"raw" in s ? s.value : (s.value as number).toLocaleString()}
+            </Text>
           </View>
         ))}
       </View>

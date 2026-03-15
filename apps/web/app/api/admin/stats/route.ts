@@ -3,6 +3,7 @@ import { asc, count, sql, or, ilike } from "drizzle-orm";
 import { db } from "@/db";
 import { users, recipes, cookLogs, follows } from "@/db/schema";
 import { requireAdmin } from "@/lib/admin-auth";
+import { listStorageByUser } from "@/lib/r2";
 
 export async function GET(req: Request) {
   const admin = await requireAdmin(req);
@@ -18,6 +19,7 @@ export async function GET(req: Request) {
     userRows,
     recipeCounts,
     cookLogCounts,
+    storageMap,
   ] = await Promise.all([
     db
       .select({
@@ -58,10 +60,17 @@ export async function GET(req: Request) {
       .select({ userId: cookLogs.userId, cnt: count() })
       .from(cookLogs)
       .groupBy(cookLogs.userId),
+
+    listStorageByUser(),
   ]);
 
   const recipeMap = new Map(recipeCounts.map((r) => [r.userId, Number(r.cnt)]));
   const cookMap = new Map(cookLogCounts.map((r) => [r.userId, Number(r.cnt)]));
+
+  let totalStorageBytes = 0;
+  for (const bytes of storageMap.values()) {
+    totalStorageBytes += bytes;
+  }
 
   return NextResponse.json({
     totals: {
@@ -69,6 +78,7 @@ export async function GET(req: Request) {
       recipes: Number(totals.totalRecipes),
       cookLogs: Number(totals.totalCookLogs),
       follows: Number(totals.totalFollows),
+      totalStorageBytes,
     },
     users: userRows.map((u) => ({
       id: u.id,
@@ -79,6 +89,7 @@ export async function GET(req: Request) {
       isSuspended: u.isSuspended,
       recipeCount: recipeMap.get(u.id) ?? 0,
       cookLogCount: cookMap.get(u.id) ?? 0,
+      storageBytes: storageMap.get(u.id) ?? 0,
       createdAt: u.createdAt.toISOString(),
     })),
   });

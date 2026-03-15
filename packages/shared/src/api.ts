@@ -92,6 +92,7 @@ export type UserSettings = {
   defaultRecipeIsPublic: boolean;
   createdAt: string;
   hasPassword: boolean;
+  notifyOnNewFollower: boolean;
 };
 
 // GET /api/users/[id] → UserProfile
@@ -133,6 +134,26 @@ export type UserSearchResult = {
   bio: string | null;
   isFollowing: boolean;
   isSelf: boolean;
+};
+
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+export type Notification = {
+  id: string;
+  type: string;
+  read: boolean;
+  createdAt: string;
+  actor: {
+    id: string;
+    name: string | null;
+    image: string | null;
+    isPublic: boolean;
+  } | null;
+};
+
+export type NotificationsResponse = {
+  notifications: Notification[];
+  unreadCount: number;
 };
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────

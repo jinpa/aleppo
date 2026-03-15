@@ -76,6 +76,7 @@ export default function SettingsScreen() {
   const [isPublic, setIsPublic] = useState(true);
   const [defaultTagsEnabled, setDefaultTagsEnabled] = useState(true);
   const [defaultRecipeIsPublic, setDefaultRecipeIsPublic] = useState(false);
+  const [notifyOnNewFollower, setNotifyOnNewFollower] = useState(true);
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
@@ -91,6 +92,7 @@ export default function SettingsScreen() {
       setIsPublic(data.isPublic);
       setDefaultTagsEnabled(data.defaultTagsEnabled);
       setDefaultRecipeIsPublic(data.defaultRecipeIsPublic);
+      setNotifyOnNewFollower(data.notifyOnNewFollower ?? true);
     } catch {
       setError("Could not load settings");
     } finally {
@@ -122,6 +124,7 @@ export default function SettingsScreen() {
           isPublic,
           defaultTagsEnabled,
           defaultRecipeIsPublic,
+          notifyOnNewFollower,
         }),
       });
       if (!res.ok) throw new Error();
@@ -279,6 +282,28 @@ export default function SettingsScreen() {
             <Switch
               value={defaultRecipeIsPublic}
               onValueChange={setDefaultRecipeIsPublic}
+              trackColor={{ false: "#e7e5e4", true: "#1c1917" }}
+              thumbColor="#fff"
+            />
+          </View>
+        </View>
+
+        {/* Notifications section */}
+        <Text style={styles.sectionLabel}>Notifications</Text>
+        <View style={styles.section}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Ionicons name="notifications-outline" size={20} color="#57534e" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.toggleLabel}>New follower alerts</Text>
+                <Text style={styles.toggleSub}>
+                  Get notified when someone follows you
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={notifyOnNewFollower}
+              onValueChange={setNotifyOnNewFollower}
               trackColor={{ false: "#e7e5e4", true: "#1c1917" }}
               thumbColor="#fff"
             />

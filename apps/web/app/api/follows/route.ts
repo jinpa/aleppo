@@ -4,7 +4,7 @@ import { eq, and } from "drizzle-orm";
 import { auth } from "@/auth";
 import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
-import { follows, users } from "@/db/schema";
+import { follows, users, notifications } from "@/db/schema";
 
 const schema = z.object({ followingId: z.string() });
 
@@ -29,9 +29,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Verify user exists
+    // Verify user exists and get notification preference
     const [target] = await db
-      .select({ id: users.id })
+      .select({ id: users.id, notifyOnNewFollower: users.notifyOnNewFollower })
       .from(users)
       .where(eq(users.id, parsed.data.followingId))
       .limit(1);
@@ -40,13 +40,33 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    await db
-      .insert(follows)
-      .values({
+    // Check if already following
+    const [existing] = await db
+      .select({ followerId: follows.followerId })
+      .from(follows)
+      .where(
+        and(
+          eq(follows.followerId, userId),
+          eq(follows.followingId, parsed.data.followingId)
+        )
+      )
+      .limit(1);
+
+    if (!existing) {
+      await db.insert(follows).values({
         followerId: userId,
         followingId: parsed.data.followingId,
-      })
-      .onConflictDoNothing();
+      });
+
+      // Emit notification if target has it enabled
+      if (target.notifyOnNewFollower) {
+        await db.insert(notifications).values({
+          userId: parsed.data.followingId,
+          type: "new_follower",
+          actorId: userId,
+        });
+      }
+    }
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
