@@ -63,3 +63,47 @@ export type Recipe = {
   createdAt: string;
   updatedAt: string;
 };
+
+// ── Import / Export ─────────────────────────────────────────────────────────
+
+export type ImportFormat = "paprika" | "mela" | "aleppo";
+
+export type AleppoExportRecipe = {
+  _exportId: string;
+  title: string;
+  description: string | null;
+  sourceUrl: string | null;
+  sourceName: string | null;
+  imageUrl: string | null;
+  imageData: string | null;
+  ingredients: Ingredient[];
+  instructions: InstructionStep[];
+  tags: string[];
+  isPublic: boolean;
+  isAdapted: boolean;
+  notes: string | null;
+  prepTime: number | null;
+  cookTime: number | null;
+  servings: number | null;
+  nutritionalInfo: NutritionalInfo | null;
+  commentsUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type AleppoExportCookLog = {
+  _recipeExportId: string;
+  cookedOn: string;
+  notes: string | null;
+  rating: number | null;
+  createdAt: string;
+};
+
+export type AleppoExportV1 = {
+  version: 1;
+  exportedAt: string;
+  app: "aleppo";
+  user: { name: string | null; email: string };
+  recipes: AleppoExportRecipe[];
+  cookLogs: AleppoExportCookLog[];
+};

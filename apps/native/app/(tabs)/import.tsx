@@ -21,12 +21,13 @@ import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 import type { Ingredient, InstructionStep, ScrapedRecipe } from "@aleppo/shared";
 import { RecipeWebExtractor } from "@/components/RecipeWebExtractor";
+import { UserAvatar } from "@/components/UserAvatar";
 
-type Mode = "url" | "images" | "text" | "paprika";
+type Mode = "url" | "images" | "text" | "file";
 type Step = "url" | "review";
 
-type PaprikaStep = "upload" | "preview" | "importing" | "done";
-type PaprikaItem = {
+type FileImportStep = "upload" | "preview" | "importing" | "done";
+type FileImportItem = {
   uid: string;
   name: string;
   sourceName?: string;
@@ -42,7 +43,7 @@ type RawIngredient = Pick<Ingredient, "raw">;
 
 export default function ImportScreen() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const { mode: modeParam, shareUrl } = useLocalSearchParams<{ mode?: string; shareUrl?: string }>();
 
   const [mode, setMode] = useState<Mode>("url");
@@ -70,16 +71,17 @@ export default function ImportScreen() {
   const [fetching, setFetching] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
 
-  // ── Paprika state ────────────────────────────────────────────────────────────
-  const [paprikaStep, setPaprikaStep] = useState<PaprikaStep>("upload");
-  const [paprikaFile, setPaprikaFile] = useState<{ uri: string; name: string; file?: File } | null>(null);
-  const [paprikaItems, setPaprikaItems] = useState<PaprikaItem[]>([]);
-  const [paprikaSelected, setPaprikaSelected] = useState<Set<string>>(new Set());
-  const [paprikaPublic, setPaprikaPublic] = useState(false);
-  const [paprikaParsing, setPaprikaParsing] = useState(false);
-  const [paprikaError, setPaprikaError] = useState<string | null>(null);
-  const [paprikaSaved, setPaprikaSaved] = useState(0);
-  const [paprikaFailed, setPaprikaFailed] = useState(0);
+  // ── File import state ────────────────────────────────────────────────────────
+  const [fileStep, setFileStep] = useState<FileImportStep>("upload");
+  const [fileImportFile, setFileImportFile] = useState<{ uri: string; name: string; file?: File } | null>(null);
+  const [fileItems, setFileItems] = useState<FileImportItem[]>([]);
+  const [fileSelected, setFileSelected] = useState<Set<string>>(new Set());
+  const [filePublic, setFilePublic] = useState(false);
+  const [fileParsing, setFileParsing] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [fileSaved, setFileSaved] = useState(0);
+  const [fileFailed, setFileFailed] = useState(0);
+  const [detectedFormat, setDetectedFormat] = useState<string | null>(null);
 
   // ── Review step state ───────────────────────────────────────────────────────
   const [title, setTitle] = useState("");
@@ -155,78 +157,82 @@ export default function ImportScreen() {
     }
   };
 
-  const pickPaprikaFile = async () => {
+  const SUPPORTED_EXTENSIONS = [".paprikarecipes", ".melarecipes", ".aleppo.json"];
+
+  const pickImportFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
       type: Platform.OS === "ios" ? "public.data" : "*/*",
       copyToCacheDirectory: true,
     });
     if (result.canceled) return;
     const asset = result.assets[0];
-    if (!asset.name.endsWith(".paprikarecipes")) {
-      setPaprikaError("Please select a .paprikarecipes file exported from Paprika.");
+    if (!SUPPORTED_EXTENSIONS.some((ext) => asset.name.toLowerCase().endsWith(ext))) {
+      setFileError("Unsupported file. Please select a .paprikarecipes, .melarecipes, or .aleppo.json file.");
       return;
     }
-    setPaprikaError(null);
-    setPaprikaParsing(true);
-    setPaprikaFile({ uri: asset.uri, name: asset.name, file: asset.file });
+    setFileError(null);
+    setFileParsing(true);
+    setFileImportFile({ uri: asset.uri, name: asset.name, file: asset.file });
     const fileForForm: any = asset.file ?? { uri: asset.uri, name: asset.name, type: "application/octet-stream" };
     try {
       const form = new FormData();
       form.append("file", fileForForm);
-      const res = await fetch(`${API_URL}/api/import/paprika`, {
+      const res = await fetch(`${API_URL}/api/import/file`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
       const data = await res.json();
-      if (!res.ok) { setPaprikaError(data.error ?? "Failed to parse file."); return; }
-      const items: PaprikaItem[] = data.recipes;
+      if (!res.ok) { setFileError(data.error ?? "Failed to parse file."); return; }
+      setDetectedFormat(data.format ?? null);
+      const items: FileImportItem[] = data.recipes;
       const initial = new Set(
         items.filter((r) => !r.isDuplicate || r.duplicateType === "title").map((r) => r.uid)
       );
-      setPaprikaItems(items);
-      setPaprikaSelected(initial);
-      setPaprikaStep("preview");
+      setFileItems(items);
+      setFileSelected(initial);
+      setFileStep("preview");
     } catch {
-      setPaprikaError("Could not connect to server.");
+      setFileError("Could not connect to server.");
     } finally {
-      setPaprikaParsing(false);
+      setFileParsing(false);
     }
   };
 
-  const startPaprikaImport = async () => {
-    if (!paprikaFile || paprikaSelected.size === 0) return;
-    setPaprikaStep("importing");
+  const startFileImport = async () => {
+    if (!fileImportFile || fileSelected.size === 0) return;
+    setFileStep("importing");
     try {
       const form = new FormData();
-      const fileForForm: any = paprikaFile.file ?? { uri: paprikaFile.uri, name: paprikaFile.name, type: "application/octet-stream" };
+      const fileForForm: any = fileImportFile.file ?? { uri: fileImportFile.uri, name: fileImportFile.name, type: "application/octet-stream" };
       form.append("file", fileForForm);
-      form.append("selectedUids", JSON.stringify([...paprikaSelected]));
-      form.append("isPublic", String(paprikaPublic));
-      const res = await fetch(`${API_URL}/api/import/paprika/save`, {
+      form.append("selectedUids", JSON.stringify([...fileSelected]));
+      form.append("isPublic", String(filePublic));
+      const res = await fetch(`${API_URL}/api/import/file/save`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: form,
       });
       const data = await res.json();
-      if (!res.ok) { setPaprikaError(data.error ?? "Import failed."); setPaprikaStep("preview"); return; }
-      setPaprikaSaved(data.saved);
-      setPaprikaFailed(data.failed ?? 0);
-      setPaprikaStep("done");
+      if (!res.ok) { setFileError(data.error ?? "Import failed."); setFileStep("preview"); return; }
+      setFileSaved(data.saved);
+      setFileFailed(data.failed ?? 0);
+      setFileStep("done");
     } catch {
-      setPaprikaError("Something went wrong during import.");
-      setPaprikaStep("preview");
+      setFileError("Something went wrong during import.");
+      setFileStep("preview");
     }
   };
 
-  const resetPaprika = () => {
-    setPaprikaStep("upload");
-    setPaprikaFile(null);
-    setPaprikaItems([]);
-    setPaprikaSelected(new Set());
-    setPaprikaError(null);
-    setPaprikaSaved(0);
-    setPaprikaFailed(0);
+  const resetFileImport = () => {
+    setFileStep("upload");
+    setFileImportFile(null);
+    setFileItems([]);
+    setFileSelected(new Set());
+    setFileError(null);
+    setFileSaved(0);
+    setFileFailed(0);
+    setDetectedFormat(null);
   };
 
   // ── Bookmarklet postMessage handshake ───────────────────────────────────────
@@ -520,7 +526,7 @@ export default function ImportScreen() {
   const segments: { key: Mode; label: string; icon: string }[] = [
     { key: "url",     label: "URL",     icon: "link-outline" },
     { key: "images",  label: "Images",  icon: "images-outline" },
-    { key: "paprika", label: "Paprika", icon: "archive-outline" },
+    { key: "file", label: "File", icon: "archive-outline" },
     { key: "text",    label: "Text",    icon: "document-text-outline" },
   ];
 
@@ -531,6 +537,17 @@ export default function ImportScreen() {
         contentContainerStyle={styles.urlContent}
         keyboardShouldPersistTaps="handled"
       >
+        {/* Header with title + profile avatar */}
+        <View style={styles.importHeader}>
+          <Text style={styles.importHeaderTitle}>Import</Text>
+          <TouchableOpacity
+            onPress={() => router.navigate("/profile")}
+            style={styles.importAvatarButton}
+          >
+            <UserAvatar name={user?.name} image={user?.image} size={34} />
+          </TouchableOpacity>
+        </View>
+
         {/* Segmented control */}
         <View style={styles.segmentedControl}>
           {segments.map((seg) => {
@@ -638,92 +655,95 @@ export default function ImportScreen() {
           </View>
         )}
 
-        {mode === "paprika" && (
-          <View style={styles.paprikaMode}>
-            {paprikaStep === "upload" && (
+        {mode === "file" && (
+          <View style={styles.fileMode}>
+            {fileStep === "upload" && (
               <>
-                <Text style={styles.heading}>Import from Paprika</Text>
+                <Text style={styles.heading}>Import from file</Text>
                 <Text style={styles.subheading}>
-                  Export your library from Paprika (File → Export → All Recipes on Mac, or Settings → Export on iPhone), then select the .paprikarecipes file below.
+                  Select an export file from Paprika (.paprikarecipes), Mela (.melarecipes), or a previous Aleppo backup (.aleppo.json).
                 </Text>
-                {paprikaError ? (
-                  <View style={styles.paprikaError}>
+                {fileError ? (
+                  <View style={styles.fileError}>
                     <Ionicons name="alert-circle-outline" size={15} color="#b91c1c" />
-                    <Text style={styles.paprikaErrorText}>{paprikaError}</Text>
+                    <Text style={styles.fileErrorText}>{fileError}</Text>
                   </View>
                 ) : null}
                 <TouchableOpacity
-                  style={[styles.fetchButton, paprikaParsing && styles.fetchButtonDisabled]}
-                  onPress={pickPaprikaFile}
-                  disabled={paprikaParsing}
+                  style={[styles.fetchButton, fileParsing && styles.fetchButtonDisabled]}
+                  onPress={pickImportFile}
+                  disabled={fileParsing}
                 >
-                  {paprikaParsing
+                  {fileParsing
                     ? <ActivityIndicator size="small" color="#fff" />
-                    : <Text style={styles.fetchButtonText}>Choose .paprikarecipes file</Text>
+                    : <Text style={styles.fetchButtonText}>Choose file</Text>
                   }
                 </TouchableOpacity>
               </>
             )}
 
-            {paprikaStep === "preview" && (
+            {fileStep === "preview" && (
               <>
-                <View style={styles.paprikaPreviewHeader}>
+                <View style={styles.filePreviewHeader}>
                   <View>
-                    <Text style={styles.heading}>{paprikaItems.length} recipes found</Text>
-                    {paprikaItems.filter((r) => r.isDuplicate).length > 0 && (
+                    <Text style={styles.heading}>{fileItems.length} recipes found</Text>
+                    {detectedFormat && (
                       <Text style={styles.subheading}>
-                        {paprikaItems.filter((r) => r.isDuplicate).length} possible duplicate{paprikaItems.filter((r) => r.isDuplicate).length !== 1 ? "s" : ""}
+                        Format: {detectedFormat.charAt(0).toUpperCase() + detectedFormat.slice(1)}
+                        {fileItems.filter((r) => r.isDuplicate).length > 0
+                          ? ` · ${fileItems.filter((r) => r.isDuplicate).length} possible duplicate${fileItems.filter((r) => r.isDuplicate).length !== 1 ? "s" : ""}`
+                          : ""}
                       </Text>
                     )}
                   </View>
-                  <TouchableOpacity onPress={resetPaprika}>
-                    <Text style={styles.paprikaChangeFile}>Change file</Text>
+                  <TouchableOpacity onPress={resetFileImport}>
+                    <Text style={styles.fileChangeFile}>Change file</Text>
                   </TouchableOpacity>
                 </View>
 
-                {paprikaError ? (
-                  <View style={styles.paprikaError}>
+                {fileError ? (
+                  <View style={styles.fileError}>
                     <Ionicons name="alert-circle-outline" size={15} color="#b91c1c" />
-                    <Text style={styles.paprikaErrorText}>{paprikaError}</Text>
+                    <Text style={styles.fileErrorText}>{fileError}</Text>
                   </View>
                 ) : null}
 
-                <View style={styles.paprikaSelectRow}>
-                  <TouchableOpacity onPress={() => setPaprikaSelected(new Set(paprikaItems.map((r) => r.uid)))}>
-                    <Text style={styles.paprikaSelectLink}>Select all</Text>
+                <View style={styles.fileSelectRow}>
+                  <TouchableOpacity onPress={() => setFileSelected(new Set(fileItems.map((r) => r.uid)))}>
+                    <Text style={styles.fileSelectLink}>Select all</Text>
                   </TouchableOpacity>
-                  <Text style={styles.paprikaDot}>·</Text>
-                  <TouchableOpacity onPress={() => setPaprikaSelected(new Set())}>
-                    <Text style={styles.paprikaSelectLink}>Deselect all</Text>
+                  <Text style={styles.fileDot}>·</Text>
+                  <TouchableOpacity onPress={() => setFileSelected(new Set())}>
+                    <Text style={styles.fileSelectLink}>Deselect all</Text>
                   </TouchableOpacity>
-                  {paprikaItems.some((r) => r.isDuplicate) && (
+                  {fileItems.some((r) => r.isDuplicate) && (
                     <>
-                      <Text style={styles.paprikaDot}>·</Text>
-                      <TouchableOpacity onPress={() => setPaprikaSelected((prev) => { const next = new Set(prev); paprikaItems.filter((r) => r.isDuplicate).forEach((r) => next.delete(r.uid)); return next; })}>
-                        <Text style={styles.paprikaSelectLink}>Deselect duplicates</Text>
+                      <Text style={styles.fileDot}>·</Text>
+                      <TouchableOpacity onPress={() => setFileSelected((prev) => { const next = new Set(prev); fileItems.filter((r) => r.isDuplicate).forEach((r) => next.delete(r.uid)); return next; })}>
+                        <Text style={styles.fileSelectLink}>Deselect duplicates</Text>
                       </TouchableOpacity>
                     </>
                   )}
                 </View>
 
-                <ScrollView style={styles.paprikaList} scrollEnabled={false}>
-                  {paprikaItems.map((item) => (
+                <ScrollView style={styles.fileList} scrollEnabled={false}>
+                  {fileItems.map((item) => (
                     <TouchableOpacity
                       key={item.uid}
-                      style={[styles.paprikaItem, paprikaSelected.has(item.uid) && styles.paprikaItemSelected]}
-                      onPress={() => setPaprikaSelected((prev) => { const next = new Set(prev); next.has(item.uid) ? next.delete(item.uid) : next.add(item.uid); return next; })}
+                      style={[styles.fileItem, fileSelected.has(item.uid) && styles.fileItemSelected]}
+                      onPress={() => setFileSelected((prev) => { const next = new Set(prev); next.has(item.uid) ? next.delete(item.uid) : next.add(item.uid); return next; })}
                       activeOpacity={0.7}
                     >
-                      <View style={[styles.paprikaCheckbox, paprikaSelected.has(item.uid) && styles.paprikaCheckboxChecked]}>
-                        {paprikaSelected.has(item.uid) && <Ionicons name="checkmark" size={12} color="#fff" />}
+                      <View style={[styles.fileCheckbox, fileSelected.has(item.uid) && styles.fileCheckboxChecked]}>
+                        {fileSelected.has(item.uid) && <Ionicons name="checkmark" size={12} color="#fff" />}
                       </View>
-                      <View style={styles.paprikaItemBody}>
-                        <Text style={styles.paprikaItemName} numberOfLines={1}>{item.name}</Text>
-                        <View style={styles.paprikaItemMeta}>
-                          {item.sourceName ? <Text style={styles.paprikaItemMetaText}>{item.sourceName} · </Text> : null}
-                          <Text style={styles.paprikaItemMetaText}>{item.ingredientCount} ingredient{item.ingredientCount !== 1 ? "s" : ""}</Text>
+                      <View style={styles.fileItemBody}>
+                        <Text style={styles.fileItemName} numberOfLines={1}>{item.name}</Text>
+                        <View style={styles.fileItemMeta}>
+                          {item.sourceName ? <Text style={styles.fileItemMetaText}>{item.sourceName} · </Text> : null}
+                          <Text style={styles.fileItemMetaText}>{item.ingredientCount} ingredient{item.ingredientCount !== 1 ? "s" : ""}</Text>
                           {item.isDuplicate && (
-                            <Text style={[styles.paprikaBadge, item.duplicateType === "url" ? styles.paprikaBadgeDupe : styles.paprikaBadgeMaybe]}>
+                            <Text style={[styles.fileBadge, item.duplicateType === "url" ? styles.fileBadgeDupe : styles.fileBadgeMaybe]}>
                               {item.duplicateType === "url" ? " · Already saved" : " · Possible duplicate"}
                             </Text>
                           )}
@@ -733,45 +753,45 @@ export default function ImportScreen() {
                   ))}
                 </ScrollView>
 
-                <View style={styles.paprikaFooter}>
-                  <View style={styles.paprikaPublicRow}>
-                    <Switch value={paprikaPublic} onValueChange={setPaprikaPublic} trackColor={{ true: "#1c1917" }} />
-                    <Text style={styles.paprikaPublicLabel}>Make recipes public</Text>
+                <View style={styles.fileFooter}>
+                  <View style={styles.filePublicRow}>
+                    <Switch value={filePublic} onValueChange={setFilePublic} trackColor={{ true: "#1c1917" }} />
+                    <Text style={styles.filePublicLabel}>Make recipes public</Text>
                   </View>
                   <TouchableOpacity
-                    style={[styles.fetchButton, paprikaSelected.size === 0 && styles.fetchButtonDisabled]}
-                    onPress={startPaprikaImport}
-                    disabled={paprikaSelected.size === 0}
+                    style={[styles.fetchButton, fileSelected.size === 0 && styles.fetchButtonDisabled]}
+                    onPress={startFileImport}
+                    disabled={fileSelected.size === 0}
                   >
                     <Text style={styles.fetchButtonText}>
-                      Import {paprikaSelected.size} recipe{paprikaSelected.size !== 1 ? "s" : ""}
+                      Import {fileSelected.size} recipe{fileSelected.size !== 1 ? "s" : ""}
                     </Text>
                   </TouchableOpacity>
                 </View>
               </>
             )}
 
-            {paprikaStep === "importing" && (
-              <View style={styles.paprikaCentered}>
+            {fileStep === "importing" && (
+              <View style={styles.fileCentered}>
                 <ActivityIndicator size="large" color="#d97706" />
-                <Text style={styles.paprikaImportingText}>Importing recipes…</Text>
-                <Text style={styles.paprikaImportingSubtext}>This may take a minute for large libraries. Please don't close this page.</Text>
+                <Text style={styles.fileImportingText}>Importing recipes…</Text>
+                <Text style={styles.fileImportingSubtext}>This may take a minute for large libraries. Please don't close this page.</Text>
               </View>
             )}
 
-            {paprikaStep === "done" && (
-              <View style={styles.paprikaCentered}>
+            {fileStep === "done" && (
+              <View style={styles.fileCentered}>
                 <Ionicons name="checkmark-circle" size={48} color="#16a34a" />
-                <Text style={styles.paprikaDoneTitle}>Import complete</Text>
-                <Text style={styles.paprikaDoneSubtext}>
-                  {paprikaSaved} recipe{paprikaSaved !== 1 ? "s" : ""} imported
-                  {paprikaFailed > 0 ? ` · ${paprikaFailed} failed` : ""}
+                <Text style={styles.fileDoneTitle}>Import complete</Text>
+                <Text style={styles.fileDoneSubtext}>
+                  {fileSaved} recipe{fileSaved !== 1 ? "s" : ""} imported
+                  {fileFailed > 0 ? ` · ${fileFailed} failed` : ""}
                 </Text>
                 <TouchableOpacity style={styles.fetchButton} onPress={() => router.replace("/(tabs)/recipes")}>
                   <Text style={styles.fetchButtonText}>Go to my recipes</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.paprikaAnotherBtn} onPress={resetPaprika}>
-                  <Text style={styles.paprikaAnotherText}>Import another file</Text>
+                <TouchableOpacity style={styles.fileAnotherBtn} onPress={resetFileImport}>
+                  <Text style={styles.fileAnotherText}>Import another file</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -1187,6 +1207,15 @@ const styles = StyleSheet.create({
   },
   bookmarkletWaitingText: { fontSize: 15, color: "#78716c" },
 
+  // ── Import header ───────────────────────────────────────────────────────────
+  importHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  importHeaderTitle: { fontSize: 28, fontWeight: "700", color: "#1c1917" },
+  importAvatarButton: { borderRadius: 20 },
+
   // ── URL step ────────────────────────────────────────────────────────────────
   urlContent: {
     flexGrow: 1,
@@ -1436,17 +1465,17 @@ const styles = StyleSheet.create({
   toggleSub: { fontSize: 12, color: "#78716c", marginTop: 1 },
   bottomSaveRow: { paddingHorizontal: 16, marginTop: 24 },
 
-  // Paprika
-  paprikaMode: { gap: 16 },
-  paprikaPreviewHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  paprikaChangeFile: { fontSize: 13, color: "#78716c", textDecorationLine: "underline", marginTop: 4 },
-  paprikaError: { flexDirection: "row", gap: 6, alignItems: "flex-start", backgroundColor: "#fef2f2", borderRadius: 8, padding: 10 },
-  paprikaErrorText: { flex: 1, fontSize: 13, color: "#b91c1c" },
-  paprikaSelectRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  paprikaSelectLink: { fontSize: 13, color: "#78716c", textDecorationLine: "underline" },
-  paprikaDot: { fontSize: 13, color: "#d6d3d1" },
-  paprikaList: { borderWidth: 1, borderColor: "#e7e5e4", borderRadius: 10, overflow: "hidden" },
-  paprikaItem: {
+  // File import
+  fileMode: { gap: 16 },
+  filePreviewHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  fileChangeFile: { fontSize: 13, color: "#78716c", textDecorationLine: "underline", marginTop: 4 },
+  fileError: { flexDirection: "row", gap: 6, alignItems: "flex-start", backgroundColor: "#fef2f2", borderRadius: 8, padding: 10 },
+  fileErrorText: { flex: 1, fontSize: 13, color: "#b91c1c" },
+  fileSelectRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  fileSelectLink: { fontSize: 13, color: "#78716c", textDecorationLine: "underline" },
+  fileDot: { fontSize: 13, color: "#d6d3d1" },
+  fileList: { borderWidth: 1, borderColor: "#e7e5e4", borderRadius: 10, overflow: "hidden" },
+  fileItem: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
@@ -1457,8 +1486,8 @@ const styles = StyleSheet.create({
     backgroundColor: "#fafaf9",
     opacity: 0.5,
   },
-  paprikaItemSelected: { backgroundColor: "#fff", opacity: 1 },
-  paprikaCheckbox: {
+  fileItemSelected: { backgroundColor: "#fff", opacity: 1 },
+  fileCheckbox: {
     width: 18,
     height: 18,
     borderRadius: 4,
@@ -1469,22 +1498,22 @@ const styles = StyleSheet.create({
     marginTop: 1,
     flexShrink: 0,
   },
-  paprikaCheckboxChecked: { backgroundColor: "#1c1917", borderColor: "#1c1917" },
-  paprikaItemBody: { flex: 1 },
-  paprikaItemName: { fontSize: 14, fontWeight: "500", color: "#1c1917" },
-  paprikaItemMeta: { flexDirection: "row", flexWrap: "wrap", marginTop: 2 },
-  paprikaItemMetaText: { fontSize: 12, color: "#a8a29e" },
-  paprikaBadge: { fontSize: 12, fontWeight: "500" },
-  paprikaBadgeDupe: { color: "#b45309" },
-  paprikaBadgeMaybe: { color: "#78716c" },
-  paprikaFooter: { gap: 12, marginTop: 4 },
-  paprikaPublicRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  paprikaPublicLabel: { fontSize: 14, color: "#57534e" },
-  paprikaCentered: { alignItems: "center", paddingVertical: 40, gap: 12 },
-  paprikaImportingText: { fontSize: 17, fontWeight: "600", color: "#1c1917" },
-  paprikaImportingSubtext: { fontSize: 13, color: "#78716c", textAlign: "center", paddingHorizontal: 16 },
-  paprikaDoneTitle: { fontSize: 22, fontWeight: "700", color: "#1c1917" },
-  paprikaDoneSubtext: { fontSize: 14, color: "#78716c" },
-  paprikaAnotherBtn: { marginTop: 4 },
-  paprikaAnotherText: { fontSize: 14, color: "#78716c", textDecorationLine: "underline" },
+  fileCheckboxChecked: { backgroundColor: "#1c1917", borderColor: "#1c1917" },
+  fileItemBody: { flex: 1 },
+  fileItemName: { fontSize: 14, fontWeight: "500", color: "#1c1917" },
+  fileItemMeta: { flexDirection: "row", flexWrap: "wrap", marginTop: 2 },
+  fileItemMetaText: { fontSize: 12, color: "#a8a29e" },
+  fileBadge: { fontSize: 12, fontWeight: "500" },
+  fileBadgeDupe: { color: "#b45309" },
+  fileBadgeMaybe: { color: "#78716c" },
+  fileFooter: { gap: 12, marginTop: 4 },
+  filePublicRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  filePublicLabel: { fontSize: 14, color: "#57534e" },
+  fileCentered: { alignItems: "center", paddingVertical: 40, gap: 12 },
+  fileImportingText: { fontSize: 17, fontWeight: "600", color: "#1c1917" },
+  fileImportingSubtext: { fontSize: 13, color: "#78716c", textAlign: "center", paddingHorizontal: 16 },
+  fileDoneTitle: { fontSize: 22, fontWeight: "700", color: "#1c1917" },
+  fileDoneSubtext: { fontSize: 14, color: "#78716c" },
+  fileAnotherBtn: { marginTop: 4 },
+  fileAnotherText: { fontSize: 14, color: "#78716c", textDecorationLine: "underline" },
 });
