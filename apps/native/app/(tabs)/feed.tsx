@@ -18,6 +18,7 @@ import { API_URL } from "@/constants/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { TagRow } from "@/components/TagRow";
 import { formatDate } from "@/utils/format";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import type { FeedItem, FollowedUser } from "@aleppo/shared";
 
 type SearchUser = {
@@ -43,6 +44,7 @@ export default function FeedScreen() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<SearchUser[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const { unreadCount } = useUnreadNotifications();
 
   const fetchFeed = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -161,9 +163,21 @@ export default function FeedScreen() {
         <View style={styles.headerLeft}>
           <Text style={styles.heading}>Following Feed</Text>
         </View>
-        <TouchableOpacity onPress={() => router.navigate("/profile")} style={styles.avatarButton}>
-          <UserAvatar name={user?.name} image={user?.image} size={34} />
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity onPress={() => router.push("/notifications")} style={styles.bellButton}>
+            <Ionicons name="notifications-outline" size={22} color="#1c1917" />
+            {unreadCount > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.navigate("/profile")} style={styles.avatarButton}>
+            <UserAvatar name={user?.name} image={user?.image} size={34} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* People search */}
@@ -370,7 +384,22 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 12 },
   heading: { fontSize: 28, fontWeight: "700", color: "#1c1917" },
+  bellButton: { position: "relative", padding: 4 },
+  badge: {
+    position: "absolute",
+    top: 0,
+    right: -2,
+    backgroundColor: "#dc2626",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  badgeText: { color: "#fff", fontSize: 10, fontWeight: "700" },
   avatarButton: { borderRadius: 20 },
   emptyContainer: {
     paddingTop: 80, alignItems: "center", gap: 12, paddingHorizontal: 32,
