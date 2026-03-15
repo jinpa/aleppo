@@ -18,7 +18,7 @@ import { API_URL } from "@/constants/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { TagRow } from "@/components/TagRow";
 import { formatDate } from "@/utils/format";
-import type { FeedItem } from "@aleppo/shared";
+import type { FeedItem, FollowedUser } from "@aleppo/shared";
 
 type SearchUser = {
   id: string;
@@ -26,6 +26,7 @@ type SearchUser = {
   image: string | null;
   bio: string | null;
   isFollowing: boolean;
+  isSelf: boolean;
   followLoading: boolean;
 };
 
@@ -34,6 +35,7 @@ export default function FeedScreen() {
   const router = useRouter();
   const { token, user, signOut } = useAuth();
   const [items, setItems] = useState<FeedItem[]>([]);
+  const [followedUsers, setFollowedUsers] = useState<FollowedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,7 +57,15 @@ export default function FeedScreen() {
           return;
         }
         if (!res.ok) throw new Error();
-        setItems(await res.json());
+        const data = await res.json();
+        // Support both old array format and new { items, following } format
+        if (Array.isArray(data)) {
+          setItems(data);
+          setFollowedUsers([]);
+        } else {
+          setItems(data.items ?? []);
+          setFollowedUsers(data.following ?? []);
+        }
         setError(null);
       } catch {
         setError("Could not load feed");
@@ -85,9 +95,10 @@ export default function FeedScreen() {
         if (res.ok) {
           const data = await res.json();
           setSearchResults(
-            data.map((u: Omit<SearchUser, "isFollowing" | "followLoading">) => ({
+            data.map((u: Omit<SearchUser, "followLoading">) => ({
               ...u,
-              isFollowing: false,
+              isFollowing: u.isFollowing ?? false,
+              isSelf: u.isSelf ?? false,
               followLoading: false,
             }))
           );
@@ -188,19 +199,25 @@ export default function FeedScreen() {
                       {result.bio ? <Text style={styles.searchResultBio} numberOfLines={1}>{result.bio}</Text> : null}
                     </View>
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.followBtn, result.isFollowing && styles.followBtnActive]}
-                    onPress={() => toggleFollow(result.id)}
-                    disabled={result.followLoading}
-                  >
-                    {result.followLoading ? (
-                      <ActivityIndicator size="small" color={result.isFollowing ? "#fff" : "#1c1917"} />
-                    ) : (
-                      <Text style={[styles.followBtnText, result.isFollowing && styles.followBtnTextActive]}>
-                        {result.isFollowing ? "Following" : "Follow"}
-                      </Text>
-                    )}
-                  </TouchableOpacity>
+                  {result.isSelf ? (
+                    <View style={styles.selfBadge}>
+                      <Text style={styles.selfBadgeText}>Me</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity
+                      style={[styles.followBtn, result.isFollowing && styles.followBtnActive]}
+                      onPress={() => toggleFollow(result.id)}
+                      disabled={result.followLoading}
+                    >
+                      {result.followLoading ? (
+                        <ActivityIndicator size="small" color={result.isFollowing ? "#fff" : "#1c1917"} />
+                      ) : (
+                        <Text style={[styles.followBtnText, result.isFollowing && styles.followBtnTextActive]}>
+                          {result.isFollowing ? "Following" : "Follow"}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  )}
                 </View>
               );
             })}
@@ -224,6 +241,31 @@ export default function FeedScreen() {
       <TouchableOpacity style={styles.retryButton} onPress={() => fetchFeed()}>
         <Text style={styles.retryText}>Try again</Text>
       </TouchableOpacity>
+    </View>
+  ) : followedUsers.length > 0 ? (
+    <View style={styles.emptyContainer}>
+      <Ionicons name="people-outline" size={48} color="#d6d3d1" />
+      <Text style={styles.emptyTitle}>No recent cooks</Text>
+      <Text style={styles.emptySubtitle}>
+        The people you follow haven't logged any cooks yet.
+      </Text>
+      <View style={styles.followingList}>
+        <Text style={styles.followingListTitle}>Following</Text>
+        {followedUsers.map((u) => (
+          <TouchableOpacity
+            key={u.id}
+            style={styles.followingListItem}
+            onPress={() => router.push(`/u/${u.id}`)}
+            activeOpacity={0.7}
+          >
+            <UserAvatar name={u.name} image={u.image} size={36} />
+            <Text style={styles.followingListName} numberOfLines={1}>
+              {u.name ?? "Unknown"}
+            </Text>
+            <Ionicons name="chevron-forward" size={16} color="#d6d3d1" />
+          </TouchableOpacity>
+        ))}
+      </View>
     </View>
   ) : (
     <View style={styles.emptyContainer}>
@@ -334,7 +376,41 @@ const styles = StyleSheet.create({
     paddingTop: 80, alignItems: "center", gap: 12, paddingHorizontal: 32,
   },
   emptyTitle: { fontSize: 18, fontWeight: "600", color: "#1c1917" },
-  emptySubtitle: { fontSize: 14, color: "#78716c", textAlign: "center" },
+  emptySubtitle: { fontSize: 14, color: "#78716c", textAlign: "center", marginBottom: 8 },
+  followingList: {
+    width: "100%",
+    marginTop: 16,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e7e5e4",
+    overflow: "hidden",
+  },
+  followingListTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#78716c",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  followingListItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#f5f5f4",
+  },
+  followingListName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#1c1917",
+  },
   errorText: { fontSize: 15, color: "#b91c1c", textAlign: "center" },
   retryButton: {
     paddingHorizontal: 20, paddingVertical: 8,
@@ -457,6 +533,15 @@ const styles = StyleSheet.create({
   },
   followBtnText: { fontSize: 13, fontWeight: "600", color: "#1c1917" },
   followBtnTextActive: { color: "#fff" },
+  selfBadge: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: "#f5f5f4",
+    minWidth: 76,
+    alignItems: "center",
+  },
+  selfBadgeText: { fontSize: 13, fontWeight: "600", color: "#a8a29e" },
   searchEmpty: {
     fontSize: 13, color: "#a8a29e",
     textAlign: "center", marginTop: 10, paddingBottom: 4,

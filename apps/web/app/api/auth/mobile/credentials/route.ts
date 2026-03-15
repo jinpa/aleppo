@@ -43,6 +43,13 @@ export async function POST(req: Request) {
     );
   }
 
+  if (user.isSuspended) {
+    return NextResponse.json(
+      { error: "Account suspended" },
+      { status: 403 }
+    );
+  }
+
   const isSecure = new URL(req.url).protocol === "https:";
   const salt = isSecure
     ? "__Secure-authjs.session-token"
@@ -55,6 +62,7 @@ export async function POST(req: Request) {
       email: user.email,
       name: user.name,
       picture: user.image,
+      isAdmin: !!user.isAdmin,
     },
     secret: process.env.AUTH_SECRET!,
     maxAge: TOKEN_MAX_AGE,
@@ -68,6 +76,7 @@ export async function POST(req: Request) {
       name: user.name,
       email: user.email,
       image: user.image,
+      isAdmin: !!user.isAdmin,
     },
   });
 }

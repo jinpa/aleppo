@@ -26,11 +26,12 @@ export interface TestUser {
 export interface TestUsers {
   alice: TestUser;
   bob: TestUser;
+  carol: TestUser;
 }
 
 function makeUser(handle: string): TestUser {
   return {
-    name: `${handle.charAt(0).toUpperCase() + handle.slice(1)} Aleppo`,
+    name: `${handle.charAt(0).toUpperCase() + handle.slice(1)} Aleppo ${RUN_ID}`,
     email: `${handle}.${RUN_ID}@test.aleppo`,
     password: "TestPass123!",
     storageStatePath: path.join(process.cwd(), `.auth/${handle}.json`),
@@ -95,11 +96,57 @@ setup("create test users", async ({ browser }) => {
 
   const alice = makeUser("alice");
   const bob = makeUser("bob");
+  const carol = makeUser("carol");
 
   await setupUser(browser, alice);
   await setupUser(browser, bob);
+  await setupUser(browser, carol);
 
-  const testUsers: TestUsers = { alice, bob };
+  // Bootstrap Carol as admin (only works when no admins exist yet)
+  const carolToken = JSON.parse(
+    fs.readFileSync(carol.storageStatePath, "utf-8")
+  ).origins?.[0]?.localStorage?.find(
+    (e: { name: string }) => e.name === "auth_token"
+  )?.value;
+
+  if (carolToken) {
+    const bootstrapRes = await fetch(`${BASE}/api/admin/bootstrap`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${carolToken}`,
+      },
+    });
+    // 200 = bootstrapped, 403 = admin already exists (re-run)
+    expect([200, 403]).toContain(bootstrapRes.status);
+  }
+
+  // Re-login Carol to get updated isAdmin in token/user
+  const carolLoginRes = await fetch(`${BASE}/api/auth/mobile/credentials`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: carol.email, password: carol.password }),
+  });
+  if (carolLoginRes.ok) {
+    const { token: newToken, user: userData } = await carolLoginRes.json();
+    // Update Carol's storage state with admin token
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.goto(BASE);
+    await page.evaluate(
+      ({ t, u }) => {
+        localStorage.setItem("auth_token", t);
+        localStorage.setItem("auth_user", JSON.stringify(u));
+      },
+      { t: newToken, u: userData }
+    );
+    await page.goto(`${BASE}/recipes`);
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 15_000 });
+    await context.storageState({ path: carol.storageStatePath });
+    await context.close();
+  }
+
+  const testUsers: TestUsers = { alice, bob, carol };
   fs.writeFileSync(
     path.join(process.cwd(), ".auth/test-users.json"),
     JSON.stringify(testUsers, null, 2)
@@ -108,4 +155,5 @@ setup("create test users", async ({ browser }) => {
   console.log(`\nTest users created for run ${RUN_ID}:`);
   console.log(`  Alice: ${alice.email} (id: ${alice.id})`);
   console.log(`  Bob:   ${bob.email} (id: ${bob.id})`);
+  console.log(`  Carol: ${carol.email} (id: ${carol.id}) [admin]`);
 });

@@ -1,0 +1,13 @@
+diff --git a/ios/ImageManipulatorUtils.swift b/ios/ImageManipulatorUtils.swift
+index 00ce0b40bab6e296415a74569168a0cd40b6d698..e5c5c99d46badf53094a66569aae98780f00e3f1 100644
+--- a/ios/ImageManipulatorUtils.swift
++++ b/ios/ImageManipulatorUtils.swift
+@@ -18,7 +18,7 @@ internal func loadImage(atUrl url: URL, appContext: AppContext) async throws ->
+     return try await loadImageFromPhotoLibrary(url: url)
+   }
+ 
+-  guard FileSystemUtilities.isReadableFile(appContext, url) else {
++  guard FileSystemUtilities.permissions(appContext, for: url).contains(.read) else {
+     guard let imageLoader = appContext.imageLoader else {
+       throw ImageLoaderNotFoundException()
+     }

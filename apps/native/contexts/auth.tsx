@@ -26,6 +26,7 @@ export type AuthUser = {
   name: string | null;
   email: string;
   image: string | null;
+  isAdmin?: boolean;
 };
 
 interface AuthContextType {

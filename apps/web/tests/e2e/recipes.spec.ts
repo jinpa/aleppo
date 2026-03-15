@@ -225,10 +225,13 @@ test.describe("Recipes — want-to-cook queue", () => {
     await createRecipe(page, { title: "Dequeue Recipe" });
     // Already on detail page
     await page.getByText("Want to cook").click();
-    await expect(page.getByText("In queue")).toBeVisible();
+    await expect(page.getByText("In queue")).toBeVisible({ timeout: 10_000 });
+
+    // Wait for the POST to finish (queueLoading guard prevents clicks while loading)
+    await page.waitForTimeout(1_000);
 
     await page.getByText("In queue").click();
-    await expect(page.getByText("Want to cook")).toBeVisible();
+    await expect(page.getByText("Want to cook")).toBeVisible({ timeout: 10_000 });
   });
 });
 
@@ -239,5 +242,142 @@ test.describe("Recipes — list page", () => {
     await page.goto("/recipes");
     await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 15_000 });
     await expect(page).not.toHaveURL(/\/login/);
+  });
+});
+
+test.describe("Recipes — sort", () => {
+  test("sort by A-Z and reverse", async ({ alicePage: page }) => {
+    await createRecipe(page, { title: "Xsort AAA" });
+    await page.getByText("Recipes", { exact: true }).click();
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 10_000 });
+
+    await createRecipe(page, { title: "Xsort ZZZ" });
+    await page.getByText("Recipes", { exact: true }).click();
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 10_000 });
+
+    // Filter to just our sort-test recipes
+    await page.getByPlaceholder("Search recipes").fill("Xsort");
+    await expect(page.getByText("Xsort AAA").last()).toBeVisible({ timeout: 10_000 });
+
+    // Click A-Z sort pill
+    await page.getByText("A-Z", { exact: true }).click();
+    await expect(page.getByText("Xsort AAA").last()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Xsort ZZZ").last()).toBeVisible();
+
+    // Click again to reverse direction
+    await page.getByText("A-Z", { exact: true }).click();
+    await expect(page.getByText("Xsort AAA").last()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Xsort ZZZ").last()).toBeVisible();
+  });
+
+  test("sort by total time", async ({ alicePage: page }) => {
+    await createRecipe(page, { title: "Xtime Quick", prepTime: "5", cookTime: "5" });
+    await page.getByText("Recipes", { exact: true }).click();
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 10_000 });
+
+    await createRecipe(page, { title: "Xtime Slow", prepTime: "60", cookTime: "60" });
+    await page.getByText("Recipes", { exact: true }).click();
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 10_000 });
+
+    // Filter to just our time-test recipes
+    await page.getByPlaceholder("Search recipes").fill("Xtime");
+    await expect(page.getByText("Xtime Quick").last()).toBeVisible({ timeout: 10_000 });
+
+    await page.getByText("Total time", { exact: true }).click();
+    await expect(page.getByText("Xtime Quick").last()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Xtime Slow").last()).toBeVisible();
+  });
+});
+
+test.describe("Recipes — bulk delete", () => {
+  test("enter edit mode, select recipes, and bulk delete", async ({
+    alicePage: page,
+  }) => {
+    // Create two recipes to delete
+    await createRecipe(page, { title: "Xdel Alpha" });
+    await page.getByText("Recipes", { exact: true }).click();
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 10_000 });
+
+    await createRecipe(page, { title: "Xdel Beta" });
+    await page.getByText("Recipes", { exact: true }).click();
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 10_000 });
+
+    // Filter to just our test recipes
+    await page.getByPlaceholder("Search recipes").fill("Xdel");
+    await expect(page.getByText("Xdel Alpha").last()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Xdel Beta").last()).toBeVisible();
+
+    // Enter edit mode
+    await page.getByText("Edit", { exact: true }).click();
+    await expect(page.getByText("0 selected")).toBeVisible();
+
+    // Select both recipes by tapping them
+    await page.getByText("Xdel Alpha").last().click();
+    await expect(page.getByText("1 selected")).toBeVisible();
+
+    await page.getByText("Xdel Beta").last().click();
+    await expect(page.getByText("2 selected")).toBeVisible();
+
+    // Bottom bar should show delete button
+    await expect(page.getByText("Delete (2)")).toBeVisible();
+
+    // Tap delete and confirm
+    await page.getByText("Delete (2)").click();
+    await expect(page.getByText("Delete 2 recipes")).toBeVisible();
+    await page.getByText("Delete", { exact: true }).click();
+
+    // Should exit edit mode and recipes should be gone
+    await expect(page.getByText("Xdel Alpha")).not.toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("Xdel Beta")).not.toBeVisible();
+  });
+
+  test("select all and deselect all", async ({ alicePage: page }) => {
+    await createRecipe(page, { title: "Xsel Recipe A" });
+    await page.getByText("Recipes", { exact: true }).click();
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 10_000 });
+
+    await createRecipe(page, { title: "Xsel Recipe B" });
+    await page.getByText("Recipes", { exact: true }).click();
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 10_000 });
+
+    // Filter to just our test recipes
+    await page.getByPlaceholder("Search recipes").fill("Xsel");
+    await expect(page.getByText("Xsel Recipe A").last()).toBeVisible({ timeout: 10_000 });
+
+    // Enter edit mode
+    await page.getByText("Edit", { exact: true }).click();
+    await expect(page.getByText("0 selected")).toBeVisible();
+
+    // Select All
+    await page.getByText("Select All", { exact: true }).click();
+    await expect(page.getByText("2 selected")).toBeVisible();
+
+    // Deselect All
+    await page.getByText("Deselect All", { exact: true }).click();
+    await expect(page.getByText("0 selected")).toBeVisible();
+
+    // Cancel edit mode
+    await page.getByText("Cancel", { exact: true }).click();
+    await expect(page.getByText("My Recipes")).toBeVisible();
+  });
+
+  test("cancel edit mode clears selection", async ({ alicePage: page }) => {
+    await createRecipe(page, { title: "Xcancel Recipe" });
+    await page.getByText("Recipes", { exact: true }).click();
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 10_000 });
+
+    // Filter to isolate our test recipe
+    await page.getByPlaceholder("Search recipes").fill("Xcancel");
+    await expect(page.getByText("Xcancel Recipe").last()).toBeVisible({ timeout: 10_000 });
+
+    await page.getByText("Edit", { exact: true }).click();
+    await page.getByText("Xcancel Recipe").last().click();
+    await expect(page.getByText("1 selected")).toBeVisible();
+
+    await page.getByText("Cancel", { exact: true }).click();
+    await expect(page.getByText("My Recipes")).toBeVisible();
+    // Re-enter edit mode — selection should be cleared
+    await page.getByText("Edit", { exact: true }).click();
+    await expect(page.getByText("0 selected")).toBeVisible();
   });
 });

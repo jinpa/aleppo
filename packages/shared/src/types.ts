@@ -59,6 +59,7 @@ export type Recipe = {
   cookTime: number | null;
   servings: number | null;
   nutritionalInfo: NutritionalInfo | null;
+  forkedFromRecipeId: string | null;
   createdAt: string;
   updatedAt: string;
 };

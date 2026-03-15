@@ -15,7 +15,7 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { Image } from "expo-image";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
@@ -107,7 +107,16 @@ const tabStyles = StyleSheet.create({
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const { token, user, signOut } = useAuth();
+
+  const goBack = () => {
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/recipes");
+    }
+  };
 
   const [detail, setDetail] = useState<RecipeDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,7 +139,7 @@ export default function RecipeDetailScreen() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [showLogModal, setShowLogModal] = useState(false);
-  const [logDate, setLogDate] = useState(todayString);
+  const [logDate, setLogDate] = useState(todayString());
   const [logNotes, setLogNotes] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
@@ -319,7 +328,7 @@ export default function RecipeDetailScreen() {
           <TouchableOpacity style={styles.retryButton} onPress={() => fetchDetail()}>
             <Text style={styles.retryText}>Try again</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.retryButton, { marginTop: 8 }]} onPress={() => router.back()}>
+          <TouchableOpacity style={[styles.retryButton, { marginTop: 8 }]} onPress={goBack}>
             <Text style={styles.retryText}>Go back</Text>
           </TouchableOpacity>
         </View>
@@ -339,7 +348,7 @@ export default function RecipeDetailScreen() {
       {/* Back button + profile avatar */}
       <View style={styles.backRow}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={goBack}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={styles.backButton}
         >
@@ -420,13 +429,22 @@ export default function RecipeDetailScreen() {
           ) : null}
         </View>
 
-        {/* Source link */}
+        {/* Source attribution */}
         {recipe.sourceUrl ? (
           <TouchableOpacity onPress={() => Linking.openURL(recipe.sourceUrl!)} style={styles.sourceLink}>
             <Ionicons name="link-outline" size={13} color="#78716c" />
-            <Text style={styles.sourceLinkText} numberOfLines={1}>{recipe.sourceName ?? "Source"}</Text>
+            <Text style={styles.sourceLinkText} numberOfLines={1}>
+              {recipe.isAdapted ? "adapted from " : "from "}{recipe.sourceName ?? "Source"}
+            </Text>
             <Ionicons name="open-outline" size={12} color="#a8a29e" />
           </TouchableOpacity>
+        ) : recipe.sourceName ? (
+          <View style={styles.sourceLink}>
+            <Ionicons name="person-outline" size={13} color="#78716c" />
+            <Text style={styles.sourceLinkText} numberOfLines={1}>
+              {recipe.isAdapted ? "adapted from " : "from "}{recipe.sourceName}
+            </Text>
+          </View>
         ) : null}
 
         {/* Tags */}
@@ -466,7 +484,15 @@ export default function RecipeDetailScreen() {
               <Ionicons name="restaurant-outline" size={16} color="#fff" />
               <Text style={styles.actionButtonFilledText}>Log a cook</Text>
             </TouchableOpacity>
-          ) : null}
+          ) : (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => router.push(`/recipes/${id}/save`)}
+            >
+              <Ionicons name="copy-outline" size={16} color="#1c1917" />
+              <Text style={styles.actionButtonText}>Save to mine</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Description */}

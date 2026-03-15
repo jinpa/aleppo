@@ -4,12 +4,14 @@ import { auth } from "@/auth";
 import { db } from "@/db";
 import { recipeImports } from "@/db/schema";
 import { scrapeRecipeFromUrl } from "@/lib/recipe-scraper";
+import { getUserFromBearerToken } from "@/lib/mobile-auth";
 
 const schema = z.object({ url: z.string().url() });
 
 export async function POST(req: Request) {
   const session = await auth();
-  if (!session?.user?.id) {
+  const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
+  if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -26,7 +28,7 @@ export async function POST(req: Request) {
   const [importRecord] = await db
     .insert(recipeImports)
     .values({
-      userId: session.user.id,
+      userId,
       importType: "url",
       sourceUrl: url,
       rawPayload,

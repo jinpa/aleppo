@@ -83,6 +83,8 @@ export default function EditRecipeScreen() {
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
 
+  const [hasSourceAttribution, setHasSourceAttribution] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -106,6 +108,7 @@ export default function EditRecipeScreen() {
       setNotes(r.notes ?? "");
       setSourceUrl(r.sourceUrl ?? "");
       setSourceName(r.sourceName ?? "");
+      setHasSourceAttribution(!!(r.forkedFromRecipeId || r.sourceUrl || r.sourceName));
     } catch {
       setErrors({ _load: "Could not load recipe for editing." });
     } finally {
@@ -152,7 +155,7 @@ export default function EditRecipeScreen() {
     if (!validate()) return;
     setSaving(true);
     try {
-      const body = {
+      const body: Record<string, unknown> = {
         title: title.trim(),
         description: description.trim() || null,
         ingredients: ingredients.filter((i) => i.raw.trim()),
@@ -168,6 +171,10 @@ export default function EditRecipeScreen() {
         sourceUrl: sourceUrl.trim() || null,
         sourceName: sourceName.trim() || null,
       };
+      // Any edit to a recipe with source attribution marks it as adapted
+      if (hasSourceAttribution) {
+        body.isAdapted = true;
+      }
 
       const res = await fetch(`${API_URL}/api/recipes/${id}`, {
         method: "PATCH",

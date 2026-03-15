@@ -28,6 +28,7 @@ export type RecipeDetailResponse = {
   cookCount: number;
   inQueue: boolean;
   isOwner: boolean;
+  forkedFrom: { recipeId: string; recipeTitle: string } | null;
 };
 
 // ─── Cook logs ────────────────────────────────────────────────────────────────
@@ -37,7 +38,7 @@ export type { CookLog };
 
 // ─── Feed ─────────────────────────────────────────────────────────────────────
 
-// GET /api/feed → FeedItem[]
+// GET /api/feed → FeedResponse
 export type FeedItem = {
   log: {
     id: string;
@@ -56,6 +57,17 @@ export type FeedItem = {
     name: string | null;
     image: string | null;
   };
+};
+
+export type FollowedUser = {
+  id: string;
+  name: string | null;
+  image: string | null;
+};
+
+export type FeedResponse = {
+  items: FeedItem[];
+  following: FollowedUser[];
 };
 
 // ─── Queue ────────────────────────────────────────────────────────────────────
@@ -119,6 +131,8 @@ export type UserSearchResult = {
   name: string | null;
   image: string | null;
   bio: string | null;
+  isFollowing: boolean;
+  isSelf: boolean;
 };
 
 // ─── Auth ─────────────────────────────────────────────────────────────────────

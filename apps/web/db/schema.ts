@@ -9,6 +9,7 @@ import {
   date,
   primaryKey,
   index,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import type { Ingredient, InstructionStep, NutritionalInfo } from "@aleppo/shared";
@@ -30,6 +31,8 @@ export const users = pgTable("users", {
   // Import/creation defaults
   defaultTagsEnabled: boolean("defaultTagsEnabled").default(true).notNull(),
   defaultRecipeIsPublic: boolean("defaultRecipeIsPublic").default(false).notNull(),
+  isAdmin: boolean("isAdmin").default(false).notNull(),
+  isSuspended: boolean("isSuspended").default(false).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -117,6 +120,10 @@ export const recipes = pgTable(
     tags: text("tags").array().default([]),
     isPublic: boolean("isPublic").default(false).notNull(),
     isAdapted: boolean("isAdapted").default(false).notNull(),
+    forkedFromRecipeId: text("forkedFromRecipeId").references(
+      (): AnyPgColumn => recipes.id,
+      { onDelete: "set null" }
+    ),
     commentsUrl: text("commentsUrl"),
     notes: text("notes"),
     prepTime: integer("prepTime"),

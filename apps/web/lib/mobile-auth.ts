@@ -8,7 +8,7 @@ import { decode } from "next-auth/jwt";
  */
 export async function getUserFromBearerToken(
   req: Request
-): Promise<{ id: string; email: string } | null> {
+): Promise<{ id: string; email: string; isAdmin: boolean } | null> {
   const authHeader = req.headers.get("authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
 
@@ -21,7 +21,7 @@ export async function getUserFromBearerToken(
     try {
       const decoded = await decode({ token, secret, salt });
       if (decoded?.sub) {
-        return { id: decoded.sub, email: decoded.email as string };
+        return { id: decoded.sub, email: decoded.email as string, isAdmin: !!decoded.isAdmin };
       }
     } catch {
       // try next salt
