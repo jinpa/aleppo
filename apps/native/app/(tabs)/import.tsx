@@ -10,34 +10,23 @@ import {
   Switch,
   Alert,
   Image,
-  ScrollView,
 } from "react-native";
-import { PhotoPicker } from "@/components/PhotoPicker";
-import * as DocumentPicker from "expo-document-picker";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 import type { Ingredient, InstructionStep, ScrapedRecipe } from "@aleppo/shared";
-import { RecipeWebExtractor } from "@/components/RecipeWebExtractor";
 import { UserAvatar } from "@/components/UserAvatar";
+
+import { ImportUrlMode } from "@/components/import/ImportUrlMode";
+import { ImportImagesMode } from "@/components/import/ImportImagesMode";
+import { ImportTextMode } from "@/components/import/ImportTextMode";
+import { ImportFileMode } from "@/components/import/ImportFileMode";
+import { ImportBookmarkletWaiting } from "@/components/import/ImportBookmarkletWaiting";
 
 type Mode = "url" | "images" | "text" | "file";
 type Step = "url" | "review";
-
-type FileImportStep = "upload" | "preview" | "importing" | "done";
-type FileImportItem = {
-  uid: string;
-  name: string;
-  sourceName?: string;
-  ingredientCount: number;
-  hasPhoto: boolean;
-  isDuplicate?: boolean;
-  duplicateType?: "url" | "title";
-  duplicateRecipeId?: string;
-  duplicateRecipeTitle?: string;
-};
 
 type RawIngredient = Pick<Ingredient, "raw">;
 
@@ -71,18 +60,6 @@ export default function ImportScreen() {
   const [fetching, setFetching] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
 
-  // ── File import state ────────────────────────────────────────────────────────
-  const [fileStep, setFileStep] = useState<FileImportStep>("upload");
-  const [fileImportFile, setFileImportFile] = useState<{ uri: string; name: string; file?: File } | null>(null);
-  const [fileItems, setFileItems] = useState<FileImportItem[]>([]);
-  const [fileSelected, setFileSelected] = useState<Set<string>>(new Set());
-  const [filePublic, setFilePublic] = useState(false);
-  const [fileParsing, setFileParsing] = useState(false);
-  const [fileError, setFileError] = useState<string | null>(null);
-  const [fileSaved, setFileSaved] = useState(0);
-  const [fileFailed, setFileFailed] = useState(0);
-  const [detectedFormat, setDetectedFormat] = useState<string | null>(null);
-
   // ── Review step state ───────────────────────────────────────────────────────
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -100,7 +77,7 @@ export default function ImportScreen() {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // ── Text mode ───────────────────────────────────────────────────────────────
+  // ── Images mode handler ───────────────────────────────────────────────────
 
   const handleImagesImport = async () => {
     if (photos.length === 0) return;
@@ -155,84 +132,6 @@ export default function ImportScreen() {
     } finally {
       setImporting(false);
     }
-  };
-
-  const SUPPORTED_EXTENSIONS = [".paprikarecipes", ".melarecipes", ".aleppo.json"];
-
-  const pickImportFile = async () => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: Platform.OS === "ios" ? "public.data" : "*/*",
-      copyToCacheDirectory: true,
-    });
-    if (result.canceled) return;
-    const asset = result.assets[0];
-    if (!SUPPORTED_EXTENSIONS.some((ext) => asset.name.toLowerCase().endsWith(ext))) {
-      setFileError("Unsupported file. Please select a .paprikarecipes, .melarecipes, or .aleppo.json file.");
-      return;
-    }
-    setFileError(null);
-    setFileParsing(true);
-    setFileImportFile({ uri: asset.uri, name: asset.name, file: asset.file });
-    const fileForForm: any = asset.file ?? { uri: asset.uri, name: asset.name, type: "application/octet-stream" };
-    try {
-      const form = new FormData();
-      form.append("file", fileForForm);
-      const res = await fetch(`${API_URL}/api/import/file`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      });
-      const data = await res.json();
-      if (!res.ok) { setFileError(data.error ?? "Failed to parse file."); return; }
-      setDetectedFormat(data.format ?? null);
-      const items: FileImportItem[] = data.recipes;
-      const initial = new Set(
-        items.filter((r) => !r.isDuplicate || r.duplicateType === "title").map((r) => r.uid)
-      );
-      setFileItems(items);
-      setFileSelected(initial);
-      setFileStep("preview");
-    } catch {
-      setFileError("Could not connect to server.");
-    } finally {
-      setFileParsing(false);
-    }
-  };
-
-  const startFileImport = async () => {
-    if (!fileImportFile || fileSelected.size === 0) return;
-    setFileStep("importing");
-    try {
-      const form = new FormData();
-      const fileForForm: any = fileImportFile.file ?? { uri: fileImportFile.uri, name: fileImportFile.name, type: "application/octet-stream" };
-      form.append("file", fileForForm);
-      form.append("selectedUids", JSON.stringify([...fileSelected]));
-      form.append("isPublic", String(filePublic));
-      const res = await fetch(`${API_URL}/api/import/file/save`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: form,
-      });
-      const data = await res.json();
-      if (!res.ok) { setFileError(data.error ?? "Import failed."); setFileStep("preview"); return; }
-      setFileSaved(data.saved);
-      setFileFailed(data.failed ?? 0);
-      setFileStep("done");
-    } catch {
-      setFileError("Something went wrong during import.");
-      setFileStep("preview");
-    }
-  };
-
-  const resetFileImport = () => {
-    setFileStep("upload");
-    setFileImportFile(null);
-    setFileItems([]);
-    setFileSelected(new Set());
-    setFileError(null);
-    setFileSaved(0);
-    setFileFailed(0);
-    setDetectedFormat(null);
   };
 
   // ── Bookmarklet postMessage handshake ───────────────────────────────────────
@@ -496,30 +395,16 @@ export default function ImportScreen() {
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
-  if (extracting && extractionUrl) {
-    let hostname = "";
-    try { hostname = new URL(extractionUrl).hostname; } catch {}
+  // Bookmarklet waiting / extraction loading screens
+  if ((extracting && extractionUrl) || waitingForBookmarklet) {
     return (
-      <View style={styles.bookmarkletWaiting}>
-        <ActivityIndicator size="large" color="#d97706" />
-        <Text style={styles.bookmarkletWaitingText}>
-          Extracting recipe from {hostname || "page"}…
-        </Text>
-        <RecipeWebExtractor
-          url={extractionUrl}
-          onResult={handleExtractResult}
-          onError={handleExtractError}
-        />
-      </View>
-    );
-  }
-
-  if (waitingForBookmarklet) {
-    return (
-      <View style={styles.bookmarkletWaiting}>
-        <ActivityIndicator size="large" color="#d97706" />
-        <Text style={styles.bookmarkletWaitingText}>Receiving recipe from your browser…</Text>
-      </View>
+      <ImportBookmarkletWaiting
+        extracting={extracting}
+        extractionUrl={extractionUrl}
+        waitingForBookmarklet={waitingForBookmarklet}
+        handleExtractResult={handleExtractResult}
+        handleExtractError={handleExtractError}
+      />
     );
   }
 
@@ -572,259 +457,37 @@ export default function ImportScreen() {
         </View>
 
         {mode === "url" && (
-          <>
-            <Text style={styles.heading}>Import from URL</Text>
-            <Text style={styles.subheading}>
-              Paste a link to any recipe. We'll parse it — you review and edit before saving.
-            </Text>
-
-            <View style={styles.urlRow}>
-              <TextInput
-                style={[styles.input, styles.urlInput]}
-                value={url}
-                onChangeText={setUrl}
-                placeholder="https://..."
-                placeholderTextColor="#a8a29e"
-                autoCapitalize="none"
-                keyboardType="url"
-                autoCorrect={false}
-                returnKeyType="go"
-                onSubmitEditing={handleFetch}
-              />
-              <TouchableOpacity
-                style={[styles.fetchButton, (!url.trim() || fetching) && styles.fetchButtonDisabled]}
-                onPress={handleFetch}
-                disabled={!url.trim() || fetching}
-              >
-                {fetching
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={styles.fetchButtonText}>Import</Text>
-                }
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.hintBox}>
-              <Text style={styles.hintTitle}>Works well with:</Text>
-              <Text style={styles.hintItem}>· AllRecipes, Simply Recipes, NYT Cooking</Text>
-              <Text style={styles.hintItem}>· Food Network, Epicurious, King Arthur</Text>
-              <Text style={styles.hintItem}>· Most sites using Schema.org recipe markup</Text>
-            </View>
-
-            <BookmarkletSection />
-          </>
+          <ImportUrlMode
+            url={url}
+            setUrl={setUrl}
+            fetching={fetching}
+            handleFetch={handleFetch}
+          />
         )}
 
         {mode === "images" && (
-          <View style={styles.imagesMode}>
-            <Text style={styles.heading}>Import from photos</Text>
-            <Text style={styles.subheading}>
-              Add photos of a recipe — handwritten, printed, or a screenshot — and we'll extract it for you.
-            </Text>
-            <PhotoPicker mode="multiple" onPhotos={setPhotos}>
-              {(open, pickedPhotos, removePhoto) => (
-                <View style={styles.photoRow}>
-                  <TouchableOpacity style={styles.cameraButton} onPress={open}>
-                    <Ionicons name="camera" size={22} color="#78716c" />
-                    <View style={styles.plusBadge}>
-                      <Ionicons name="add" size={11} color="#fff" />
-                    </View>
-                  </TouchableOpacity>
-                  {pickedPhotos.map((uri, i) => (
-                    <View key={uri} style={styles.thumbWrapper}>
-                      <Image source={{ uri }} style={styles.thumb} />
-                      <TouchableOpacity style={styles.removeButton} onPress={() => removePhoto(i)}>
-                        <Ionicons name="close-circle" size={18} color="#1c1917" />
-                      </TouchableOpacity>
-                    </View>
-                  ))}
-                </View>
-              )}
-            </PhotoPicker>
-            {photos.length > 0 && (
-              <TouchableOpacity
-                style={[styles.importButton, importing && styles.fetchButtonDisabled]}
-                onPress={handleImagesImport}
-                disabled={importing}
-              >
-                {importing
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={styles.fetchButtonText}>Import</Text>
-                }
-              </TouchableOpacity>
-            )}
-          </View>
+          <ImportImagesMode
+            photos={photos}
+            setPhotos={setPhotos}
+            importing={importing}
+            handleImagesImport={handleImagesImport}
+          />
         )}
 
         {mode === "file" && (
-          <View style={styles.fileMode}>
-            {fileStep === "upload" && (
-              <>
-                <Text style={styles.heading}>Import from file</Text>
-                <Text style={styles.subheading}>
-                  Select an export file from Paprika (.paprikarecipes), Mela (.melarecipes), or a previous Aleppo backup (.aleppo.json).
-                </Text>
-                {fileError ? (
-                  <View style={styles.fileError}>
-                    <Ionicons name="alert-circle-outline" size={15} color="#b91c1c" />
-                    <Text style={styles.fileErrorText}>{fileError}</Text>
-                  </View>
-                ) : null}
-                <TouchableOpacity
-                  style={[styles.fetchButton, fileParsing && styles.fetchButtonDisabled]}
-                  onPress={pickImportFile}
-                  disabled={fileParsing}
-                >
-                  {fileParsing
-                    ? <ActivityIndicator size="small" color="#fff" />
-                    : <Text style={styles.fetchButtonText}>Choose file</Text>
-                  }
-                </TouchableOpacity>
-              </>
-            )}
-
-            {fileStep === "preview" && (
-              <>
-                <View style={styles.filePreviewHeader}>
-                  <View>
-                    <Text style={styles.heading}>{fileItems.length} recipes found</Text>
-                    {detectedFormat && (
-                      <Text style={styles.subheading}>
-                        Format: {detectedFormat.charAt(0).toUpperCase() + detectedFormat.slice(1)}
-                        {fileItems.filter((r) => r.isDuplicate).length > 0
-                          ? ` · ${fileItems.filter((r) => r.isDuplicate).length} possible duplicate${fileItems.filter((r) => r.isDuplicate).length !== 1 ? "s" : ""}`
-                          : ""}
-                      </Text>
-                    )}
-                  </View>
-                  <TouchableOpacity onPress={resetFileImport}>
-                    <Text style={styles.fileChangeFile}>Change file</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {fileError ? (
-                  <View style={styles.fileError}>
-                    <Ionicons name="alert-circle-outline" size={15} color="#b91c1c" />
-                    <Text style={styles.fileErrorText}>{fileError}</Text>
-                  </View>
-                ) : null}
-
-                <View style={styles.fileSelectRow}>
-                  <TouchableOpacity onPress={() => setFileSelected(new Set(fileItems.map((r) => r.uid)))}>
-                    <Text style={styles.fileSelectLink}>Select all</Text>
-                  </TouchableOpacity>
-                  <Text style={styles.fileDot}>·</Text>
-                  <TouchableOpacity onPress={() => setFileSelected(new Set())}>
-                    <Text style={styles.fileSelectLink}>Deselect all</Text>
-                  </TouchableOpacity>
-                  {fileItems.some((r) => r.isDuplicate) && (
-                    <>
-                      <Text style={styles.fileDot}>·</Text>
-                      <TouchableOpacity onPress={() => setFileSelected((prev) => { const next = new Set(prev); fileItems.filter((r) => r.isDuplicate).forEach((r) => next.delete(r.uid)); return next; })}>
-                        <Text style={styles.fileSelectLink}>Deselect duplicates</Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-                </View>
-
-                <ScrollView style={styles.fileList} scrollEnabled={false}>
-                  {fileItems.map((item) => (
-                    <TouchableOpacity
-                      key={item.uid}
-                      style={[styles.fileItem, fileSelected.has(item.uid) && styles.fileItemSelected]}
-                      onPress={() => setFileSelected((prev) => { const next = new Set(prev); next.has(item.uid) ? next.delete(item.uid) : next.add(item.uid); return next; })}
-                      activeOpacity={0.7}
-                    >
-                      <View style={[styles.fileCheckbox, fileSelected.has(item.uid) && styles.fileCheckboxChecked]}>
-                        {fileSelected.has(item.uid) && <Ionicons name="checkmark" size={12} color="#fff" />}
-                      </View>
-                      <View style={styles.fileItemBody}>
-                        <Text style={styles.fileItemName} numberOfLines={1}>{item.name}</Text>
-                        <View style={styles.fileItemMeta}>
-                          {item.sourceName ? <Text style={styles.fileItemMetaText}>{item.sourceName} · </Text> : null}
-                          <Text style={styles.fileItemMetaText}>{item.ingredientCount} ingredient{item.ingredientCount !== 1 ? "s" : ""}</Text>
-                          {item.isDuplicate && (
-                            <Text style={[styles.fileBadge, item.duplicateType === "url" ? styles.fileBadgeDupe : styles.fileBadgeMaybe]}>
-                              {item.duplicateType === "url" ? " · Already saved" : " · Possible duplicate"}
-                            </Text>
-                          )}
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-
-                <View style={styles.fileFooter}>
-                  <View style={styles.filePublicRow}>
-                    <Switch value={filePublic} onValueChange={setFilePublic} trackColor={{ true: "#1c1917" }} />
-                    <Text style={styles.filePublicLabel}>Make recipes public</Text>
-                  </View>
-                  <TouchableOpacity
-                    style={[styles.fetchButton, fileSelected.size === 0 && styles.fetchButtonDisabled]}
-                    onPress={startFileImport}
-                    disabled={fileSelected.size === 0}
-                  >
-                    <Text style={styles.fetchButtonText}>
-                      Import {fileSelected.size} recipe{fileSelected.size !== 1 ? "s" : ""}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-
-            {fileStep === "importing" && (
-              <View style={styles.fileCentered}>
-                <ActivityIndicator size="large" color="#d97706" />
-                <Text style={styles.fileImportingText}>Importing recipes…</Text>
-                <Text style={styles.fileImportingSubtext}>This may take a minute for large libraries. Please don't close this page.</Text>
-              </View>
-            )}
-
-            {fileStep === "done" && (
-              <View style={styles.fileCentered}>
-                <Ionicons name="checkmark-circle" size={48} color="#16a34a" />
-                <Text style={styles.fileDoneTitle}>Import complete</Text>
-                <Text style={styles.fileDoneSubtext}>
-                  {fileSaved} recipe{fileSaved !== 1 ? "s" : ""} imported
-                  {fileFailed > 0 ? ` · ${fileFailed} failed` : ""}
-                </Text>
-                <TouchableOpacity style={styles.fetchButton} onPress={() => router.replace("/(tabs)/recipes")}>
-                  <Text style={styles.fetchButtonText}>Go to my recipes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.fileAnotherBtn} onPress={resetFileImport}>
-                  <Text style={styles.fileAnotherText}>Import another file</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-          </View>
+          <ImportFileMode
+            token={token}
+            router={router}
+          />
         )}
 
         {mode === "text" && (
-          <View style={styles.textMode}>
-            <Text style={styles.heading}>Import from text</Text>
-            <Text style={styles.subheading}>
-              Paste the recipe text below and we'll extract it for you.
-            </Text>
-            <TextInput
-              style={[styles.input, styles.textModeInput]}
-              value={textInput}
-              onChangeText={setTextInput}
-              placeholder="Paste recipe text here…"
-              placeholderTextColor="#a8a29e"
-              multiline
-              textAlignVertical="top"
-              autoCorrect={false}
-            />
-            <TouchableOpacity
-              style={[styles.importButton, (!textInput.trim() || importing) && styles.fetchButtonDisabled]}
-              onPress={handleTextImport}
-              disabled={!textInput.trim() || importing}
-            >
-              {importing
-                ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={styles.fetchButtonText}>Import</Text>
-              }
-            </TouchableOpacity>
-          </View>
+          <ImportTextMode
+            textInput={textInput}
+            setTextInput={setTextInput}
+            importing={importing}
+            handleTextImport={handleTextImport}
+          />
         )}
       </KeyboardAwareScrollView>
     );
@@ -1082,130 +745,8 @@ export default function ImportScreen() {
   );
 }
 
-// ── Bookmarklet section (web-only) ─────────────────────────────────────────
-
-// Renders a draggable bookmarklet button for web; hidden on native.
-// Uses React.createElement('a', ...) to produce a real HTML <a> element in
-// React Native Web — the only way to get browser drag-to-bookmark behaviour.
-function BookmarkletSection() {
-  const [open, setOpen] = useState(false);
-  const linkRef = useRef<any>(null);
-
-  useEffect(() => {
-    if (!open || !linkRef.current || Platform.OS !== "web") return;
-    const appUrl = (window as any).location.origin;
-    // Same bookmarklet as the web app, but opens /import instead of /recipes/import
-    const code = `(function(){var base=${JSON.stringify(appUrl)};var scripts=document.querySelectorAll('script[type="application/ld+json"]');var jsonld=[];for(var i=0;i<scripts.length;i++){try{jsonld.push(JSON.parse(scripts[i].textContent));}catch(e){}}var re=document.querySelector('[itemtype="https://schema.org/Recipe"],[itemtype="http://schema.org/Recipe"]');if(re){var md={'@type':'Recipe','recipeIngredient':[],'recipeInstructions':[]};var n=re.querySelector('[itemprop="name"]');if(n)md.name=n.textContent.trim();var ings=re.querySelectorAll('[itemprop="recipeIngredient"]');for(var j=0;j<ings.length;j++){var s=ings[j].textContent.trim();if(s)md.recipeIngredient.push(s);}var yr=re.querySelector('[itemprop="recipeYield"]');if(yr)md.recipeYield=yr.textContent.trim().replace(/^servings:\\s*/i,'');var tf=['totalTime','cookTime','prepTime'];for(var j=0;j<tf.length;j++){var tel=re.querySelector('[itemprop="'+tf[j]+'"]');if(tel)md[tf[j]]=tel.getAttribute('datetime')||tel.textContent.trim();}var iels=re.querySelectorAll('[itemprop="recipeInstructions"]');if(iels.length){for(var j=0;j<iels.length;j++){var s=iels[j].textContent.trim();if(s)md.recipeInstructions.push({'@type':'HowToStep','text':s});}}else{var de=re.querySelector('.e-instructions,.jetpack-recipe-directions');if(de){var ps=de.querySelectorAll('p');if(ps.length){for(var j=0;j<ps.length;j++){var s=ps[j].textContent.trim();if(s)md.recipeInstructions.push({'@type':'HowToStep','text':s});}}else{var s=de.textContent.trim();if(s)md.recipeInstructions.push({'@type':'HowToStep','text':s});}}}if(md.name||md.recipeIngredient.length)jsonld.push(md);}var commentIds=['comments','disqus_thread','respond'];var commentClasses=['.comments-area','.comment-list'];var commentsUrl=null;for(var ci=0;ci<commentIds.length;ci++){if(document.getElementById(commentIds[ci])){commentsUrl=location.href+'#'+commentIds[ci];break;}}if(!commentsUrl){for(var ci=0;ci<commentClasses.length;ci++){if(document.querySelector(commentClasses[ci])){commentsUrl=location.href+'#comments';break;}}}var payload={jsonld:jsonld,url:location.href,title:document.title,ogImage:((document.querySelector('meta[property="og:image"]')||{}).content)||'',siteName:((document.querySelector('meta[property="og:site_name"]')||{}).content)||'',commentsUrl:commentsUrl};var w=window.open(base+'/import?mode=bookmarklet','aleppo_import','width=1100,height=800');if(!w){alert('Aleppo: allow popups for this site, then click the bookmarklet again.');return;}var sent=false;function onMsg(e){if(!e.data||e.data.type!=='aleppo:ready'||sent)return;sent=true;window.removeEventListener('message',onMsg);w.postMessage({type:'aleppo:data',payload:payload},base);}window.addEventListener('message',onMsg);setTimeout(function(){window.removeEventListener('message',onMsg);},30000);})();`;
-    linkRef.current.href = `javascript:${encodeURIComponent(code)}`;
-  }, [open]);
-
-  if (Platform.OS !== "web") return null;
-
-  // Cast to any so TypeScript doesn't complain about the raw 'a' element
-  const A = "a" as unknown as React.ComponentType<any>;
-
-  return (
-    <View style={bkStyles.container}>
-      <TouchableOpacity style={bkStyles.toggle} onPress={() => setOpen((v) => !v)}>
-        <Ionicons name="bookmark-outline" size={16} color="#d97706" />
-        <Text style={bkStyles.toggleText}>Use the Aleppo bookmarklet (works on any site)</Text>
-        <Text style={bkStyles.toggleChevron}>{open ? "▲" : "▼"}</Text>
-      </TouchableOpacity>
-
-      {open && (
-        <View style={bkStyles.panel}>
-          <View style={bkStyles.infoRow}>
-            <Ionicons name="information-circle-outline" size={15} color="#78716c" />
-            <Text style={bkStyles.infoText}>
-              The bookmarklet runs in your browser on the recipe page — Cloudflare and bot
-              protection can't block it because you're already there.
-            </Text>
-          </View>
-
-          <Text style={bkStyles.stepLabel}>Step 1 — Drag this button to your bookmarks bar:</Text>
-          <View style={bkStyles.dragRow}>
-            {/* Real HTML <a> for drag-to-bookmark; href set via ref in useEffect */}
-            <A
-              ref={linkRef}
-              href="#"
-              draggable
-              onClick={(e: any) => {
-                e.preventDefault();
-                alert("Drag this button to your bookmarks bar — don't click it here!");
-              }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 16px",
-                backgroundColor: "#d97706",
-                color: "#fff",
-                borderRadius: 8,
-                fontSize: 14,
-                fontWeight: "600",
-                cursor: "grab",
-                userSelect: "none",
-                textDecoration: "none",
-              }}
-            >
-              🔖 + Aleppo
-            </A>
-            <Text style={bkStyles.dragHint}>← drag me to your bookmarks bar</Text>
-          </View>
-
-          <Text style={bkStyles.stepLabel}>Step 2 — Use it:</Text>
-          <Text style={bkStyles.stepItem}>1. Go to any recipe page (e.g. Serious Eats)</Text>
-          <Text style={bkStyles.stepItem}>2. Click <Text style={{ fontWeight: "700" }}>+ Aleppo</Text> in your bookmarks bar</Text>
-          <Text style={bkStyles.stepItem}>3. You'll be brought here to review and save the recipe</Text>
-
-          <Text style={bkStyles.fine}>
-            The bookmarklet only reads recipe data from the current page — nothing else.
-          </Text>
-        </View>
-      )}
-    </View>
-  );
-}
-
-const bkStyles = StyleSheet.create({
-  container: {
-    borderTopWidth: 1,
-    borderTopColor: "#e7e5e4",
-    paddingTop: 16,
-  },
-  toggle: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  toggleText: { flex: 1, fontSize: 14, fontWeight: "500", color: "#57534e" },
-  toggleChevron: { fontSize: 11, color: "#a8a29e" },
-  panel: {
-    marginTop: 14,
-    backgroundColor: "#f5f5f4",
-    borderRadius: 10,
-    padding: 14,
-    gap: 10,
-  },
-  infoRow: { flexDirection: "row", gap: 8, alignItems: "flex-start" },
-  infoText: { flex: 1, fontSize: 13, color: "#78716c", lineHeight: 18 },
-  stepLabel: { fontSize: 13, fontWeight: "600", color: "#1c1917" },
-  dragRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  dragHint: { fontSize: 12, color: "#a8a29e", fontStyle: "italic" },
-  stepItem: { fontSize: 13, color: "#57534e", lineHeight: 20 },
-  fine: { fontSize: 11, color: "#a8a29e" },
-});
-
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#fafaf9" },
-  bookmarkletWaiting: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 16,
-    backgroundColor: "#fafaf9",
-  },
-  bookmarkletWaitingText: { fontSize: 15, color: "#78716c" },
 
   // ── Import header ───────────────────────────────────────────────────────────
   importHeader: {
@@ -1255,90 +796,6 @@ const styles = StyleSheet.create({
   segmentTextActive: {
     color: "#1c1917",
   },
-  tbd: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingVertical: 48,
-  },
-  tbdText: {
-    fontSize: 14,
-    color: "#a8a29e",
-  },
-  imagesMode: { gap: 16 },
-  textMode: { gap: 16 },
-  textModeInput: { height: 200, paddingTop: 10 },
-  photoRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingVertical: 4,
-  },
-  cameraButton: {
-    width: 72,
-    height: 72,
-    borderRadius: 10,
-    backgroundColor: "#f5f5f4",
-    borderWidth: 1.5,
-    borderColor: "#d6d3d1",
-    borderStyle: "dashed",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  plusBadge: {
-    position: "absolute",
-    top: 6,
-    right: 6,
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#78716c",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  thumbWrapper: { position: "relative" },
-  thumb: {
-    width: 72,
-    height: 72,
-    borderRadius: 10,
-    backgroundColor: "#f5f5f4",
-  },
-  removeButton: {
-    position: "absolute",
-    top: -6,
-    right: -6,
-    backgroundColor: "#fff",
-    borderRadius: 9,
-  },
-  heading: { fontSize: 24, fontWeight: "700", color: "#1c1917" },
-  subheading: { fontSize: 14, color: "#78716c", lineHeight: 20 },
-  urlRow: { flexDirection: "row", gap: 8 },
-  urlInput: { flex: 1 },
-  fetchButton: {
-    backgroundColor: "#1c1917",
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    minWidth: 72,
-  },
-  importButton: {
-    backgroundColor: "#1c1917",
-    borderRadius: 10,
-    paddingVertical: 14,
-    alignItems: "center",
-  },
-  fetchButtonDisabled: { opacity: 0.5 },
-  fetchButtonText: { color: "#fff", fontWeight: "600", fontSize: 14 },
-  hintBox: {
-    backgroundColor: "#f5f5f4",
-    borderRadius: 10,
-    padding: 14,
-    gap: 4,
-  },
-  hintTitle: { fontSize: 13, fontWeight: "600", color: "#57534e", marginBottom: 4 },
-  hintItem: { fontSize: 13, color: "#78716c" },
 
   // ── Review step ─────────────────────────────────────────────────────────────
   content: { paddingBottom: 48 },
@@ -1464,56 +921,4 @@ const styles = StyleSheet.create({
   toggleLabel: { fontSize: 15, fontWeight: "500", color: "#1c1917" },
   toggleSub: { fontSize: 12, color: "#78716c", marginTop: 1 },
   bottomSaveRow: { paddingHorizontal: 16, marginTop: 24 },
-
-  // File import
-  fileMode: { gap: 16 },
-  filePreviewHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
-  fileChangeFile: { fontSize: 13, color: "#78716c", textDecorationLine: "underline", marginTop: 4 },
-  fileError: { flexDirection: "row", gap: 6, alignItems: "flex-start", backgroundColor: "#fef2f2", borderRadius: 8, padding: 10 },
-  fileErrorText: { flex: 1, fontSize: 13, color: "#b91c1c" },
-  fileSelectRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  fileSelectLink: { fontSize: 13, color: "#78716c", textDecorationLine: "underline" },
-  fileDot: { fontSize: 13, color: "#d6d3d1" },
-  fileList: { borderWidth: 1, borderColor: "#e7e5e4", borderRadius: 10, overflow: "hidden" },
-  fileItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: "#e7e5e4",
-    backgroundColor: "#fafaf9",
-    opacity: 0.5,
-  },
-  fileItemSelected: { backgroundColor: "#fff", opacity: 1 },
-  fileCheckbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1.5,
-    borderColor: "#d6d3d1",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 1,
-    flexShrink: 0,
-  },
-  fileCheckboxChecked: { backgroundColor: "#1c1917", borderColor: "#1c1917" },
-  fileItemBody: { flex: 1 },
-  fileItemName: { fontSize: 14, fontWeight: "500", color: "#1c1917" },
-  fileItemMeta: { flexDirection: "row", flexWrap: "wrap", marginTop: 2 },
-  fileItemMetaText: { fontSize: 12, color: "#a8a29e" },
-  fileBadge: { fontSize: 12, fontWeight: "500" },
-  fileBadgeDupe: { color: "#b45309" },
-  fileBadgeMaybe: { color: "#78716c" },
-  fileFooter: { gap: 12, marginTop: 4 },
-  filePublicRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  filePublicLabel: { fontSize: 14, color: "#57534e" },
-  fileCentered: { alignItems: "center", paddingVertical: 40, gap: 12 },
-  fileImportingText: { fontSize: 17, fontWeight: "600", color: "#1c1917" },
-  fileImportingSubtext: { fontSize: 13, color: "#78716c", textAlign: "center", paddingHorizontal: 16 },
-  fileDoneTitle: { fontSize: 22, fontWeight: "700", color: "#1c1917" },
-  fileDoneSubtext: { fontSize: 14, color: "#78716c" },
-  fileAnotherBtn: { marginTop: 4 },
-  fileAnotherText: { fontSize: 14, color: "#78716c", textDecorationLine: "underline" },
 });
