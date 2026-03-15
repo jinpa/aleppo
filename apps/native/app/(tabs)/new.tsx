@@ -14,6 +14,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
+import { UserAvatar } from "@/components/UserAvatar";
 import { API_URL } from "@/constants/api";
 import type { Ingredient, InstructionStep } from "@aleppo/shared";
 
@@ -21,7 +22,7 @@ type RawIngredient = Pick<Ingredient, "raw">;
 
 export default function NewRecipeScreen() {
   const router = useRouter();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -148,21 +149,26 @@ export default function NewRecipeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-            <Ionicons name="close" size={24} color="#1c1917" />
-          </TouchableOpacity>
           <Text style={styles.heading}>New Recipe</Text>
-          <TouchableOpacity
-            style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-            onPress={handleSave}
-            disabled={saving}
-          >
-            {saving ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Text style={styles.saveButtonText}>Save</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <TouchableOpacity
+              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={saving}
+            >
+              {saving ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save</Text>
             )}
-          </TouchableOpacity>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.navigate("/profile")}
+              style={{ borderRadius: 20 }}
+            >
+              <UserAvatar name={user?.name} image={user?.image} size={34} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {errors._form ? (
