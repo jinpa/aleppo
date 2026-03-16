@@ -44,3 +44,12 @@ Add the raw text you found for servings to under the key
 7- Add a list of the rules you applied, explaining how they were
 applied, to the key "applied_rules" at the toplevel of the final json
 result.
+
+8- Express prepTime and cookTime as plain integers representing
+minutes. For example, 30 minutes = 30, 1 hour 30 minutes = 90. Omit
+these fields if the times are not known or cannot be estimated.
+
+9- Add a "tags" array with 2-5 lowercase tags describing the recipe,
+such as cuisine type, meal type, dietary style, or key ingredient
+(e.g., ["italian", "pasta", "dinner", "vegetarian"]). Use short,
+single-word or hyphenated tags only.

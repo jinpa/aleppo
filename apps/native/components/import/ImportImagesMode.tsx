@@ -27,7 +27,7 @@ export function ImportImagesMode({
     <View style={styles.imagesMode}>
       <Text style={sharedStyles.heading}>Import from photos</Text>
       <Text style={sharedStyles.subheading}>
-        Add photos of a recipe — handwritten, printed, or a screenshot — and we'll extract it for you.
+        Add photos of a recipe (handwritten, printed, or a screenshot) or a photo of a dish — we'll extract or generate a recipe for you.
       </Text>
       <PhotoPicker mode="multiple" onPhotos={setPhotos}>
         {(open, pickedPhotos, removePhoto) => (
