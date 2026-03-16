@@ -16,6 +16,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
+import { PhotoPicker } from "@/components/PhotoPicker";
 import type { Ingredient, InstructionStep, Recipe } from "@aleppo/shared";
 
 // ─── Tab Bar ─────────────────────────────────────────────────────────────────
@@ -83,6 +84,9 @@ export default function EditRecipeScreen() {
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
 
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+
   const [hasSourceAttribution, setHasSourceAttribution] = useState(false);
   const [originalContent, setOriginalContent] = useState("");
 
@@ -106,6 +110,7 @@ export default function EditRecipeScreen() {
       setCookTime(r.cookTime ? String(r.cookTime) : "");
       setServings(r.servings ? String(r.servings) : "");
       setIsPublic(r.isPublic);
+      setImageUrl(r.imageUrl ?? null);
       setNotes(r.notes ?? "");
       setSourceUrl(r.sourceUrl ?? "");
       setSourceName(r.sourceName ?? "");
@@ -152,6 +157,38 @@ export default function EditRecipeScreen() {
     setInstructions((p) => p.filter((_, idx) => idx !== i).map((ins, idx) => ({ ...ins, step: idx + 1 })));
   };
 
+  const uploadImage = async (uris: string[]) => {
+    const uri = uris[0];
+    if (!uri) return;
+    setImageUploading(true);
+    try {
+      const formData = new FormData();
+      if (Platform.OS === "web") {
+        const resp = await fetch(uri);
+        const blob = await resp.blob();
+        formData.append("file", blob, "photo.jpg");
+      } else {
+        formData.append("file", {
+          uri,
+          name: "photo.jpg",
+          type: "image/jpeg",
+        } as unknown as Blob);
+      }
+      const res = await fetch(`${API_URL}/api/upload`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Upload failed");
+      const data = await res.json();
+      setImageUrl(data.url);
+    } catch {
+      setErrors((prev) => ({ ...prev, _form: "Failed to upload image. Please try again." }));
+    } finally {
+      setImageUploading(false);
+    }
+  };
+
   const addTag = () => {
     const t = tagInput.trim().toLowerCase();
     if (t && !tags.includes(t)) setTags((p) => [...p, t]);
@@ -164,6 +201,7 @@ export default function EditRecipeScreen() {
     try {
       const body: Record<string, unknown> = {
         title: title.trim(),
+        imageUrl: imageUrl || null,
         description: description.trim() || null,
         ingredients: ingredients.filter((i) => i.raw.trim()),
         instructions: instructions
@@ -287,6 +325,50 @@ export default function EditRecipeScreen() {
             maxLength={300}
           />
           {errors.title ? <Text style={styles.fieldError}>{errors.title}</Text> : null}
+        </View>
+
+        {/* Photo */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Photo</Text>
+          <PhotoPicker mode="single" onPhotos={uploadImage}>
+            {(open, _photos, _remove, isDragging) => imageUrl ? (
+              <View style={[styles.imagePreviewContainer, isDragging && styles.imageDragging]}>
+                <Image source={{ uri: imageUrl }} style={styles.imagePreview} contentFit="cover" transition={200} />
+                <View style={styles.imageActions}>
+                  <TouchableOpacity style={styles.imageActionButton} onPress={open} disabled={imageUploading}>
+                    <Ionicons name="camera-outline" size={16} color="#57534e" />
+                    <Text style={styles.imageActionText}>Change</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.imageActionButton} onPress={() => setImageUrl(null)} disabled={imageUploading}>
+                    <Ionicons name="trash-outline" size={16} color="#b91c1c" />
+                    <Text style={[styles.imageActionText, { color: "#b91c1c" }]}>Remove</Text>
+                  </TouchableOpacity>
+                </View>
+                {imageUploading ? (
+                  <View style={styles.imageUploadOverlay}>
+                    <ActivityIndicator size="small" color="#fff" />
+                  </View>
+                ) : null}
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.imagePickerEmpty, isDragging && styles.imageDragging]}
+                onPress={open}
+                disabled={imageUploading}
+              >
+                {imageUploading ? (
+                  <ActivityIndicator size="small" color="#78716c" />
+                ) : (
+                  <>
+                    <Ionicons name={isDragging ? "image-outline" : "camera-outline"} size={28} color={isDragging ? "#d97706" : "#a8a29e"} />
+                    <Text style={[styles.imagePickerEmptyText, isDragging && { color: "#92400e" }]}>
+                      {isDragging ? "Drop image here" : "Add a photo"}
+                    </Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            )}
+          </PhotoPicker>
         </View>
 
         {/* Description */}
@@ -538,4 +620,25 @@ const styles = StyleSheet.create({
     paddingVertical: 14, alignItems: "center",
   },
   bottomSaveButtonText: { fontSize: 16, fontWeight: "600", color: "#fff" },
+  imagePreviewContainer: { position: "relative", borderRadius: 10, overflow: "hidden" },
+  imagePreview: { width: "100%", height: 200, borderRadius: 10 },
+  imageActions: { flexDirection: "row", gap: 10, marginTop: 10 },
+  imageActionButton: {
+    flexDirection: "row", alignItems: "center", gap: 4,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: 8, borderWidth: 1, borderColor: "#e7e5e4", backgroundColor: "#fff",
+  },
+  imageActionText: { fontSize: 13, fontWeight: "500", color: "#57534e" },
+  imageUploadOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)", borderRadius: 10,
+    justifyContent: "center", alignItems: "center",
+  },
+  imagePickerEmpty: {
+    borderWidth: 1, borderColor: "#e7e5e4", borderStyle: "dashed",
+    borderRadius: 10, paddingVertical: 32, alignItems: "center", gap: 8,
+    backgroundColor: "#fff",
+  },
+  imagePickerEmptyText: { fontSize: 14, color: "#a8a29e" },
+  imageDragging: { borderWidth: 2, borderColor: "#d97706", backgroundColor: "#fffbeb" },
 });
