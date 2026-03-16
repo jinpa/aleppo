@@ -9,8 +9,10 @@ import {
   date,
   primaryKey,
   index,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import type { Ingredient, InstructionStep, NutritionalInfo } from "@aleppo/shared";
 
 // ─── Auth.js required tables ────────────────────────────────────────────────
 
@@ -29,6 +31,9 @@ export const users = pgTable("users", {
   // Import/creation defaults
   defaultTagsEnabled: boolean("defaultTagsEnabled").default(true).notNull(),
   defaultRecipeIsPublic: boolean("defaultRecipeIsPublic").default(false).notNull(),
+  isAdmin: boolean("isAdmin").default(false).notNull(),
+  isSuspended: boolean("isSuspended").default(false).notNull(),
+  notifyOnNewFollower: boolean("notifyOnNewFollower").default(true).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
@@ -91,28 +96,9 @@ export const passwordResetTokens = pgTable("passwordResetTokens", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
-// ─── Ingredient type ─────────────────────────────────────────────────────────
+// ─── Shared types (re-exported for consumers that import from @/db/schema) ────
 
-export type Ingredient = {
-  raw: string;
-  amount?: string;
-  unit?: string;
-  name?: string;
-  notes?: string;
-};
-
-export type InstructionStep = {
-  step: number;
-  text: string;
-};
-
-export type NutritionalInfo = {
-  calories?: number;
-  protein?: number;
-  fat?: number;
-  carbohydrates?: number;
-  fiber?: number;
-};
+export type { Ingredient, InstructionStep, NutritionalInfo };
 
 // ─── Recipes ─────────────────────────────────────────────────────────────────
 
@@ -135,6 +121,10 @@ export const recipes = pgTable(
     tags: text("tags").array().default([]),
     isPublic: boolean("isPublic").default(false).notNull(),
     isAdapted: boolean("isAdapted").default(false).notNull(),
+    forkedFromRecipeId: text("forkedFromRecipeId").references(
+      (): AnyPgColumn => recipes.id,
+      { onDelete: "set null" }
+    ),
     commentsUrl: text("commentsUrl"),
     notes: text("notes"),
     prepTime: integer("prepTime"),
@@ -234,6 +224,28 @@ export const recipeImports = pgTable("recipeImports", {
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
+// ─── Notifications ───────────────────────────────────────────────────────────
+
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: text("type").notNull(),
+    actorId: text("actorId").references(() => users.id, { onDelete: "cascade" }),
+    read: boolean("read").default(false).notNull(),
+    createdAt: timestamp("createdAt").defaultNow().notNull(),
+  },
+  (table) => ({
+    userIdIdx: index("notifications_userId_idx").on(table.userId),
+    userUnreadIdx: index("notifications_userId_read_idx").on(table.userId, table.read),
+  })
+);
+
 // ─── Relations ────────────────────────────────────────────────────────────────
 
 export const usersRelations = relations(users, ({ many }) => ({
@@ -244,6 +256,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   wantToCook: many(wantToCook),
   following: many(follows, { relationName: "follower" }),
   followers: many(follows, { relationName: "following" }),
+  notifications: many(notifications, { relationName: "notificationUser" }),
 }));
 
 export const recipesRelations = relations(recipes, ({ one, many }) => ({
@@ -271,5 +284,18 @@ export const followsRelations = relations(follows, ({ one }) => ({
     fields: [follows.followingId],
     references: [users.id],
     relationName: "following",
+  }),
+}));
+
+export const notificationsRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+    relationName: "notificationUser",
+  }),
+  actor: one(users, {
+    fields: [notifications.actorId],
+    references: [users.id],
+    relationName: "notificationActor",
   }),
 }));

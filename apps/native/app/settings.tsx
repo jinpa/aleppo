@@ -15,17 +15,50 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
+import type { UserSettings } from "@aleppo/shared";
 
-type UserSettings = {
-  id: string;
-  name: string | null;
-  email: string;
-  image: string | null;
-  bio: string | null;
-  isPublic: boolean;
-  defaultTagsEnabled: boolean;
-  defaultRecipeIsPublic: boolean;
-};
+// ─── Tab Bar ─────────────────────────────────────────────────────────────────
+
+const TAB_ITEMS = [
+  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
+  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
+  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
+  { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
+  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
+] as const;
+
+function TabBar() {
+  const router = useRouter();
+  return (
+    <View style={tabStyles.bar}>
+      {TAB_ITEMS.map((item) => (
+        <TouchableOpacity
+          key={item.name}
+          style={tabStyles.tab}
+          onPress={() => router.navigate(item.route)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={item.icon} size={24} color={item.amber ? "#d97706" : "#a8a29e"} />
+          <Text style={[tabStyles.label, item.amber && tabStyles.labelAmber]}>{item.name}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+const tabStyles = StyleSheet.create({
+  bar: {
+    flexDirection: "row",
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: "#e7e5e4",
+    paddingBottom: Platform.OS === "ios" ? 28 : 8,
+    paddingTop: 8,
+  },
+  tab: { flex: 1, alignItems: "center", gap: 2 },
+  label: { fontSize: 11, fontWeight: "500", color: "#a8a29e" },
+  labelAmber: { color: "#d97706" },
+});
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -43,6 +76,65 @@ export default function SettingsScreen() {
   const [isPublic, setIsPublic] = useState(true);
   const [defaultTagsEnabled, setDefaultTagsEnabled] = useState(true);
   const [defaultRecipeIsPublic, setDefaultRecipeIsPublic] = useState(false);
+  const [notifyOnNewFollower, setNotifyOnNewFollower] = useState(true);
+
+  // Export state
+  const [exportIncludeCookLogs, setExportIncludeCookLogs] = useState(true);
+  const [exportIncludeImages, setExportIncludeImages] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [exportDone, setExportDone] = useState<{ recipeCount: number; fileSize: string } | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  const handleExport = async () => {
+    setExporting(true);
+    setExportError(null);
+    setExportDone(null);
+    try {
+      const params = new URLSearchParams({
+        includeCookLogs: String(exportIncludeCookLogs),
+        includeImages: String(exportIncludeImages),
+      });
+      const res = await fetch(`${API_URL}/api/export?${params}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Export failed");
+      const blob = await res.blob();
+      const text = await blob.text();
+      const data = JSON.parse(text);
+      const recipeCount = data.recipes?.length ?? 0;
+      const sizeBytes = new Blob([text]).size;
+      const fileSize = sizeBytes > 1024 * 1024
+        ? `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.round(sizeBytes / 1024)} KB`;
+
+      const today = new Date().toISOString().slice(0, 10);
+      const filename = `aleppo-export-${today}.aleppo.json`;
+
+      if (Platform.OS === "web") {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(url);
+      } else {
+        // Native: dynamically import expo modules
+        const [FileSystem, Sharing] = await Promise.all([
+          import("expo-file-system"),
+          import("expo-sharing"),
+        ]);
+        const path = `${FileSystem.cacheDirectory}${filename}`;
+        await FileSystem.writeAsStringAsync(path, text, { encoding: FileSystem.EncodingType.UTF8 });
+        await Sharing.shareAsync(path, { mimeType: "application/json", UTI: "public.json" });
+      }
+
+      setExportDone({ recipeCount, fileSize });
+    } catch {
+      setExportError("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
@@ -58,6 +150,7 @@ export default function SettingsScreen() {
       setIsPublic(data.isPublic);
       setDefaultTagsEnabled(data.defaultTagsEnabled);
       setDefaultRecipeIsPublic(data.defaultRecipeIsPublic);
+      setNotifyOnNewFollower(data.notifyOnNewFollower ?? true);
     } catch {
       setError("Could not load settings");
     } finally {
@@ -89,6 +182,7 @@ export default function SettingsScreen() {
           isPublic,
           defaultTagsEnabled,
           defaultRecipeIsPublic,
+          notifyOnNewFollower,
         }),
       });
       if (!res.ok) throw new Error();
@@ -103,13 +197,17 @@ export default function SettingsScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1c1917" />
+      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#1c1917" />
+        </View>
+        <TabBar />
       </View>
     );
   }
 
   return (
+    <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -137,7 +235,10 @@ export default function SettingsScreen() {
             {saving ? (
               <ActivityIndicator size="small" color="#fff" />
             ) : saved ? (
-              <Ionicons name="checkmark" size={16} color="#fff" />
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                <Ionicons name="checkmark" size={16} color="#fff" />
+                <Text style={styles.saveButtonText}>Saved</Text>
+              </View>
             ) : (
               <Text style={styles.saveButtonText}>Save</Text>
             )}
@@ -245,6 +346,91 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Notifications section */}
+        <Text style={styles.sectionLabel}>Notifications</Text>
+        <View style={styles.section}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Ionicons name="notifications-outline" size={20} color="#57534e" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.toggleLabel}>New follower alerts</Text>
+                <Text style={styles.toggleSub}>
+                  Get notified when someone follows you
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={notifyOnNewFollower}
+              onValueChange={setNotifyOnNewFollower}
+              trackColor={{ false: "#e7e5e4", true: "#1c1917" }}
+              thumbColor="#fff"
+            />
+          </View>
+        </View>
+
+        {/* Data section — export */}
+        <Text style={styles.sectionLabel}>Data</Text>
+        <View style={styles.section}>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Ionicons name="document-text-outline" size={20} color="#57534e" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.toggleLabel}>Include cook logs</Text>
+                <Text style={styles.toggleSub}>Export your cooking history</Text>
+              </View>
+            </View>
+            <Switch
+              value={exportIncludeCookLogs}
+              onValueChange={setExportIncludeCookLogs}
+              trackColor={{ false: "#e7e5e4", true: "#1c1917" }}
+              thumbColor="#fff"
+            />
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Ionicons name="images-outline" size={20} color="#57534e" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.toggleLabel}>Include images</Text>
+                <Text style={styles.toggleSub}>
+                  Embeds photos for full portability (larger file)
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={exportIncludeImages}
+              onValueChange={setExportIncludeImages}
+              trackColor={{ false: "#e7e5e4", true: "#1c1917" }}
+              thumbColor="#fff"
+            />
+          </View>
+          <View style={styles.divider} />
+          <View style={{ padding: 14, gap: 8 }}>
+            {exportError ? (
+              <Text style={{ fontSize: 13, color: "#b91c1c" }}>{exportError}</Text>
+            ) : null}
+            {exportDone ? (
+              <Text style={{ fontSize: 13, color: "#16a34a" }}>
+                Exported {exportDone.recipeCount} recipes ({exportDone.fileSize})
+              </Text>
+            ) : null}
+            <TouchableOpacity
+              style={[styles.exportButton, exporting && { opacity: 0.6 }]}
+              onPress={handleExport}
+              disabled={exporting}
+            >
+              {exporting ? (
+                <ActivityIndicator size="small" color="#1c1917" />
+              ) : (
+                <>
+                  <Ionicons name="download-outline" size={16} color="#1c1917" />
+                  <Text style={styles.exportButtonText}>Download backup</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+
         {settings?.email ? (
           <>
             <Text style={styles.sectionLabel}>Account</Text>
@@ -260,6 +446,8 @@ export default function SettingsScreen() {
         <View style={{ height: 48 }} />
       </ScrollView>
     </KeyboardAvoidingView>
+    <TabBar />
+    </View>
   );
 }
 
@@ -324,4 +512,10 @@ const styles = StyleSheet.create({
   toggleLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1, marginRight: 12 },
   toggleLabel: { fontSize: 15, fontWeight: "500", color: "#1c1917" },
   toggleSub: { fontSize: 12, color: "#78716c", marginTop: 2 },
+  exportButton: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center",
+    gap: 6, backgroundColor: "#f5f5f4", borderRadius: 8,
+    paddingVertical: 10, borderWidth: 1, borderColor: "#e7e5e4",
+  },
+  exportButtonText: { fontSize: 14, fontWeight: "600", color: "#1c1917" },
 });

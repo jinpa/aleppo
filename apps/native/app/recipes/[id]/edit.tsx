@@ -16,15 +16,16 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
+import type { Ingredient, InstructionStep, Recipe } from "@aleppo/shared";
 
 // ─── Tab Bar ─────────────────────────────────────────────────────────────────
 
 const TAB_ITEMS = [
-  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes" },
-  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue" },
-  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed" },
+  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
+  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
+  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
   { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
-  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import" },
+  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
 ] as const;
 
 function TabBar() {
@@ -60,24 +61,7 @@ const tabStyles = StyleSheet.create({
   labelAmber: { color: "#d97706" },
 });
 
-type Ingredient = { raw: string };
-type Instruction = { step: number; text: string };
-
-type RecipeDetail = {
-  id: string;
-  title: string;
-  description: string | null;
-  ingredients: { raw: string; amount?: string; unit?: string; name?: string; notes?: string }[];
-  instructions: { step: number; text: string }[];
-  tags: string[];
-  prepTime: number | null;
-  cookTime: number | null;
-  servings: number | null;
-  isPublic: boolean;
-  notes: string | null;
-  sourceUrl: string | null;
-  sourceName: string | null;
-};
+type RawIngredient = Pick<Ingredient, "raw">;
 
 export default function EditRecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -87,8 +71,8 @@ export default function EditRecipeScreen() {
   const [loadingRecipe, setLoadingRecipe] = useState(true);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [ingredients, setIngredients] = useState<Ingredient[]>([{ raw: "" }]);
-  const [instructions, setInstructions] = useState<Instruction[]>([{ step: 1, text: "" }]);
+  const [ingredients, setIngredients] = useState<RawIngredient[]>([{ raw: "" }]);
+  const [instructions, setInstructions] = useState<InstructionStep[]>([{ step: 1, text: "" }]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
   const [prepTime, setPrepTime] = useState("");
@@ -98,6 +82,9 @@ export default function EditRecipeScreen() {
   const [notes, setNotes] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
+
+  const [hasSourceAttribution, setHasSourceAttribution] = useState(false);
+  const [originalContent, setOriginalContent] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -109,7 +96,7 @@ export default function EditRecipeScreen() {
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
-      const r: RecipeDetail = data.recipe;
+      const r: Recipe = data.recipe;
       setTitle(r.title);
       setDescription(r.description ?? "");
       setIngredients(r.ingredients.length > 0 ? r.ingredients.map((i) => ({ raw: i.raw })) : [{ raw: "" }]);
@@ -122,6 +109,13 @@ export default function EditRecipeScreen() {
       setNotes(r.notes ?? "");
       setSourceUrl(r.sourceUrl ?? "");
       setSourceName(r.sourceName ?? "");
+      setHasSourceAttribution(!!(r.forkedFromRecipeId || r.sourceUrl || r.sourceName));
+      setOriginalContent(JSON.stringify({
+        title: r.title,
+        description: r.description ?? "",
+        ingredients: r.ingredients.length > 0 ? r.ingredients.map((i: Ingredient) => i.raw) : [],
+        instructions: r.instructions.length > 0 ? r.instructions.map((i: Instruction) => i.text) : [],
+      }));
     } catch {
       setErrors({ _load: "Could not load recipe for editing." });
     } finally {
@@ -168,7 +162,7 @@ export default function EditRecipeScreen() {
     if (!validate()) return;
     setSaving(true);
     try {
-      const body = {
+      const body: Record<string, unknown> = {
         title: title.trim(),
         description: description.trim() || null,
         ingredients: ingredients.filter((i) => i.raw.trim()),
@@ -184,6 +178,18 @@ export default function EditRecipeScreen() {
         sourceUrl: sourceUrl.trim() || null,
         sourceName: sourceName.trim() || null,
       };
+      // Only mark as adapted when recipe content (not just metadata) changes
+      if (hasSourceAttribution) {
+        const currentContent = JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || "",
+          ingredients: ingredients.filter((i) => i.raw.trim()).map((i) => i.raw.trim()),
+          instructions: instructions.filter((i) => i.text.trim()).map((i) => i.text.trim()),
+        });
+        if (currentContent !== originalContent) {
+          body.isAdapted = true;
+        }
+      }
 
       const res = await fetch(`${API_URL}/api/recipes/${id}`, {
         method: "PATCH",

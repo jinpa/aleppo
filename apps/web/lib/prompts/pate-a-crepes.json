@@ -1,0 +1,58 @@
+{
+  "title": "Crêpes ou Galettes de Blé Noir",
+  "description": "Découvrez la recette authentique de la célèbre crêpe de blé noir\nbretonne, sans gluten, sans lactose et riche en fibres, à la crêpière\ntraditionnelle.\n",
+  "ingredients": [
+    {
+      "raw": "farine de sarrasin 500 g",
+      "name": "farine de sarrasin",
+      "unit": "grams",
+      "amount": "500"
+    },
+    {
+      "raw": "gros sel 15 g",
+      "name": "gros sel",
+      "unit": "grams",
+      "amount": "15"
+    },
+    {
+      "raw": "eau 4¼ cups",
+      "name": "eau",
+      "unit": "cups",
+      "amount": "4¼"
+    },
+    {
+      "raw": "miel 1 tsp",
+      "name": "miel",
+      "unit": "teaspoons",
+      "amount": "1"
+    }
+  ],
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Verser dans un saladier la farine de sarrasin, le sel et une partie de l'eau. Le pâton est réalisé uniquement avec la moitié de l'eau nécessaire à la recette."
+    },
+    {
+      "step": 1,
+      "text": "Mélanger le tout avec un fouet ou à la main et rajouter à la préparation un peu d'eau et une cuillère à café de miel. Le pâton doit être lisse, mais pas trop liquide."
+    },
+    {
+      "step": 2,
+      "text": "Laisser reposer au frais pendant 24, 48 ou 72 heures."
+    },
+    {
+      "step": 3,
+      "text": "Sortir le pâton du frigo 30 minutes avant de faire les crêpes. Rallonger la pâte en ajoutant progressivement le reste de l'eau. Battre énergiquement la préparation à la main pour obtenir un résultat bien aéré. Une fois que des bulles apparaissent en surface, la pâte est prête."
+    },
+    {
+      "step": 4,
+      "text": "Cuire les crêpes de blé noir sur une crêpière électrique ou gaz préchauffée à 220 ou 240 °C. Graisser la plaque entre chaque crêpe à l'aide d'un tampon pour retourner plus facilement les crêpes."
+    },
+    {
+      "step": 5,
+      "text": "Retourner la crêpe à l'aide d'une spatule à crêpes lorsque les bords commencent à se décoller, finir la cuisson quelques secondes sur la deuxième face."
+    }
+  ],
+  "servings": 12,
+  "servingName": "crêpes"
+}

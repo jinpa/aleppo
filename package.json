@@ -7,7 +7,10 @@
       "esbuild",
       "sharp",
       "unrs-resolver"
-    ]
+    ],
+    "patchedDependencies": {
+      "expo-image-manipulator@55.0.10": "patches/expo-image-manipulator@55.0.10.patch"
+    }
   },
   "scripts": {
     "dev:web": "pnpm --filter @aleppo/web dev",
@@ -17,6 +20,6 @@
     "start:railway": "pnpm --filter @aleppo/web start:railway"
   },
   "dependencies": {
-    "pnpm": "^10.32.0"
+    "pnpm": "^10.32.1"
   }
 }

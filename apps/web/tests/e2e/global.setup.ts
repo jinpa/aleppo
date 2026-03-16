@@ -11,8 +11,12 @@
 import { test as setup, expect } from "@playwright/test";
 import path from "path";
 import fs from "fs";
+import { config } from "dotenv";
 
-const BASE = "http://localhost:3000";
+// Load .env.local so DATABASE_URL etc. are available in this Node process
+config({ path: path.join(process.cwd(), ".env.local") });
+
+const BASE = process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000";
 const RUN_ID = Date.now().toString().slice(-8);
 
 export interface TestUser {
@@ -26,11 +30,12 @@ export interface TestUser {
 export interface TestUsers {
   alice: TestUser;
   bob: TestUser;
+  carol: TestUser;
 }
 
 function makeUser(handle: string): TestUser {
   return {
-    name: `${handle.charAt(0).toUpperCase() + handle.slice(1)} Aleppo`,
+    name: `${handle.charAt(0).toUpperCase() + handle.slice(1)} Aleppo ${RUN_ID}`,
     email: `${handle}.${RUN_ID}@test.aleppo`,
     password: "TestPass123!",
     storageStatePath: path.join(process.cwd(), `.auth/${handle}.json`),
@@ -95,11 +100,45 @@ setup("create test users", async ({ browser }) => {
 
   const alice = makeUser("alice");
   const bob = makeUser("bob");
+  const carol = makeUser("carol");
 
   await setupUser(browser, alice);
   await setupUser(browser, bob);
+  await setupUser(browser, carol);
 
-  const testUsers: TestUsers = { alice, bob };
+  // Promote Carol to admin directly via DB.
+  // The bootstrap endpoint now requires ADMIN_EMAIL to match the target user,
+  // which won't be Carol's dynamic test email, so we update the DB directly.
+  const { default: postgres } = await import("postgres");
+  const sql = postgres(process.env.DATABASE_URL!, { max: 1 });
+  await sql`UPDATE users SET "isAdmin" = true WHERE id = ${carol.id}`;
+  await sql.end();
+
+  // Re-login Carol to get updated isAdmin in token/user
+  const carolLoginRes = await fetch(`${BASE}/api/auth/mobile/credentials`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: carol.email, password: carol.password }),
+  });
+  if (carolLoginRes.ok) {
+    const { token: newToken, user: userData } = await carolLoginRes.json();
+    const context = await browser.newContext();
+    const page = await context.newPage();
+    await page.goto(BASE);
+    await page.evaluate(
+      ({ t, u }) => {
+        localStorage.setItem("auth_token", t);
+        localStorage.setItem("auth_user", JSON.stringify(u));
+      },
+      { t: newToken, u: userData }
+    );
+    await page.goto(`${BASE}/recipes`);
+    await expect(page.getByText("My Recipes")).toBeVisible({ timeout: 15_000 });
+    await context.storageState({ path: carol.storageStatePath });
+    await context.close();
+  }
+
+  const testUsers: TestUsers = { alice, bob, carol };
   fs.writeFileSync(
     path.join(process.cwd(), ".auth/test-users.json"),
     JSON.stringify(testUsers, null, 2)
@@ -108,4 +147,5 @@ setup("create test users", async ({ browser }) => {
   console.log(`\nTest users created for run ${RUN_ID}:`);
   console.log(`  Alice: ${alice.email} (id: ${alice.id})`);
   console.log(`  Bob:   ${bob.email} (id: ${bob.id})`);
+  console.log(`  Carol: ${carol.email} (id: ${carol.id}) [admin]`);
 });

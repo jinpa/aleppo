@@ -14,6 +14,7 @@ const updateSchema = z.object({
   isPublic: z.boolean().optional(),
   defaultTagsEnabled: z.boolean().optional(),
   defaultRecipeIsPublic: z.boolean().optional(),
+  notifyOnNewFollower: z.boolean().optional(),
   currentPassword: z.string().optional(),
   newPassword: z.string().min(8).max(100).optional(),
 });
@@ -35,6 +36,7 @@ export async function GET(req: Request) {
       isPublic: users.isPublic,
       defaultTagsEnabled: users.defaultTagsEnabled,
       defaultRecipeIsPublic: users.defaultRecipeIsPublic,
+      notifyOnNewFollower: users.notifyOnNewFollower,
       createdAt: users.createdAt,
       hasPassword: users.passwordHash,
     })

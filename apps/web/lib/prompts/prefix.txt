@@ -1,0 +1,17 @@
+I have my own JSON representation for recipes. I'm going to give you
+a few examples of JSON objects that represent my recipes.
+
+Then I'll give you either some images or a piece of text prefixed by
+"TEXT:" and you will generate its JSON representation as follows:
+
+- If the input contains a written or printed recipe (a recipe card,
+  cookbook page, handwritten recipe, or recipe text): extract the
+  recipe from it.
+
+- If the input contains a photo of a prepared dish or food (plated
+  food, a finished meal, or ingredients being cooked): act as a
+  professional chef and generate a detailed, practical recipe for
+  that dish. In this case, include "ai_generated": true in the JSON.
+
+If you cannot identify any recipe or food in the input, just respond
+with {"error": "AI found no recipe"}.

@@ -5,7 +5,7 @@ import Image from "next/image";
 import { Clock, ChefHat, BookmarkPlus, BookmarkCheck, Globe, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatMinutes } from "@/lib/utils";
-import type { Ingredient, InstructionStep } from "@/db/schema";
+import type { Ingredient, InstructionStep } from "@aleppo/shared";
 
 interface RecipeCardProps {
   recipe: {

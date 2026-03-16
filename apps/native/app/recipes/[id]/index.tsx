@@ -15,73 +15,12 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { Image } from "expo-image";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 import { scaleIngredient } from "@/lib/scale-ingredient";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type Ingredient = {
-  raw: string;
-  amount?: string;
-  unit?: string;
-  name?: string;
-  notes?: string;
-};
-
-type InstructionStep = {
-  step: number;
-  text: string;
-};
-
-type CookLog = {
-  id: string;
-  recipeId: string;
-  userId: string;
-  cookedOn: string;
-  notes: string | null;
-  rating: number | null;
-  createdAt: string;
-};
-
-type Author = {
-  id: string;
-  name: string | null;
-  image: string | null;
-};
-
-type Recipe = {
-  id: string;
-  userId: string;
-  title: string;
-  description: string | null;
-  sourceUrl: string | null;
-  sourceName: string | null;
-  imageUrl: string | null;
-  ingredients: Ingredient[];
-  instructions: InstructionStep[];
-  tags: string[];
-  isPublic: boolean;
-  isAdapted: boolean;
-  commentsUrl: string | null;
-  notes: string | null;
-  prepTime: number | null;
-  cookTime: number | null;
-  servings: number | null;
-  createdAt: string;
-  updatedAt: string;
-  author: Author;
-};
-
-type DetailResponse = {
-  recipe: Recipe;
-  cookLogs: CookLog[];
-  cookCount: number;
-  inQueue: boolean;
-  isOwner: boolean;
-};
+import type { RecipeDetailResponse, CookLog } from "@aleppo/shared";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -117,11 +56,11 @@ const SCALE_PRESETS = [
 // ─── Tab Bar ─────────────────────────────────────────────────────────────────
 
 const TAB_ITEMS = [
-  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes" },
-  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue" },
-  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed" },
+  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
+  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
+  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
   { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
-  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import" },
+  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
 ] as const;
 
 function TabBar() {
@@ -168,9 +107,18 @@ const tabStyles = StyleSheet.create({
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const navigation = useNavigation();
   const { token, user, signOut } = useAuth();
 
-  const [detail, setDetail] = useState<DetailResponse | null>(null);
+  const goBack = () => {
+    if (navigation.canGoBack()) {
+      router.back();
+    } else {
+      router.replace("/(tabs)/recipes");
+    }
+  };
+
+  const [detail, setDetail] = useState<RecipeDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -191,7 +139,7 @@ export default function RecipeDetailScreen() {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const [showLogModal, setShowLogModal] = useState(false);
-  const [logDate, setLogDate] = useState(todayString);
+  const [logDate, setLogDate] = useState(todayString());
   const [logNotes, setLogNotes] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
@@ -209,7 +157,8 @@ export default function RecipeDetailScreen() {
           return;
         }
         if (!res.ok) throw new Error("Failed to load recipe");
-        const data: DetailResponse = await res.json();
+        const data: RecipeDetailResponse = await res.json();
+        console.log("[recipe detail]", JSON.stringify(data, null, 2));
         setDetail(data);
         setInQueue(data.inQueue);
         setIsPublic(data.recipe.isPublic);
@@ -379,7 +328,7 @@ export default function RecipeDetailScreen() {
           <TouchableOpacity style={styles.retryButton} onPress={() => fetchDetail()}>
             <Text style={styles.retryText}>Try again</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.retryButton, { marginTop: 8 }]} onPress={() => router.back()}>
+          <TouchableOpacity style={[styles.retryButton, { marginTop: 8 }]} onPress={goBack}>
             <Text style={styles.retryText}>Go back</Text>
           </TouchableOpacity>
         </View>
@@ -399,7 +348,7 @@ export default function RecipeDetailScreen() {
       {/* Back button + profile avatar */}
       <View style={styles.backRow}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={goBack}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={styles.backButton}
         >
@@ -480,13 +429,22 @@ export default function RecipeDetailScreen() {
           ) : null}
         </View>
 
-        {/* Source link */}
+        {/* Source attribution */}
         {recipe.sourceUrl ? (
           <TouchableOpacity onPress={() => Linking.openURL(recipe.sourceUrl!)} style={styles.sourceLink}>
             <Ionicons name="link-outline" size={13} color="#78716c" />
-            <Text style={styles.sourceLinkText} numberOfLines={1}>{recipe.sourceName ?? "Source"}</Text>
+            <Text style={styles.sourceLinkText} numberOfLines={1}>
+              {recipe.isAdapted ? "adapted from " : "from "}{recipe.sourceName ?? "Source"}
+            </Text>
             <Ionicons name="open-outline" size={12} color="#a8a29e" />
           </TouchableOpacity>
+        ) : recipe.sourceName ? (
+          <View style={styles.sourceLink}>
+            <Ionicons name="person-outline" size={13} color="#78716c" />
+            <Text style={styles.sourceLinkText} numberOfLines={1}>
+              {recipe.isAdapted ? "adapted from " : "from "}{recipe.sourceName}
+            </Text>
+          </View>
         ) : null}
 
         {/* Tags */}
@@ -526,7 +484,15 @@ export default function RecipeDetailScreen() {
               <Ionicons name="restaurant-outline" size={16} color="#fff" />
               <Text style={styles.actionButtonFilledText}>Log a cook</Text>
             </TouchableOpacity>
-          ) : null}
+          ) : (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => router.push(`/recipes/${id}/save`)}
+            >
+              <Ionicons name="copy-outline" size={16} color="#1c1917" />
+              <Text style={styles.actionButtonText}>Save to mine</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Description */}

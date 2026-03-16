@@ -8,13 +8,14 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const { ref } = useLocalSearchParams<{ ref?: string }>();
   const { signIn } = useAuth();
 
   const [name, setName] = useState("");
@@ -51,7 +52,7 @@ export default function RegisterScreen() {
       const res = await fetch(`${API_URL}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: name.trim(), email: email.trim(), password }),
+        body: JSON.stringify({ name: name.trim(), email: email.trim(), password, ...(ref ? { ref } : {}) }),
       });
 
       const data = await res.json();
@@ -77,7 +78,7 @@ export default function RegisterScreen() {
       }
 
       await signIn(loginData.token, loginData.user);
-      router.replace("/");
+      router.replace(ref ? `/u/${ref}` : "/");
     } catch {
       setError("Could not connect to server");
     } finally {

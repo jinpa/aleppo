@@ -1,0 +1,82 @@
+{
+  "title": "Matcha Green Tea Cookies",
+  "description": "Chewy, sweet and coated with crunchy sugar, these Matcha Green Tea\nCookies are made with melted butter and 2 scoops of matcha\npowder. They bake up crispy on the edges with fudge-like centers. Real\nmatcha lovers will love these for an afternoon treat!\n\n",
+  "ingredients": [
+    {
+      "raw": "unsalted butter 4 oz",
+      "name": "unsalted butter",
+      "unit": "ounces",
+      "amount": "4"
+    },
+    {
+      "raw": "granulated sugar ⅔ cups",
+      "name": "granulated sugar",
+      "unit": "cups",
+      "amount": "⅔"
+    },
+    {
+      "raw": "large egg yolks 2",
+      "name": "large egg yolks",
+      "unit": "count",
+      "amount": "2"
+    },
+    {
+      "raw": "vanilla extract 1 tsp",
+      "name": "vanilla extract",
+      "unit": "teaspoons",
+      "amount": "1"
+    },
+    {
+      "raw": "all-purpose flour 1¼ cups",
+      "name": "all-purpose flour",
+      "unit": "cups",
+      "amount": "1¼"
+    },
+    {
+      "raw": "matcha powder 8 g",
+      "name": "matcha powder",
+      "unit": "grams",
+      "amount": "8"
+    },
+    {
+      "raw": "baking soda ½ tsp",
+      "name": "baking soda",
+      "unit": "teaspoons",
+      "amount": "½"
+    },
+    {
+      "raw": "salt ¼ tsp",
+      "name": "salt",
+      "unit": "teaspoons",
+      "amount": "¼"
+    }
+  ],
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Preheat the oven to 350, and line a small baking sheet with parchment paper."
+    },
+    {
+      "step": 1,
+      "text": "Stir together the melted butter, sugar, egg yolk, and vanilla extract. Stir very well to combine."
+    },
+    {
+      "step": 2,
+      "text": "Next, sprinkle the flour, matcha, baking soda and salt evenly over the dough, and stir just to combine."
+    },
+    {
+      "step": 3,
+      "text": "Press the dough flat and evenly in the bowl, and then divide it in half by eye. You should get 6 cookies from each half."
+    },
+    {
+      "step": 4,
+      "text": "Roll each dough ball in your hands, roll lightly extra granulated sugar, and then space evenly on the prepared baking sheet."
+    },
+    {
+      "step": 5,
+      "text": "Bake for 10-11 minutes, until they spread, start to crackle and appear dry on top. Let the cookies rest on the baking sheet for 2 minutes before moving them to a wire rack to cool completely."
+    }
+  ],
+  "servings": 12,
+  "servingName": "cookies"
+}

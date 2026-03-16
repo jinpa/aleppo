@@ -1,5 +1,5 @@
 import Fraction from "fraction.js";
-import type { Ingredient } from "@/db/schema";
+import type { Ingredient } from "@aleppo/shared";
 
 // Maps Unicode vulgar fractions to their ASCII slash equivalents.
 const UNICODE_FRACTION_MAP: Record<string, string> = {
@@ -138,7 +138,7 @@ function scaleParentheticals(text: string, factor: number): string {
  * Parses a string like "1/2", "2", "1 1/4", or "½" into a Fraction.
  * Returns null if the string can't be parsed as a positive number.
  */
-function parseFractionString(str: string): Fraction | null {
+export function parseFractionString(str: string): Fraction | null {
   const s = normalizeUnicodeFractions(str.trim());
 
   // Mixed numbers: "1 1/2", "2 3/4", etc.

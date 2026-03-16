@@ -1,0 +1,64 @@
+{
+  "title": "Best-Ever Pigs in a Blanket",
+  "description": "",
+  "ingredients": [
+    {
+      "raw": "large egg 1",
+      "name": "large egg",
+      "unit": "count",
+      "amount": "1"
+    },
+    {
+      "raw": "water 1 tsp",
+      "name": "water",
+      "unit": "teaspoons",
+      "amount": "1"
+    },
+    {
+      "raw": "cocktail-sized smoked sausages or little smokies 14 oz",
+      "name": "cocktail-sized smoked sausages or little smokies",
+      "unit": "ounces",
+      "amount": "14"
+    },
+    {
+      "raw": "refrigerated crescent roll dough 8 oz",
+      "name": "refrigerated crescent roll dough",
+      "unit": "ounces",
+      "amount": "8"
+    },
+    {
+      "raw": "flaky salt or everything bagel seasoning 1",
+      "name": "flaky salt or everything bagel seasoning",
+      "unit": "count",
+      "amount": "1"
+    }
+  ],
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Arrange a rack in the middle of the oven and heat the oven to 375ºF. Line a rimmed baking sheet with parchment paper or a silicone baking mat."
+    },
+    {
+      "step": 1,
+      "text": "Whisk egg and water in a small bowl until combined. Pat sausages dry with paper towels."
+    },
+    {
+      "step": 2,
+      "text": "Open cans and unroll refrigerated crescent roll dough on a work surface. Separate the dough from each can along the perforated seams into 8 triangles. Use a pizza cutter or sharp knife to cut each triangle lengthwise into 3 narrow triangles, {{count}} total."
+    },
+    {
+      "step": 3,
+      "text": "Place 1 sausage at the wide end of a dough triangle. Roll towards the pointed end, wrapping the dough around the sausage and allowing the dough to overlap. Place on the baking sheet seam-side down. Repeat with the remaining sausages, spacing them evenly apart on the baking sheet."
+    },
+    {
+      "step": 4,
+      "text": "Brush the tops and sides of the dough with a thin layer of the egg wash. Sprinkle with flaky salt or everything bagel seasoning if desired."
+    },
+    {
+      "step": 5,
+      "text": "Bake until the dough is puffed and golden brown, 13 to 15 minutes. Serve warm with mustard, ketchup, or your favorite dipping sauce."
+    }
+  ],
+  "servings": 24,
+  "servingName": "pigs in a blanket"
+}

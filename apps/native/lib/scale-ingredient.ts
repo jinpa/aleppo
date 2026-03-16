@@ -1,10 +1,4 @@
-type Ingredient = {
-  raw: string;
-  amount?: string;
-  unit?: string;
-  name?: string;
-  notes?: string;
-};
+import type { Ingredient } from "@aleppo/shared";
 
 const UNICODE_FRACTIONS: Record<string, string> = {
   "½": "1/2",

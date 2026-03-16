@@ -17,31 +17,50 @@ import { API_URL } from "@/constants/api";
 import { UserAvatar } from "@/components/UserAvatar";
 import { TagRow } from "@/components/TagRow";
 import { formatTime } from "@/utils/format";
+import type { UserProfile, RecipeSummary } from "@aleppo/shared";
 
-type UserProfile = {
-  id: string;
-  name: string | null;
-  image: string | null;
-  bio: string | null;
-  isPublic: boolean;
-  recipeCount: number;
-  cookCount: number;
-  followerCount: number;
-  followingCount: number;
-  isFollowing: boolean;
-  isOwner: boolean;
-};
+// ─── Tab Bar ─────────────────────────────────────────────────────────────────
 
-type PublicRecipe = {
-  id: string;
-  title: string;
-  imageUrl: string | null;
-  tags: string[];
-  prepTime: number | null;
-  cookTime: number | null;
-  isPublic: boolean;
-  sourceName: string | null;
-};
+const TAB_ITEMS = [
+  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
+  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
+  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
+  { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
+  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
+] as const;
+
+function TabBar() {
+  const router = useRouter();
+  return (
+    <View style={tabStyles.bar}>
+      {TAB_ITEMS.map((item) => (
+        <TouchableOpacity
+          key={item.name}
+          style={tabStyles.tab}
+          onPress={() => router.navigate(item.route)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={item.icon} size={24} color={item.amber ? "#d97706" : "#a8a29e"} />
+          <Text style={[tabStyles.label, item.amber && tabStyles.labelAmber]}>{item.name}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+const tabStyles = StyleSheet.create({
+  bar: {
+    flexDirection: "row",
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: "#e7e5e4",
+    paddingBottom: Platform.OS === "ios" ? 28 : 8,
+    paddingTop: 8,
+  },
+  tab: { flex: 1, alignItems: "center", gap: 2 },
+  label: { fontSize: 11, fontWeight: "500", color: "#a8a29e" },
+  labelAmber: { color: "#d97706" },
+});
 
 
 export default function UserProfileScreen() {
@@ -50,7 +69,7 @@ export default function UserProfileScreen() {
   const { token, user: currentUser, signOut } = useAuth();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [recipes, setRecipes] = useState<PublicRecipe[]>([]);
+  const [recipes, setRecipes] = useState<RecipeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -74,7 +93,7 @@ export default function UserProfileScreen() {
         }
         if (!profileRes.ok) throw new Error("Profile not found");
         const profileData: UserProfile = await profileRes.json();
-        const recipesData: PublicRecipe[] = recipesRes.ok ? await recipesRes.json() : [];
+        const recipesData: RecipeSummary[] = recipesRes.ok ? await recipesRes.json() : [];
         setProfile(profileData);
         setIsFollowing(profileData.isFollowing);
         setFollowerCount(profileData.followerCount);
@@ -122,19 +141,25 @@ export default function UserProfileScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#1c1917" />
+      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#1c1917" />
+        </View>
+        <TabBar />
       </View>
     );
   }
 
   if (error || !profile) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>{error ?? "Profile not found"}</Text>
-        <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
-          <Text style={styles.retryText}>Go back</Text>
-        </TouchableOpacity>
+      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+        <View style={styles.centered}>
+          <Text style={styles.errorText}>{error ?? "Profile not found"}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => router.back()}>
+            <Text style={styles.retryText}>Go back</Text>
+          </TouchableOpacity>
+        </View>
+        <TabBar />
       </View>
     );
   }
@@ -249,58 +274,61 @@ export default function UserProfileScreen() {
   ) : null;
 
   return (
-    <FlatList
-      style={styles.container}
-      data={recipes}
-      keyExtractor={(r) => r.id}
-      ListHeaderComponent={listHeader}
-      ListEmptyComponent={listEmpty}
-      contentContainerStyle={styles.list}
-      showsVerticalScrollIndicator={false}
-      keyboardShouldPersistTaps="handled"
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => { setRefreshing(true); fetchProfile({ silent: true }); }}
-          tintColor="#1c1917"
-        />
-      }
-      renderItem={({ item }) => {
-        const totalMins = (item.prepTime ?? 0) + (item.cookTime ?? 0);
-        return (
-          <TouchableOpacity
-            style={styles.recipeCard}
-            onPress={() => router.push(`/recipes/${item.id}`)}
-            activeOpacity={0.7}
-          >
-            {item.imageUrl ? (
-              <Image
-                source={{ uri: item.imageUrl }}
-                style={styles.recipeImage}
-                contentFit="cover"
-                transition={200}
-              />
-            ) : (
-              <View style={styles.recipeImagePlaceholder}>
-                <Text style={{ fontSize: 24 }}>🍳</Text>
-              </View>
-            )}
-            <View style={styles.recipeBody}>
-              <Text style={styles.recipeTitle} numberOfLines={2}>{item.title}</Text>
-              {(totalMins > 0 || item.sourceName) && (
-                <View style={styles.recipeMeta}>
-                  {totalMins > 0 && <Text style={styles.recipeMetaText}>{formatTime(totalMins)}</Text>}
-                  {item.sourceName && <Text style={styles.recipeMetaText}>{item.sourceName}</Text>}
+    <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+      <FlatList
+        style={styles.container}
+        data={recipes}
+        keyExtractor={(r) => r.id}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={listEmpty}
+        contentContainerStyle={styles.list}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => { setRefreshing(true); fetchProfile({ silent: true }); }}
+            tintColor="#1c1917"
+          />
+        }
+        renderItem={({ item }) => {
+          const totalMins = (item.prepTime ?? 0) + (item.cookTime ?? 0);
+          return (
+            <TouchableOpacity
+              style={styles.recipeCard}
+              onPress={() => router.push(`/recipes/${item.id}`)}
+              activeOpacity={0.7}
+            >
+              {item.imageUrl ? (
+                <Image
+                  source={{ uri: item.imageUrl }}
+                  style={styles.recipeImage}
+                  contentFit="cover"
+                  transition={200}
+                />
+              ) : (
+                <View style={styles.recipeImagePlaceholder}>
+                  <Text style={{ fontSize: 24 }}>🍳</Text>
                 </View>
               )}
-              <TagRow tags={item.tags} />
-            </View>
-            <Ionicons name="chevron-forward" size={16} color="#d6d3d1" style={{ alignSelf: "center" }} />
-          </TouchableOpacity>
-        );
-      }}
-      ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
-    />
+              <View style={styles.recipeBody}>
+                <Text style={styles.recipeTitle} numberOfLines={2}>{item.title}</Text>
+                {(totalMins > 0 || item.sourceName) && (
+                  <View style={styles.recipeMeta}>
+                    {totalMins > 0 && <Text style={styles.recipeMetaText}>{formatTime(totalMins)}</Text>}
+                    {item.sourceName && <Text style={styles.recipeMetaText}>{item.sourceName}</Text>}
+                  </View>
+                )}
+                <TagRow tags={item.tags} />
+              </View>
+              <Ionicons name="chevron-forward" size={16} color="#d6d3d1" style={{ alignSelf: "center" }} />
+            </TouchableOpacity>
+          );
+        }}
+        ItemSeparatorComponent={() => <View style={{ height: 10 }} />}
+      />
+      <TabBar />
+    </View>
   );
 }
 

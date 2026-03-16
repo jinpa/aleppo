@@ -5,6 +5,7 @@ import { auth } from "@/auth";
 import { getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
+import { parseIngredients } from "@/lib/parse-ingredients";
 
 const updateSchema = z.object({
   title: z.string().min(1).max(300).optional(),
@@ -12,17 +13,7 @@ const updateSchema = z.object({
   sourceUrl: z.string().url().optional().or(z.literal("")).nullable(),
   sourceName: z.string().max(200).optional().nullable(),
   imageUrl: z.string().optional().nullable(),
-  ingredients: z
-    .array(
-      z.object({
-        raw: z.string(),
-        amount: z.string().optional(),
-        unit: z.string().optional(),
-        name: z.string().optional(),
-        notes: z.string().optional(),
-      })
-    )
-    .optional(),
+  ingredients: z.array(z.object({ raw: z.string() })).optional(),
   instructions: z
     .array(z.object({ step: z.number(), text: z.string() }))
     .optional(),
@@ -81,9 +72,13 @@ export async function PATCH(
     );
   }
 
+  const ingredients = parsed.data.ingredients
+    ? parseIngredients(parsed.data.ingredients.map((i) => i.raw))
+    : undefined;
+
   const [updated] = await db
     .update(recipes)
-    .set({ ...parsed.data, updatedAt: new Date() })
+    .set({ ...parsed.data, ...(ingredients && { ingredients }), updatedAt: new Date() })
     .where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
     .returning();
 

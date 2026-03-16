@@ -1,0 +1,55 @@
+1- Look for the list of instructions, create one instruction in the
+json representation for each instruction in the list. Add the list of
+the raw text of the instructions you found under the key
+"found_instructions" at the toplevel of the final json result.
+
+2- Look for a list of ingredients, create one ingredient in the json
+representation for each in ingredient in the list. Add a list of the
+raw text for the ingredients you found under the key
+"found_ingredients" at the toplevel of the final json result.
+
+3- List each ingredient using the unit found in the recipe, in the
+format: {"raw": "<full ingredient text>, "name": "<ingredient name>",
+"units": "<ingredient unit>", "amount":"<ingrecient amount as
+string>"}.  The following units are available: "grams", "kilograms",
+"ounces", "pounds", "cups", "tablespoons", "teaspoons", "liters",
+"deciliters", "centiliters", "milliliters".
+
+If the recipe is not in English, map the units to English names. For
+example "c. à c." is French for "teaspoon".
+
+4- If an ingredient does not list weight or volume and is an easily
+identifiable quantity like "one orange" or "une galette", use "count"
+as the unit as { "raw": "one orange", "name": "orange", "units":
+"count", "amount": "1"}.
+
+5- If an ingredient does not list weight or volume and is not an
+easily identifiable quantity like "butter" or "salt", use "some" as
+the unit and 0 as the amount as: { "raw": "butter for the pan",
+"name": "butter", "units": "some", "amount": "0"}.
+
+6- Try to find the number of servings for the recipe, and list it as
+the "servings" attribute in the json representation. Servings can be
+one of:
+
+  6.a- A number of items yielded by the recipe, like "12 cookies", use
+  { "servings": 12, servingName": "cookies" }
+
+  6.b- A number or portions or people being fed, like "4 people", or
+  "4 porciones", or "4 servings", use {"servings": 4}.
+  
+Add the raw text you found for servings to under the key
+"found_servings".
+
+7- Add a list of the rules you applied, explaining how they were
+applied, to the key "applied_rules" at the toplevel of the final json
+result.
+
+8- Express prepTime and cookTime as plain integers representing
+minutes. For example, 30 minutes = 30, 1 hour 30 minutes = 90. Omit
+these fields if the times are not known or cannot be estimated.
+
+9- Add a "tags" array with 2-5 lowercase tags describing the recipe,
+such as cuisine type, meal type, dietary style, or key ingredient
+(e.g., ["italian", "pasta", "dinner", "vegetarian"]). Use short,
+single-word or hyphenated tags only.

@@ -43,6 +43,34 @@
       "when": 1772479611053,
       "tag": "0005_strange_mach_iv",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1773498721301,
+      "tag": "0006_black_wolfpack",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1773585600000,
+      "tag": "0007_recipe_fulltext_search",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1773705600000,
+      "tag": "0008_admin_suspend",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1773535006857,
+      "tag": "0009_clean_ezekiel",
+      "breakpoints": true
     }
   ]
 }

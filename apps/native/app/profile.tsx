@@ -1,14 +1,61 @@
+import { useState } from "react";
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
   Platform,
+  Share,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
+import { API_URL } from "@/constants/api";
 import { UserAvatar } from "@/components/UserAvatar";
+
+// ─── Tab Bar ─────────────────────────────────────────────────────────────────
+
+const TAB_ITEMS = [
+  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
+  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
+  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
+  { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
+  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
+] as const;
+
+function TabBar() {
+  const router = useRouter();
+  return (
+    <View style={tabStyles.bar}>
+      {TAB_ITEMS.map((item) => (
+        <TouchableOpacity
+          key={item.name}
+          style={tabStyles.tab}
+          onPress={() => router.navigate(item.route)}
+          activeOpacity={0.7}
+        >
+          <Ionicons name={item.icon} size={24} color={item.amber ? "#d97706" : "#a8a29e"} />
+          <Text style={[tabStyles.label, item.amber && tabStyles.labelAmber]}>{item.name}</Text>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+const tabStyles = StyleSheet.create({
+  bar: {
+    flexDirection: "row",
+    backgroundColor: "#ffffff",
+    borderTopWidth: 1,
+    borderTopColor: "#e7e5e4",
+    paddingBottom: Platform.OS === "ios" ? 28 : 8,
+    paddingTop: 8,
+  },
+  tab: { flex: 1, alignItems: "center", gap: 2 },
+  label: { fontSize: 11, fontWeight: "500", color: "#a8a29e" },
+  labelAmber: { color: "#d97706" },
+});
 
 type RowProps = {
   icon: React.ComponentProps<typeof Ionicons>["name"];
@@ -37,8 +84,30 @@ function Row({ icon, label, onPress, destructive }: RowProps) {
 }
 
 export default function ProfileScreen() {
-  const { user, signOut } = useAuth();
+  const { user, token, signOut } = useAuth();
   const router = useRouter();
+  const [inviteLoading, setInviteLoading] = useState(false);
+
+  const handleInviteLink = async () => {
+    setInviteLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/invite-link`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const { url } = await res.json();
+      if (Platform.OS === "web") {
+        await navigator.clipboard.writeText(url);
+        alert("Invite link copied!");
+      } else {
+        await Share.share({ message: `Join me on Aleppo! ${url}`, url });
+      }
+    } catch {
+      // ignore
+    } finally {
+      setInviteLoading(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -46,54 +115,77 @@ export default function ProfileScreen() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.titleBar}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        >
-          <Ionicons name="chevron-back" size={24} color="#1c1917" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Profile</Text>
-        <View style={{ width: 24 }} />
-      </View>
+    <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+      <View style={styles.container}>
+        <View style={styles.titleBar}>
+          <TouchableOpacity
+            onPress={() => router.back()}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="chevron-back" size={24} color="#1c1917" />
+          </TouchableOpacity>
+          <Text style={styles.title}>Profile</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-      <View style={styles.identity}>
-        <View style={{ marginBottom: 4 }}><UserAvatar name={user?.name} image={user?.image} size={72} /></View>
-        {user ? (
-          <>
-            <Text style={styles.name}>{user.name ?? "—"}</Text>
-            <Text style={styles.email}>{user.email}</Text>
-          </>
-        ) : (
-          <Text style={styles.placeholderNote}>
-            Sign out and back in to load your profile.
-          </Text>
+        <View style={styles.identity}>
+          <View style={{ marginBottom: 4 }}><UserAvatar name={user?.name} image={user?.image} size={72} /></View>
+          {user ? (
+            <>
+              <Text style={styles.name}>{user.name ?? "—"}</Text>
+              <Text style={styles.email}>{user.email}</Text>
+            </>
+          ) : (
+            <Text style={styles.placeholderNote}>
+              Sign out and back in to load your profile.
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.section}>
+          <Row
+            icon="settings-outline"
+            label="Settings"
+            onPress={() => router.push("/settings")}
+          />
+          <View style={styles.divider} />
+          <Row
+            icon="person-outline"
+            label="View public profile"
+            onPress={() => user?.id && router.push(`/u/${user.id}`)}
+          />
+          <View style={styles.divider} />
+          <TouchableOpacity style={styles.row} onPress={handleInviteLink} activeOpacity={0.6} disabled={inviteLoading}>
+            <Ionicons name="link-outline" size={20} color="#57534e" style={styles.rowIcon} />
+            <Text style={styles.rowLabel}>Invite link</Text>
+            {inviteLoading ? (
+              <ActivityIndicator size="small" color="#a8a29e" />
+            ) : (
+              <Ionicons name="chevron-forward" size={16} color="#d6d3d1" />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {user?.isAdmin && (
+          <View style={styles.section}>
+            <Row
+              icon="shield-outline"
+              label="Admin"
+              onPress={() => router.push("/admin")}
+            />
+          </View>
         )}
-      </View>
 
-      <View style={styles.section}>
-        <Row
-          icon="settings-outline"
-          label="Settings"
-          onPress={() => router.push("/settings")}
-        />
-        <View style={styles.divider} />
-        <Row
-          icon="person-outline"
-          label="View public profile"
-          onPress={() => user?.id && router.push(`/u/${user.id}`)}
-        />
+        <View style={styles.section}>
+          <Row
+            icon="log-out-outline"
+            label="Sign out"
+            onPress={handleSignOut}
+            destructive
+          />
+        </View>
       </View>
-
-      <View style={styles.section}>
-        <Row
-          icon="log-out-outline"
-          label="Sign out"
-          onPress={handleSignOut}
-          destructive
-        />
-      </View>
+      <TabBar />
     </View>
   );
 }

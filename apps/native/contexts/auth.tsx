@@ -26,6 +26,7 @@ export type AuthUser = {
   name: string | null;
   email: string;
   image: string | null;
+  isAdmin?: boolean;
 };
 
 interface AuthContextType {
@@ -34,6 +35,7 @@ interface AuthContextType {
   isLoading: boolean;
   signIn: (token: string, user: AuthUser) => Promise<void>;
   signOut: () => Promise<void>;
+  updateUser: (patch: Partial<AuthUser>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -68,8 +70,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null);
   };
 
+  const updateUser = async (patch: Partial<AuthUser>) => {
+    const updated = { ...user!, ...patch };
+    await storage.set(USER_KEY, JSON.stringify(updated));
+    setUser(updated);
+  };
+
   return (
-    <AuthContext.Provider value={{ token, user, isLoading, signIn, signOut }}>
+    <AuthContext.Provider value={{ token, user, isLoading, signIn, signOut, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

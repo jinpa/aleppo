@@ -1,0 +1,75 @@
+{
+  "version": 1,
+  "exportedAt": "2026-03-15T00:00:00.000Z",
+  "app": "aleppo",
+  "user": { "name": "Test Exporter", "email": "test@example.com" },
+  "recipes": [
+    {
+      "_exportId": "aaaaaaaa-0000-0000-0000-000000000001",
+      "title": "E2E Import Test Pancakes",
+      "description": "Fluffy test pancakes",
+      "sourceUrl": null,
+      "sourceName": null,
+      "imageUrl": null,
+      "imageData": null,
+      "ingredients": [
+        { "raw": "2 cups flour", "amount": "2", "unit": "cups", "name": "flour" },
+        { "raw": "1 egg", "amount": "1", "name": "egg" },
+        { "raw": "1 cup milk", "amount": "1", "unit": "cup", "name": "milk" }
+      ],
+      "instructions": [
+        { "step": 1, "text": "Mix dry ingredients" },
+        { "step": 2, "text": "Add wet ingredients and stir" },
+        { "step": 3, "text": "Cook on griddle" }
+      ],
+      "tags": ["breakfast", "quick"],
+      "isPublic": false,
+      "isAdapted": false,
+      "notes": null,
+      "prepTime": 10,
+      "cookTime": 15,
+      "servings": 4,
+      "nutritionalInfo": null,
+      "commentsUrl": null,
+      "createdAt": "2026-01-01T00:00:00.000Z",
+      "updatedAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "_exportId": "aaaaaaaa-0000-0000-0000-000000000002",
+      "title": "E2E Import Test Salad",
+      "description": "Simple green salad",
+      "sourceUrl": "https://example.com/salad",
+      "sourceName": "Example Kitchen",
+      "imageUrl": null,
+      "imageData": null,
+      "ingredients": [
+        { "raw": "1 head lettuce", "amount": "1", "unit": "head", "name": "lettuce" },
+        { "raw": "2 tomatoes", "amount": "2", "name": "tomatoes" }
+      ],
+      "instructions": [
+        { "step": 1, "text": "Wash and chop lettuce" },
+        { "step": 2, "text": "Dice tomatoes and toss" }
+      ],
+      "tags": ["salad", "healthy"],
+      "isPublic": false,
+      "isAdapted": false,
+      "notes": "Add dressing of choice",
+      "prepTime": 5,
+      "cookTime": null,
+      "servings": 2,
+      "nutritionalInfo": null,
+      "commentsUrl": null,
+      "createdAt": "2026-01-15T00:00:00.000Z",
+      "updatedAt": "2026-01-15T00:00:00.000Z"
+    }
+  ],
+  "cookLogs": [
+    {
+      "_recipeExportId": "aaaaaaaa-0000-0000-0000-000000000001",
+      "cookedOn": "2026-02-01",
+      "notes": "Turned out great",
+      "rating": 5,
+      "createdAt": "2026-02-01T12:00:00.000Z"
+    }
+  ]
+}

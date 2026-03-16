@@ -1,0 +1,68 @@
+{
+  "title": "Crêpes ou Galettes de Blé Noir",
+  "description": "La complète est une incontournable des crêpes salées. Il en existe\nplusieurs variantes, mais commencons par la plus classique\nd'entre-elles : la galette complète à base de jambon, oeuf et fromage\nrâpé.\n",
+  "ingredients": [
+    {
+      "raw": "farine de sarrasin 500 g",
+      "name": "farine de sarrasin",
+      "unit": "grams",
+      "amount": "500"
+    },
+    {
+      "raw": "gros sel 15 g",
+      "name": "gros sel",
+      "unit": "grams",
+      "amount": "15"
+    },
+    {
+      "raw": "eau 1.0 L",
+      "name": "eau",
+      "unit": "liters",
+      "amount": "1.0"
+    },
+    {
+      "raw": "miel 1 tsp",
+      "name": "miel",
+      "unit": "teaspoons",
+      "amount": "1"
+    },
+    {
+      "raw": "eau ",
+      "name": "eau",
+      "unit": "some",
+      "amount": ""
+    }
+  ],
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Verser dans un saladier la farine de sarrasin, le sel et une partie de l’eau. Le pâton est réalisé uniquement avec la moitié de l’eau nécessaire à la recette."
+    },
+    {
+      "step": 1,
+      "text": "Mélanger le tout avec un fouet ou à la main et rajouter à la préparation un peu d’eau et une cuillère à café de miel. Cette étape va donner plus de coloration aux crêpes. Le pâton doit être lisse, mais pas trop liquide."
+    },
+    {
+      "step": 2,
+      "text": "Laisser reposer au frais pendant 24, 48 ou 72 heures."
+    },
+    {
+      "step": 3,
+      "text": "Sortir le pâton du frigo 30 minutes avant de faire les crêpes. Rallonger la pâte en ajoutant progressivement le reste de l’eau. Battre énergiquement la préparation à la main pour obtenir un résultat bien aéré. Une fois que des bulles apparaissent en surface, la pâte est prête à être utilisée."
+    },
+    {
+      "step": 4,
+      "text": "Cuire les crêpes de blé noir sur une crêpière électrique ou gaz préchauffée à 220 ou 240 °C pour les plus expérimentés. Graisser la plaque entre chaque crêpe à l’aide d’un tampon pour retourner plus facilement les crêpes."
+    },
+    {
+      "step": 5,
+      "text": "Retourner la crêpe à l’aide d’une spatule à crêpes lorsque les bords commencent à se décoller, finir la cuisson quelques secondes sur la deuxième face."
+    },
+    {
+      "step": 6,
+      "text": "Accompagnez vos crêpes de garnitures salées ou sucrées selon vos envies."
+    }
+  ],
+  "servings": 12,
+  "servingName": "galettes"
+}
