@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { and, eq, inArray } from "drizzle-orm";
-import { auth } from "@/auth";
-import { getUserFromBearerToken } from "@/lib/mobile-auth";
+
+import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
 
@@ -11,7 +11,7 @@ const schema = z.object({
 });
 
 export async function DELETE(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

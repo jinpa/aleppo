@@ -1,14 +1,14 @@
 import { NextResponse } from "next/server";
 import sharp from "sharp";
-import { auth } from "@/auth";
+
 import { uploadImageToR2 } from "@/lib/r2";
-import { getUserFromBearerToken } from "@/lib/mobile-auth";
+import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 
 const MAX_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export async function POST(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
