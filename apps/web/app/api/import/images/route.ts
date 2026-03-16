@@ -32,9 +32,9 @@ function buildPrompt(inputText?: string): string {
   const base = `${prefix}\n${shots}\n---\nRULES:\n0- Keep the recipe in its original language\n${instructions}\n---\n`;
 
   if (inputText) {
-    return `${base}Extract the recipe from the following text\nTEXT: ${inputText}\nJSON:`;
+    return `${base}Process the following text and output the recipe JSON.\nTEXT: ${inputText}\nJSON:`;
   }
-  return `${base}Extract the recipe from the provided images\nJSON:`;
+  return `${base}Process the provided images and output the recipe JSON.\nJSON:`;
 }
 
 export async function POST(req: Request) {
@@ -154,5 +154,5 @@ export async function POST(req: Request) {
       : typeof parsed.imageUrl === "string" && { imageUrl: parsed.imageUrl }),
   };
 
-  return NextResponse.json({ recipe });
+  return NextResponse.json({ recipe, generated: parsed.ai_generated === true });
 }
