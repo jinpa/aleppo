@@ -1,4 +1,17 @@
 import { decode } from "next-auth/jwt";
+import { auth } from "@/auth";
+
+/**
+ * Calls auth() but returns null instead of throwing if the session cookie
+ * is present but unreadable (e.g. encrypted with a rotated AUTH_SECRET).
+ */
+export async function safeAuth() {
+  try {
+    return await auth();
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Extracts a user ID from an Authorization: Bearer <token> header.

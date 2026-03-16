@@ -6,14 +6,14 @@
  */
 
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { getUserFromBearerToken } from "@/lib/mobile-auth";
+
+import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { buildExport } from "@/lib/export-builder";
 
 export const maxDuration = 300;
 
 export async function GET(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

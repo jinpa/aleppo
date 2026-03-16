@@ -8,8 +8,8 @@
  */
 
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
-import { getUserFromBearerToken } from "@/lib/mobile-auth";
+
+import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { recipes, recipeImports } from "@/db/schema";
 import {
@@ -25,7 +25,7 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const PHOTO_CONCURRENCY = 10;
 
 export async function POST(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

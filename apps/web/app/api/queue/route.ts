@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, and, desc, max, sql } from "drizzle-orm";
-import { auth } from "@/auth";
-import { getUserFromBearerToken } from "@/lib/mobile-auth";
+
+import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { wantToCook, recipes } from "@/db/schema";
 
 const schema = z.object({ recipeId: z.string() });
 
 export async function GET(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
 const reorderSchema = z.object({ order: z.array(z.string()) });
 
 export async function PATCH(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -107,7 +107,7 @@ export async function PATCH(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

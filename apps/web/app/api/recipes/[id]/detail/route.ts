@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq, and, count, desc } from "drizzle-orm";
-import { auth } from "@/auth";
-import { getUserFromBearerToken } from "@/lib/mobile-auth";
+
+import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { recipes, users, cookLogs, wantToCook } from "@/db/schema";
 
@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const session = await auth();
+  const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
 
   // Fetch recipe + author

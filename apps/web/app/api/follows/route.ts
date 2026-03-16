@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, and } from "drizzle-orm";
-import { auth } from "@/auth";
-import { getUserFromBearerToken } from "@/lib/mobile-auth";
+
+import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { follows, users, notifications } from "@/db/schema";
 
@@ -10,7 +10,7 @@ const schema = z.object({ followingId: z.string() });
 
 export async function POST(req: Request) {
   try {
-    const session = await auth();
+    const session = await safeAuth();
     const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
-    const session = await auth();
+    const session = await safeAuth();
     const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

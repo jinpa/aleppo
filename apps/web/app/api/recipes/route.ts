@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { eq, desc, asc, and, sql } from "drizzle-orm";
-import { auth } from "@/auth";
+
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
-import { getUserFromBearerToken } from "@/lib/mobile-auth";
+import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { reuploadImageToR2 } from "@/lib/r2";
 import { parseIngredients } from "@/lib/parse-ingredients";
 
@@ -42,7 +42,7 @@ const createSchema = z.object({
 });
 
 export async function GET(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const userId =
     session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId) {
@@ -162,7 +162,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
