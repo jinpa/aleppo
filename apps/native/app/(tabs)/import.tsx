@@ -11,13 +11,13 @@ import { ImportImagesHandler } from "@/components/import/ImportImagesHandler";
 import { ImportTextHandler } from "@/components/import/ImportTextHandler";
 import { ImportFileMode } from "@/components/import/ImportFileMode";
 import { ImportReview } from "@/components/import/ImportReview";
+import type { ImportOutcome } from "@/components/import/types";
 
 type Mode = "url" | "images" | "text" | "file";
 
 type ReviewData = {
   recipe: ScrapedRecipe;
-  url: string;
-  parseError?: string | null;
+  parseError?: string;
   aiGenerated?: boolean;
 };
 
@@ -35,12 +35,26 @@ export default function ImportScreen() {
 
   const [mode, setMode] = useState<Mode>("url");
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleComplete = (outcome: ImportOutcome) => {
+    if (!outcome.ok) {
+      setError(outcome.error);
+    } else {
+      setError(null);
+      setReviewData({ recipe: outcome.recipe, parseError: outcome.parseError, aiGenerated: outcome.aiGenerated });
+    }
+  };
+
+  const handleModeChange = (newMode: Mode) => {
+    setMode(newMode);
+    setError(null);
+  };
 
   if (reviewData) {
     return (
       <ImportReview
         recipe={reviewData.recipe}
-        sourceUrl={reviewData.url}
         parseError={reviewData.parseError}
         aiGenerated={reviewData.aiGenerated}
         token={token}
@@ -70,7 +84,7 @@ export default function ImportScreen() {
             <TouchableOpacity
               key={seg.key}
               style={[styles.segment, active && styles.segmentActive]}
-              onPress={() => setMode(seg.key)}
+              onPress={() => handleModeChange(seg.key)}
             >
               <Ionicons name={seg.icon as any} size={14} color={active ? "#1c1917" : "#a8a29e"} />
               <Text style={[styles.segmentText, active && styles.segmentTextActive]}>
@@ -81,19 +95,26 @@ export default function ImportScreen() {
         })}
       </View>
 
+      {error && (
+        <View style={styles.errorBanner}>
+          <Ionicons name="alert-circle-outline" size={16} color="#b91c1c" style={{ marginTop: 1 }} />
+          <Text style={styles.errorText}>{error}</Text>
+        </View>
+      )}
+
       {mode === "url" && (
         <ImportUrlHandler
           token={token}
           modeParam={modeParam}
           shareUrl={shareUrl}
-          onComplete={(r) => setReviewData({ recipe: r.recipe, url: r.url, parseError: r.parseError })}
+          onComplete={handleComplete}
         />
       )}
 
       {mode === "images" && (
         <ImportImagesHandler
           token={token}
-          onComplete={(r) => setReviewData({ recipe: r.recipe, url: "", aiGenerated: r.aiGenerated })}
+          onComplete={handleComplete}
         />
       )}
 
@@ -104,7 +125,7 @@ export default function ImportScreen() {
       {mode === "text" && (
         <ImportTextHandler
           token={token}
-          onComplete={(r) => setReviewData({ recipe: r.recipe, url: "", aiGenerated: r.aiGenerated })}
+          onComplete={handleComplete}
         />
       )}
     </KeyboardAwareScrollView>
@@ -152,4 +173,15 @@ const styles = StyleSheet.create({
   },
   segmentText: { fontSize: 13, fontWeight: "500", color: "#a8a29e" },
   segmentTextActive: { color: "#1c1917" },
+  errorBanner: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+    backgroundColor: "#fef2f2",
+    borderWidth: 1,
+    borderColor: "#fecaca",
+    borderRadius: 10,
+    padding: 12,
+  },
+  errorText: { flex: 1, fontSize: 13, color: "#b91c1c", lineHeight: 18 },
 });

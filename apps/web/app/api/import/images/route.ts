@@ -137,6 +137,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "AI returned invalid JSON" }, { status: 502 });
   }
 
+  if (typeof parsed.error === "string") {
+    return NextResponse.json({ error: parsed.error }, { status: 422 });
+  }
+
   // Pick only the fields that belong to ScrapedRecipe
   const recipe = {
     ...(typeof parsed.title === "string" && { title: parsed.title }),

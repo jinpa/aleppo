@@ -1,22 +1,16 @@
 import { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "@/constants/api";
-import type { ScrapedRecipe } from "@aleppo/shared";
 import { sharedStyles } from "./importStyles";
 import { ImportBookmarkletWaiting } from "./ImportBookmarkletWaiting";
-
-export type ImportUrlResult = {
-  recipe: ScrapedRecipe;
-  url: string;
-  parseError?: string | null;
-};
+import type { ImportOutcome } from "./types";
 
 type ImportUrlHandlerProps = {
   token: string | null;
   modeParam?: string;
   shareUrl?: string;
-  onComplete: (result: ImportUrlResult) => void;
+  onComplete: (outcome: ImportOutcome) => void;
 };
 
 export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete }: ImportUrlHandlerProps) {
@@ -63,21 +57,21 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete }: Imp
         const data = await res.json();
         if (!res.ok) {
           onComplete({
-            recipe: {},
-            url: payload?.url ?? "",
-            parseError: res.status === 401
+            ok: false,
+            error: res.status === 401
               ? "Authentication error — please reload and try again."
-              : data.error ?? "Import failed. Please fill in the details manually.",
+              : data.error ?? "Import failed.",
           });
           return;
         }
+        const sourceUrl = payload?.url ?? "";
         onComplete({
-          recipe: data.recipe ?? {},
-          url: payload?.url ?? "",
-          parseError: data.recipe ? null : "No recipe structured data found on that page. Please fill in the details manually.",
+          ok: true,
+          recipe: { ...(data.recipe ?? {}), sourceUrl },
+          parseError: data.recipe ? undefined : "No recipe structured data found on that page. Please fill in the details manually.",
         });
       } catch {
-        onComplete({ recipe: {}, url: payload?.url ?? "", parseError: "Failed to connect to server." });
+        onComplete({ ok: false, error: "Failed to connect to server." });
       }
     }
 
@@ -122,23 +116,23 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete }: Imp
         body: JSON.stringify(payload),
       });
       const data = await res.json();
+      const sourceUrl = payload?.url ?? "";
       if (!res.ok) {
         onComplete({
-          recipe: {},
-          url: payload?.url ?? "",
-          parseError: res.status === 401
+          ok: false,
+          error: res.status === 401
             ? "Authentication error — please try again."
-            : data.error ?? "Import failed. Please fill in the details manually.",
+            : data.error ?? "Import failed.",
         });
       } else {
         onComplete({
-          recipe: data.recipe ?? {},
-          url: payload?.url ?? "",
-          parseError: data.recipe ? null : "No recipe structured data found on that page. Please fill in the details manually.",
+          ok: true,
+          recipe: { ...(data.recipe ?? {}), sourceUrl },
+          parseError: data.recipe ? undefined : "No recipe structured data found on that page. Please fill in the details manually.",
         });
       }
     } catch {
-      onComplete({ recipe: {}, url: payload?.url ?? "", parseError: "Failed to connect to server." });
+      onComplete({ ok: false, error: "Failed to connect to server." });
     } finally {
       setExtracting(false);
     }
@@ -165,14 +159,16 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete }: Imp
       });
       const data = await res.json();
       if (!res.ok) {
-        Alert.alert("Error", data.error ?? "Failed to fetch URL");
+        onComplete({ ok: false, error: data.error ?? "Failed to fetch URL." });
         return;
       }
       onComplete({
-        recipe: data.recipe ?? {},
-        url: currentUrl,
-        parseError: data.parseError ?? null,
+        ok: true,
+        recipe: { ...(data.recipe ?? {}), sourceUrl: currentUrl },
+        parseError: data.parseError ?? undefined,
       });
+    } catch {
+      onComplete({ ok: false, error: "Could not connect to server." });
     } finally {
       setFetching(false);
     }

@@ -1,19 +1,14 @@
 import { useState } from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "@/constants/api";
-import type { ScrapedRecipe } from "@aleppo/shared";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { sharedStyles } from "./importStyles";
-
-export type ImportImagesResult = {
-  recipe: ScrapedRecipe;
-  aiGenerated: boolean;
-};
+import type { ImportOutcome } from "./types";
 
 type ImportImagesHandlerProps = {
   token: string | null;
-  onComplete: (result: ImportImagesResult) => void;
+  onComplete: (outcome: ImportOutcome) => void;
 };
 
 export function ImportImagesHandler({ token, onComplete }: ImportImagesHandlerProps) {
@@ -37,13 +32,15 @@ export function ImportImagesHandler({ token, onComplete }: ImportImagesHandlerPr
         body,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        Alert.alert("Error", data.error ?? "Import failed");
+      if (!res.ok || data.error) {
+        onComplete({ ok: false, error: data.error ?? "Import failed." });
         return;
       }
-      onComplete({ recipe: data.recipe ?? {}, aiGenerated: data.generated === true });
+      onComplete({ ok: true, recipe: data.recipe ?? {}, aiGenerated: data.generated === true });
+
     } catch {
-      Alert.alert("Error", "Could not connect to server");
+      onComplete({ ok: false, error: "Could not connect to server." });
+
     } finally {
       setImporting(false);
     }

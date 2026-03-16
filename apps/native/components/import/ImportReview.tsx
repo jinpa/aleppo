@@ -19,15 +19,14 @@ type RawIngredient = Pick<Ingredient, "raw">;
 
 type ImportReviewProps = {
   recipe: ScrapedRecipe;
-  sourceUrl: string;
-  parseError?: string | null;
+  parseError?: string;
   aiGenerated?: boolean;
   token: string | null;
   onBack: () => void;
   router: { replace: (href: any) => void };
 };
 
-export function ImportReview({ recipe, sourceUrl, parseError, aiGenerated, token, onBack, router }: ImportReviewProps) {
+export function ImportReview({ recipe, parseError, aiGenerated, token, onBack, router }: ImportReviewProps) {
   const [title, setTitle] = useState(recipe.title ?? "");
   const [description, setDescription] = useState(recipe.description ?? "");
   const [ingredients, setIngredients] = useState<RawIngredient[]>(
@@ -45,7 +44,7 @@ export function ImportReview({ recipe, sourceUrl, parseError, aiGenerated, token
   const [servings, setServings] = useState(recipe.servings ? String(recipe.servings) : "");
   const [isPublic, setIsPublic] = useState(false);
   const [imageUrl] = useState<string | undefined>(recipe.imageUrl ?? undefined);
-  const [recipeSourceUrl, setRecipeSourceUrl] = useState(recipe.sourceUrl ?? sourceUrl);
+  const [recipeSourceUrl, setRecipeSourceUrl] = useState(recipe.sourceUrl ?? "");
   const [sourceName, setSourceName] = useState(recipe.sourceName ?? "");
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});

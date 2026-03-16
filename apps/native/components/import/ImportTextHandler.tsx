@@ -1,17 +1,12 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { API_URL } from "@/constants/api";
-import type { ScrapedRecipe } from "@aleppo/shared";
 import { sharedStyles } from "./importStyles";
-
-export type ImportTextResult = {
-  recipe: ScrapedRecipe;
-  aiGenerated: boolean;
-};
+import type { ImportOutcome } from "./types";
 
 type ImportTextHandlerProps = {
   token: string | null;
-  onComplete: (result: ImportTextResult) => void;
+  onComplete: (outcome: ImportOutcome) => void;
 };
 
 export function ImportTextHandler({ token, onComplete }: ImportTextHandlerProps) {
@@ -30,13 +25,13 @@ export function ImportTextHandler({ token, onComplete }: ImportTextHandlerProps)
         body,
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        Alert.alert("Error", data.error ?? "Import failed");
+      if (!res.ok || data.error) {
+        onComplete({ ok: false, error: data.error ?? "Import failed." });
         return;
       }
-      onComplete({ recipe: data.recipe ?? {}, aiGenerated: data.generated === true });
+      onComplete({ ok: true, recipe: data.recipe ?? {}, aiGenerated: data.generated === true });
     } catch {
-      Alert.alert("Error", "Could not connect to server");
+      onComplete({ ok: false, error: "Could not connect to server." });
     } finally {
       setImporting(false);
     }
