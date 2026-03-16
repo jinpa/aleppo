@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { auth } from "@/auth";
-import { getUserFromBearerToken } from "@/lib/mobile-auth";
+
+import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 
 /**
  * Bootstrap admin access via ADMIN_EMAIL env var.
@@ -13,7 +13,7 @@ import { getUserFromBearerToken } from "@/lib/mobile-auth";
  * Without ADMIN_EMAIL, admins must be set directly in the database.
  */
 export async function POST(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const bearer = await getUserFromBearerToken(req);
   const userId = session?.user?.id ?? bearer?.id;
   if (!userId) {

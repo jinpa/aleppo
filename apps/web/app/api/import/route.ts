@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { auth } from "@/auth";
+
 import { db } from "@/db";
 import { recipeImports } from "@/db/schema";
 import { scrapeRecipeFromUrl } from "@/lib/recipe-scraper";
-import { getUserFromBearerToken } from "@/lib/mobile-auth";
+import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 
 const schema = z.object({ url: z.string().url() });
 
 export async function POST(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

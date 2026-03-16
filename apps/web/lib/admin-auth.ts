@@ -1,5 +1,4 @@
-import { auth } from "@/auth";
-import { getUserFromBearerToken } from "@/lib/mobile-auth";
+import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
@@ -9,7 +8,7 @@ import { eq } from "drizzle-orm";
  * Returns the user row if admin, null otherwise.
  */
 export async function requireAdmin(req: Request) {
-  const session = await auth();
+  const session = await safeAuth();
   const bearer = await getUserFromBearerToken(req);
   const userId = session?.user?.id ?? bearer?.id;
   if (!userId) return null;
