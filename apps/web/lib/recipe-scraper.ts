@@ -199,8 +199,9 @@ function extractFromJsonLd(jsonLd: object): ScrapedRecipe | null {
         rawInstructions.push(decodeHtmlEntities(step));
       } else if (step["@type"] === "HowToStep" && step.text) {
         rawInstructions.push(decodeHtmlEntities(step.text));
-      } else if (step["@type"] === "HowToSection" && Array.isArray(step.itemListElement)) {
-        for (const subStep of step.itemListElement) {
+      } else if (step["@type"] === "HowToSection" && step.itemListElement) {
+        const subSteps = Array.isArray(step.itemListElement) ? step.itemListElement : [step.itemListElement];
+        for (const subStep of subSteps) {
           if (subStep.text) rawInstructions.push(decodeHtmlEntities(subStep.text));
         }
       }
