@@ -20,6 +20,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 import { scaleIngredient } from "@/lib/scale-ingredient";
+import ImageViewerModal from "@/components/ImageViewerModal";
 import type { RecipeDetailResponse, CookLog } from "@aleppo/shared";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -138,6 +139,7 @@ export default function RecipeDetailScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const [showImageViewer, setShowImageViewer] = useState(false);
   const [showLogModal, setShowLogModal] = useState(false);
   const [logDate, setLogDate] = useState(todayString());
   const [logNotes, setLogNotes] = useState("");
@@ -369,7 +371,9 @@ export default function RecipeDetailScreen() {
 
       {/* Hero image */}
       {recipe.imageUrl ? (
-        <Image source={{ uri: recipe.imageUrl }} style={styles.heroImage} contentFit="cover" transition={300} />
+        <TouchableOpacity activeOpacity={0.9} onPress={() => setShowImageViewer(true)}>
+          <Image source={{ uri: recipe.imageUrl }} style={styles.heroImage} contentFit="cover" transition={300} />
+        </TouchableOpacity>
       ) : null}
 
       <View style={styles.content}>
@@ -614,6 +618,15 @@ export default function RecipeDetailScreen() {
         />
         <TabBar />
       </View>
+
+      {/* Image Viewer */}
+      {recipe.imageUrl ? (
+        <ImageViewerModal
+          uri={recipe.imageUrl}
+          visible={showImageViewer}
+          onClose={() => setShowImageViewer(false)}
+        />
+      ) : null}
 
       {/* Cook Log Modal */}
       <Modal visible={showLogModal} transparent animationType="slide" onRequestClose={() => setShowLogModal(false)}>
