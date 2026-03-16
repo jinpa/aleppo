@@ -1,24 +1,207 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
-  Platform,
-} from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { API_URL } from "@/constants/api";
+import type { ScrapedRecipe } from "@aleppo/shared";
 import { sharedStyles } from "./importStyles";
+import { ImportBookmarkletWaiting } from "./ImportBookmarkletWaiting";
 
-type ImportUrlModeProps = {
+export type ImportUrlResult = {
+  recipe: ScrapedRecipe;
   url: string;
-  setUrl: (url: string) => void;
-  fetching: boolean;
-  handleFetch: () => void;
+  parseError?: string | null;
 };
 
-export function ImportUrlMode({ url, setUrl, fetching, handleFetch }: ImportUrlModeProps) {
+type ImportUrlHandlerProps = {
+  token: string | null;
+  modeParam?: string;
+  shareUrl?: string;
+  onComplete: (result: ImportUrlResult) => void;
+};
+
+export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete }: ImportUrlHandlerProps) {
+  const [url, setUrl] = useState("");
+  const [fetching, setFetching] = useState(false);
+  const [extracting, setExtracting] = useState(!!shareUrl);
+  const [extractionUrl, setExtractionUrl] = useState(shareUrl ?? "");
+  const extractionDone = useRef(false);
+  const [waitingForBookmarklet, setWaitingForBookmarklet] = useState(modeParam === "bookmarklet");
+  const bookmarkletReadySent = useRef(false);
+  const bookmarkletDataReceived = useRef(false);
+
+  // ── Bookmarklet postMessage handshake ─────────────────────────────────────
+  useEffect(() => {
+    if (modeParam !== "bookmarklet" || Platform.OS !== "web") return;
+    if (bookmarkletDataReceived.current) return;
+
+    const w = window as any;
+    if (!w.opener) {
+      setWaitingForBookmarklet(false);
+      return;
+    }
+
+    async function handleMessage(e: MessageEvent) {
+      if (bookmarkletDataReceived.current) return;
+      if (!e.data || e.data.type !== "aleppo:data") return;
+
+      bookmarkletDataReceived.current = true;
+      setWaitingForBookmarklet(false);
+
+      const payload = e.data.payload;
+      // Read token fresh from localStorage — the closure may have captured a
+      // null value if auth hadn't finished loading when the effect first ran.
+      const currentToken = Platform.OS === "web" ? localStorage.getItem("auth_token") : token;
+      try {
+        const res = await fetch(`${API_URL}/api/import/bookmarklet`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${currentToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          onComplete({
+            recipe: {},
+            url: payload?.url ?? "",
+            parseError: res.status === 401
+              ? "Authentication error — please reload and try again."
+              : data.error ?? "Import failed. Please fill in the details manually.",
+          });
+          return;
+        }
+        onComplete({
+          recipe: data.recipe ?? {},
+          url: payload?.url ?? "",
+          parseError: data.recipe ? null : "No recipe structured data found on that page. Please fill in the details manually.",
+        });
+      } catch {
+        onComplete({ recipe: {}, url: payload?.url ?? "", parseError: "Failed to connect to server." });
+      }
+    }
+
+    window.addEventListener("message", handleMessage as any);
+
+    if (!bookmarkletReadySent.current) {
+      bookmarkletReadySent.current = true;
+      w.opener.postMessage({ type: "aleppo:ready" }, "*");
+    }
+
+    const timeout = setTimeout(() => {
+      if (!bookmarkletDataReceived.current) setWaitingForBookmarklet(false);
+    }, 10000);
+
+    return () => {
+      window.removeEventListener("message", handleMessage as any);
+      clearTimeout(timeout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modeParam]);
+
+  // ── Share sheet / WebView extraction callbacks ────────────────────────────
+  const handleExtractResult = async (payload: {
+    jsonld: unknown[];
+    url: string;
+    title: string;
+    ogImage: string;
+    siteName: string;
+    commentsUrl: string | null;
+  }) => {
+    if (extractionDone.current) return;
+    extractionDone.current = true;
+
+    const currentToken = Platform.OS === "web" ? localStorage.getItem("auth_token") : token;
+    try {
+      const res = await fetch(`${API_URL}/api/import/bookmarklet`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        onComplete({
+          recipe: {},
+          url: payload?.url ?? "",
+          parseError: res.status === 401
+            ? "Authentication error — please try again."
+            : data.error ?? "Import failed. Please fill in the details manually.",
+        });
+      } else {
+        onComplete({
+          recipe: data.recipe ?? {},
+          url: payload?.url ?? "",
+          parseError: data.recipe ? null : "No recipe structured data found on that page. Please fill in the details manually.",
+        });
+      }
+    } catch {
+      onComplete({ recipe: {}, url: payload?.url ?? "", parseError: "Failed to connect to server." });
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  const handleExtractError = async (_message: string) => {
+    if (extractionDone.current) return;
+    extractionDone.current = true;
+    const currentUrl = extractionUrl;
+    // Stop the WebView, pre-fill the URL field, show fetch spinner
+    setExtracting(false);
+    setExtractionUrl("");
+    setUrl(currentUrl);
+    setFetching(true);
+    // Automatically fall back to server-side scraping (has Playwright fallback)
+    try {
+      const res = await fetch(`${API_URL}/api/import`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: currentUrl }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        Alert.alert("Error", data.error ?? "Failed to fetch URL");
+        return;
+      }
+      onComplete({
+        recipe: data.recipe ?? {},
+        url: currentUrl,
+        parseError: data.parseError ?? null,
+      });
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleFetch = () => {
+    if (!url.trim()) return;
+    // Always use client-side WebView extraction first; handleExtractError
+    // falls back to server-side scraping if the WebView fails.
+    extractionDone.current = false;
+    setExtractionUrl(url.trim());
+    setExtracting(true);
+  };
+
+  // Full-screen overlay during extraction / bookmarklet wait
+  if ((extracting && extractionUrl) || waitingForBookmarklet) {
+    return (
+      <View style={styles.fullScreen}>
+        <ImportBookmarkletWaiting
+          extracting={extracting}
+          extractionUrl={extractionUrl}
+          waitingForBookmarklet={waitingForBookmarklet}
+          handleExtractResult={handleExtractResult}
+          handleExtractError={handleExtractError}
+        />
+      </View>
+    );
+  }
+
   return (
     <>
       <Text style={sharedStyles.heading}>Import from URL</Text>
@@ -63,8 +246,7 @@ export function ImportUrlMode({ url, setUrl, fetching, handleFetch }: ImportUrlM
   );
 }
 
-// ── Bookmarklet section (web-only) ─────────────────────────────────────────
-
+// ── Bookmarklet section (web-only) ────────────────────────────────────────
 // Renders a draggable bookmarklet button for web; hidden on native.
 // Uses React.createElement('a', ...) to produce a real HTML <a> element in
 // React Native Web — the only way to get browser drag-to-bookmark behaviour.
@@ -148,6 +330,24 @@ function BookmarkletSection() {
   );
 }
 
+const styles = StyleSheet.create({
+  fullScreen: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "#fafaf9",
+    zIndex: 100,
+  },
+  urlRow: { flexDirection: "row", gap: 8 },
+  urlInput: { flex: 1 },
+  hintBox: {
+    backgroundColor: "#f5f5f4",
+    borderRadius: 10,
+    padding: 14,
+    gap: 4,
+  },
+  hintTitle: { fontSize: 13, fontWeight: "600", color: "#57534e", marginBottom: 4 },
+  hintItem: { fontSize: 13, color: "#78716c" },
+});
+
 const bkStyles = StyleSheet.create({
   container: {
     borderTopWidth: 1,
@@ -175,17 +375,4 @@ const bkStyles = StyleSheet.create({
   dragHint: { fontSize: 12, color: "#a8a29e", fontStyle: "italic" },
   stepItem: { fontSize: 13, color: "#57534e", lineHeight: 20 },
   fine: { fontSize: 11, color: "#a8a29e" },
-});
-
-const styles = StyleSheet.create({
-  urlRow: { flexDirection: "row", gap: 8 },
-  urlInput: { flex: 1 },
-  hintBox: {
-    backgroundColor: "#f5f5f4",
-    borderRadius: 10,
-    padding: 14,
-    gap: 4,
-  },
-  hintTitle: { fontSize: 13, fontWeight: "600", color: "#57534e", marginBottom: 4 },
-  hintItem: { fontSize: 13, color: "#78716c" },
 });
