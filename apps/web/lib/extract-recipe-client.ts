@@ -103,11 +103,9 @@ function extractOneJsonLd(recipe: any): ScrapedRecipe | null {
         rawInstructions.push(decodeHtmlEntities(step));
       } else if (step["@type"] === "HowToStep" && step.text) {
         rawInstructions.push(decodeHtmlEntities(step.text));
-      } else if (
-        step["@type"] === "HowToSection" &&
-        Array.isArray(step.itemListElement)
-      ) {
-        for (const sub of step.itemListElement) {
+      } else if (step["@type"] === "HowToSection" && step.itemListElement) {
+        const subSteps = Array.isArray(step.itemListElement) ? step.itemListElement : [step.itemListElement];
+        for (const sub of subSteps) {
           if (sub.text) rawInstructions.push(decodeHtmlEntities(sub.text));
         }
       }
