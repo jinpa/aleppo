@@ -53,8 +53,8 @@ export function ImportImagesHandler({ token, onComplete }: ImportImagesHandlerPr
         Add photos of a recipe (handwritten, printed, or a screenshot) or a photo of a dish — we'll extract or generate a recipe for you.
       </Text>
       <PhotoPicker mode="multiple" onPhotos={setPhotos}>
-        {(open, pickedPhotos, removePhoto) => (
-          <View style={styles.photoRow}>
+        {(open, pickedPhotos, removePhoto, isDragging) => (
+          <View style={[styles.photoRow, isDragging && styles.photoRowDragging]}>
             <TouchableOpacity style={styles.cameraButton} onPress={open}>
               <Ionicons name="camera" size={22} color="#78716c" />
               <View style={styles.plusBadge}>
@@ -93,6 +93,13 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
     paddingVertical: 4,
+  },
+  photoRowDragging: {
+    borderWidth: 2,
+    borderColor: "#d97706",
+    borderRadius: 10,
+    backgroundColor: "#fffbeb",
+    padding: 8,
   },
   cameraButton: {
     width: 72,
