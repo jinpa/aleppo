@@ -72,18 +72,16 @@ export function ImportImagesHandler({ token, onComplete }: ImportImagesHandlerPr
           </View>
         )}
       </PhotoPicker>
-      {photos.length > 0 && (
-        <TouchableOpacity
-          style={[sharedStyles.importButton, importing && sharedStyles.fetchButtonDisabled]}
-          onPress={handleImagesImport}
-          disabled={importing}
-        >
-          {importing
-            ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={sharedStyles.fetchButtonText}>Import</Text>
-          }
-        </TouchableOpacity>
-      )}
+      <TouchableOpacity
+        style={[sharedStyles.importButton, (photos.length === 0 || importing) && sharedStyles.fetchButtonDisabled]}
+        onPress={handleImagesImport}
+        disabled={photos.length === 0 || importing}
+      >
+        {importing
+          ? <ActivityIndicator size="small" color="#fff" />
+          : <Text style={sharedStyles.fetchButtonText}>Import</Text>
+        }
+      </TouchableOpacity>
     </View>
   );
 }

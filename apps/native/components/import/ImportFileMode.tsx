@@ -137,7 +137,7 @@ export function ImportFileMode({ token, router }: ImportFileModeProps) {
             </View>
           ) : null}
           <TouchableOpacity
-            style={[sharedStyles.fetchButton, fileParsing && sharedStyles.fetchButtonDisabled]}
+            style={[sharedStyles.importButton, fileParsing && sharedStyles.fetchButtonDisabled]}
             onPress={pickImportFile}
             disabled={fileParsing}
           >
