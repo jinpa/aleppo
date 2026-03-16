@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  expo-image-manipulator@55.0.10:
-    hash: 56dae7d99161246bb9226ebe2019fb0bbf1e8bb99bd29e5512bb4d7ffef90d47
-    path: patches/expo-image-manipulator@55.0.10.patch
-
 importers:
 
   .:
@@ -41,8 +36,8 @@ importers:
         specifier: ~18.0.13
         version: 18.0.13(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))
       expo-document-picker:
-        specifier: ^55.0.8
-        version: 55.0.8(expo@54.0.33)
+        specifier: ~14.0.8
+        version: 14.0.8(expo@54.0.33)
       expo-font:
         specifier: ~14.0.11
         version: 14.0.11(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -53,11 +48,11 @@ importers:
         specifier: ~3.0.11
         version: 3.0.11(expo@54.0.33)(react-native-web@0.21.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       expo-image-manipulator:
-        specifier: ^55.0.10
-        version: 55.0.10(patch_hash=56dae7d99161246bb9226ebe2019fb0bbf1e8bb99bd29e5512bb4d7ffef90d47)(expo@54.0.33)
+        specifier: ~14.0.8
+        version: 14.0.8(expo@54.0.33)
       expo-image-picker:
-        specifier: ^55.0.12
-        version: 55.0.12(expo@54.0.33)
+        specifier: ~17.0.10
+        version: 17.0.10(expo@54.0.33)
       expo-linking:
         specifier: ~8.0.11
         version: 8.0.11(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
@@ -71,8 +66,8 @@ importers:
         specifier: ^5.1.1
         version: 5.1.1(expo-constants@18.0.13)(expo-linking@8.0.11)(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
       expo-sharing:
-        specifier: ^55.0.11
-        version: 55.0.11(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
+        specifier: ~14.0.8
+        version: 14.0.8(expo@54.0.33)
       expo-splash-screen:
         specifier: ~31.0.13
         version: 31.0.13(expo@54.0.33)
@@ -1424,17 +1419,11 @@ packages:
   '@expo/config-plugins@54.0.4':
     resolution: {integrity: sha512-g2yXGICdoOw5i3LkQSDxl2Q5AlQCrG7oniu0pCPPO+UxGb7He4AFqSvPSy8HpRUj55io17hT62FTjYRD+d6j3Q==}
 
-  '@expo/config-plugins@55.0.6':
-    resolution: {integrity: sha512-cIox6FjZlFaaX40rbQ3DvP9e87S5X85H9uw+BAxJE5timkMhuByy3GAlOsj1h96EyzSiol7Q6YIGgY1Jiz4M+A==}
-
   '@expo/config-types@53.0.5':
     resolution: {integrity: sha512-kqZ0w44E+HEGBjy+Lpyn0BVL5UANg/tmNixxaRMLS6nf37YsDrLk2VMAmeKMMk5CKG0NmOdVv3ngeUjRQMsy9g==}
 
   '@expo/config-types@54.0.10':
     resolution: {integrity: sha512-/J16SC2an1LdtCZ67xhSkGXpALYUVUNyZws7v+PVsFZxClYehDSoKLqyRaGkpHlYrCc08bS0RF5E0JV6g50psA==}
-
-  '@expo/config-types@55.0.5':
-    resolution: {integrity: sha512-sCmSUZG4mZ/ySXvfyyBdhjivz8Q539X1NondwDdYG7s3SBsk+wsgPJzYsqgAG/P9+l0xWjUD2F+kQ1cAJ6NNLg==}
 
   '@expo/config@12.0.13':
     resolution: {integrity: sha512-Cu52arBa4vSaupIWsF0h7F/Cg//N374nYb7HAxV0I4KceKA7x2UXpYaHOL7EEYYvp7tZdThBjvGpVmr8ScIvaQ==}
@@ -1566,9 +1555,6 @@ packages:
 
   '@expo/plist@0.4.8':
     resolution: {integrity: sha512-pfNtErGGzzRwHP+5+RqswzPDKkZrx+Cli0mzjQaus1ZWFsog5ibL+nVT3NcporW51o8ggnt7x813vtRbPiyOrQ==}
-
-  '@expo/plist@0.5.2':
-    resolution: {integrity: sha512-o4xdVdBpe4aTl3sPMZ2u3fJH4iG1I768EIRk1xRZP+GaFI93MaR3JvoFibYqxeTmLQ1p1kNEVqylfUjezxx45g==}
 
   '@expo/prebuild-config@54.0.8':
     resolution: {integrity: sha512-EA7N4dloty2t5Rde+HP0IEE+nkAQiu4A/+QGZGT9mFnZ5KKjPPkqSyYcRvP5bhQE10D+tvz6X0ngZpulbMdbsg==}
@@ -4291,8 +4277,8 @@ packages:
       expo: '*'
       react-native: '*'
 
-  expo-document-picker@55.0.8:
-    resolution: {integrity: sha512-p6rYEQ1/h3UqGl3+hzTjv51fsNxoOVfMGSYjHX2/e3cvcy02MWWE+bpj4QEGo9MBwU4RyyIbuv/SCxGtAtG+eA==}
+  expo-document-picker@14.0.8:
+    resolution: {integrity: sha512-3tyQKpPqWWFlI8p9RiMX1+T1Zge5mEKeBuXWp1h8PEItFMUDSiOJbQ112sfdC6Hxt8wSxreV9bCRl/NgBdt+fA==}
     peerDependencies:
       expo: '*'
 
@@ -4314,18 +4300,18 @@ packages:
     peerDependencies:
       expo: '*'
 
-  expo-image-loader@55.0.0:
-    resolution: {integrity: sha512-NOjp56wDrfuA5aiNAybBIjqIn1IxKeGJ8CECWZncQ/GzjZfyTYAHTCyeApYkdKkMBLHINzI4BbTGSlbCa0fXXQ==}
+  expo-image-loader@6.0.0:
+    resolution: {integrity: sha512-nKs/xnOGw6ACb4g26xceBD57FKLFkSwEUTDXEDF3Gtcu3MqF3ZIYd3YM+sSb1/z9AKV1dYT7rMSGVNgsveXLIQ==}
     peerDependencies:
       expo: '*'
 
-  expo-image-manipulator@55.0.10:
-    resolution: {integrity: sha512-eEiHSznWa0i5I7iNFDRuHz663XiS26s8SEFigGbsvkFDibGI9x391Qb76DPSGtnqNkJa39etuFw42lbErHphHA==}
+  expo-image-manipulator@14.0.8:
+    resolution: {integrity: sha512-sXsXjm7rIxLWZe0j2A41J/Ph53PpFJRdyzJ3EQ/qetxLUvS2m3K1sP5xy37px43qCf0l79N/i6XgFgenFV36/Q==}
     peerDependencies:
       expo: '*'
 
-  expo-image-picker@55.0.12:
-    resolution: {integrity: sha512-ky8nzXTd5eLUDct5daAHng0xrWYRJyXfLCRmEdE9v/IUywYCnFU7aCnQ7PTQJvzGSzhePJJmP/POvTkVP//+qQ==}
+  expo-image-picker@17.0.10:
+    resolution: {integrity: sha512-a2xrowp2trmvXyUWgX3O6Q2rZaa2C59AqivKI7+bm+wLvMfTEbZgldLX4rEJJhM8xtmEDTNU+lzjtObwzBRGaw==}
     peerDependencies:
       expo: '*'
 
@@ -4414,12 +4400,10 @@ packages:
       react: '*'
       react-native: '*'
 
-  expo-sharing@55.0.11:
-    resolution: {integrity: sha512-YlVez832W0sYR2KJY4Dr8ON9aC+Wp8a/r40eQyhoHT9Tetkr2KBM7tWLT0CGKRuTTnrqJL1C51UacLkHJ9zmNA==}
+  expo-sharing@14.0.8:
+    resolution: {integrity: sha512-A1pPr2iBrxypFDCWVAESk532HK+db7MFXbvO2sCV9ienaFXAk7lIBm6bkqgE6vzRd9O3RGdEGzYx80cYlc089Q==}
     peerDependencies:
       expo: '*'
-      react: '*'
-      react-native: '*'
 
   expo-splash-screen@31.0.13:
     resolution: {integrity: sha512-1epJLC1cDlwwj089R2h8cxaU5uk4ONVAC+vzGiTZH4YARQhL4Stlz1MbR6yAS173GMosvkE6CAeihR7oIbCkDA==}
@@ -8371,29 +8355,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@expo/config-plugins@55.0.6':
-    dependencies:
-      '@expo/config-types': 55.0.5
-      '@expo/json-file': 10.0.12
-      '@expo/plist': 0.5.2
-      '@expo/sdk-runtime-versions': 1.0.0
-      chalk: 4.1.2
-      debug: 4.4.3
-      getenv: 2.0.0
-      glob: 13.0.6
-      resolve-from: 5.0.0
-      semver: 7.7.4
-      slugify: 1.6.8
-      xcode: 3.0.1
-      xml2js: 0.6.0
-    transitivePeerDependencies:
-      - supports-color
-
   '@expo/config-types@53.0.5': {}
 
   '@expo/config-types@54.0.10': {}
-
-  '@expo/config-types@55.0.5': {}
 
   '@expo/config@12.0.13':
     dependencies:
@@ -8610,12 +8574,6 @@ snapshots:
       xmlbuilder: 15.1.1
 
   '@expo/plist@0.4.8':
-    dependencies:
-      '@xmldom/xmldom': 0.8.11
-      base64-js: 1.5.1
-      xmlbuilder: 15.1.1
-
-  '@expo/plist@0.5.2':
     dependencies:
       '@xmldom/xmldom': 0.8.11
       base64-js: 1.5.1
@@ -11979,7 +11937,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  expo-document-picker@55.0.8(expo@54.0.33):
+  expo-document-picker@14.0.8(expo@54.0.33):
     dependencies:
       expo: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native-webview@13.16.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
 
@@ -11999,19 +11957,19 @@ snapshots:
     dependencies:
       expo: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native-webview@13.16.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
 
-  expo-image-loader@55.0.0(expo@54.0.33):
+  expo-image-loader@6.0.0(expo@54.0.33):
     dependencies:
       expo: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native-webview@13.16.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
 
-  expo-image-manipulator@55.0.10(patch_hash=56dae7d99161246bb9226ebe2019fb0bbf1e8bb99bd29e5512bb4d7ffef90d47)(expo@54.0.33):
+  expo-image-manipulator@14.0.8(expo@54.0.33):
     dependencies:
       expo: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native-webview@13.16.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
-      expo-image-loader: 55.0.0(expo@54.0.33)
+      expo-image-loader: 6.0.0(expo@54.0.33)
 
-  expo-image-picker@55.0.12(expo@54.0.33):
+  expo-image-picker@17.0.10(expo@54.0.33):
     dependencies:
       expo: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native-webview@13.16.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
-      expo-image-loader: 55.0.0(expo@54.0.33)
+      expo-image-loader: 6.0.0(expo@54.0.33)
 
   expo-image@3.0.11(expo@54.0.33)(react-native-web@0.21.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
     dependencies:
@@ -12110,16 +12068,9 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  expo-sharing@55.0.11(expo@54.0.33)(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0):
+  expo-sharing@14.0.8(expo@54.0.33):
     dependencies:
-      '@expo/config-plugins': 55.0.6
-      '@expo/config-types': 55.0.5
-      '@expo/plist': 0.5.2
       expo: 54.0.33(@babel/core@7.29.0)(@expo/metro-runtime@6.1.2)(expo-router@6.0.23)(react-native-webview@13.16.1(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0))(react-native@0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0))(react@19.1.0)
-      react: 19.1.0
-      react-native: 0.81.5(@babel/core@7.29.0)(@types/react@19.1.17)(react@19.1.0)
-    transitivePeerDependencies:
-      - supports-color
 
   expo-splash-screen@31.0.13(expo@54.0.33):
     dependencies:

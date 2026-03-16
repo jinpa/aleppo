@@ -8,9 +8,7 @@
       "sharp",
       "unrs-resolver"
     ],
-    "patchedDependencies": {
-      "expo-image-manipulator@55.0.10": "patches/expo-image-manipulator@55.0.10.patch"
-    }
+    "patchedDependencies": {}
   },
   "scripts": {
     "dev:web": "pnpm --filter @aleppo/web dev",
