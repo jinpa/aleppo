@@ -287,6 +287,7 @@ export default function ImportScreen() {
       if (data.parseError) setParseError(data.parseError);
       if (data.recipe) populateForm(data.recipe, currentUrl);
       else populateForm({}, currentUrl);
+      setStep("review");
     } finally {
       setFetching(false);
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 
+import { safeAuth } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
 
