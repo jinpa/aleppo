@@ -34,7 +34,7 @@ const RY = 26;
 const ICON_SIZE = 24;
 const ORBIT_W = RX * 2 + ICON_SIZE * 2;
 const ORBIT_H = RY * 2 + ICON_SIZE * 2 + 8;
-const DURATION = 7000; // ms per revolution
+const DURATION = 14000; // ms per revolution
 
 type OrbitIconProps = {
   name: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
