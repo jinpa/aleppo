@@ -3,6 +3,11 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import type { Recipe } from "@aleppo/shared";
 
+type RecipeWithCookStats = Recipe & {
+  cookCount?: number;
+  lastCookedOn?: string | null;
+};
+
 function totalTime(recipe: Recipe): string | null {
   const mins = (recipe.prepTime ?? 0) + (recipe.cookTime ?? 0);
   if (!mins) return null;
@@ -12,8 +17,21 @@ function totalTime(recipe: Recipe): string | null {
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
+function formatLastCooked(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
 type RecipeCardProps = {
-  recipe: Recipe;
+  recipe: RecipeWithCookStats;
   onPress: () => void;
   editMode?: boolean;
   selected?: boolean;
@@ -70,6 +88,16 @@ export function RecipeCard({
           {recipe.sourceName ? (
             <Text style={styles.cardMetaText} numberOfLines={1}>
               {recipe.sourceName}
+            </Text>
+          ) : null}
+          {recipe.cookCount ? (
+            <Text style={styles.cardMetaText}>
+              Made {recipe.cookCount}×
+            </Text>
+          ) : null}
+          {recipe.lastCookedOn ? (
+            <Text style={styles.cardMetaText}>
+              {formatLastCooked(recipe.lastCookedOn)}
             </Text>
           ) : null}
         </View>
