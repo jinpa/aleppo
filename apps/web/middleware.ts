@@ -42,6 +42,6 @@ export const config = {
   // Exclude Next.js internals, Expo static assets, and files with extensions
   // (images, fonts, manifests, etc.) — those are served directly from public/.
   matcher: [
-    "/((?!_next/static|_next/image|_expo|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|json|woff2?|ttf|otf)$).*)",
+    "/((?!_next/static|_next/image|_expo|favicon\\.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|js|json|woff2?|ttf|otf)$).*)",
   ],
 };
