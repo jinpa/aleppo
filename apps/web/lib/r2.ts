@@ -38,6 +38,18 @@ export async function deleteFromR2(key: string): Promise<void> {
   );
 }
 
+/** Extract R2 object key from a full public URL. Returns null if not an R2 URL. */
+export function r2KeyFromUrl(url: string): string | null {
+  if (!R2_PUBLIC_URL || !url.startsWith(R2_PUBLIC_URL)) return null;
+  return url.slice(R2_PUBLIC_URL.length + 1); // strip trailing "/"
+}
+
+/** Delete an R2 object by its public URL. No-op if not an R2 URL or R2 is not configured. */
+export async function deleteR2ByUrl(url: string): Promise<void> {
+  const key = r2KeyFromUrl(url);
+  if (key) await deleteFromR2(key);
+}
+
 /**
  * Fetches an image from a remote URL, resizes it, and uploads to R2.
  * Returns the R2 public URL, or the original URL if R2 is not configured or the fetch fails.
