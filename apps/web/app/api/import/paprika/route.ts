@@ -46,9 +46,9 @@ export async function POST(req: Request) {
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     paprikaRecipes = parseZipBuffer(buffer);
-  } catch {
+  } catch (err) {
     return NextResponse.json(
-      { error: "Could not parse file. Make sure it's a valid .paprikarecipes export." },
+      { error: `Could not parse file: ${err instanceof Error ? err.message : String(err)}` },
       { status: 400 }
     );
   }

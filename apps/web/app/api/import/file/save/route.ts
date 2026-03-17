@@ -50,8 +50,8 @@ export async function POST(req: Request) {
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     parsed = parseImportFile(buffer, file.name);
-  } catch {
-    return NextResponse.json({ error: "Could not parse file." }, { status: 400 });
+  } catch (err) {
+    return NextResponse.json({ error: `Could not parse file: ${err instanceof Error ? err.message : String(err)}` }, { status: 400 });
   }
 
   type ProcessedRecipe =

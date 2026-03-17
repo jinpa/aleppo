@@ -96,11 +96,18 @@ export async function POST(req: Request) {
     const stream = await client.models.generateContentStream({
       model: modelId,
       contents: [{ role: "user", parts }],
-      config: { thinkingConfig: { thinkingBudget: 0 } },
+      config: { thinkingConfig: { thinkingBudget: 0 }, maxOutputTokens: 8192 },
     });
     let text = "";
+    let finishReason: string | undefined;
     for await (const chunk of stream) {
       if (chunk.text) text += chunk.text;
+      const reason = chunk.candidates?.[0]?.finishReason;
+      if (reason) finishReason = reason;
+    }
+    console.log("[import/images] Gemini finish reason:", finishReason, "chars:", text.length);
+    if (finishReason === "RECITATION") {
+      throw new Error("RECITATION");
     }
     return text;
   })();
@@ -123,7 +130,19 @@ export async function POST(req: Request) {
     }
   })();
 
-  const [responseText, uploadedImageUrl] = await Promise.all([geminiPromise, imageUrlPromise]);
+  let responseText: string;
+  let uploadedImageUrl: string | null;
+  try {
+    [responseText, uploadedImageUrl] = await Promise.all([geminiPromise, imageUrlPromise]);
+  } catch (err) {
+    if (err instanceof Error && err.message === "RECITATION") {
+      return NextResponse.json(
+        { error: "The AI stopped because this recipe may be from a copyrighted source. Try importing it by URL instead, or enter it manually." },
+        { status: 422 }
+      );
+    }
+    throw err;
+  }
 
   console.log("[import/images] Gemini raw response:\n", responseText);
 
@@ -133,8 +152,8 @@ export async function POST(req: Request) {
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(cleaned);
-  } catch {
-    return NextResponse.json({ error: "AI returned invalid JSON" }, { status: 502 });
+  } catch (e) {
+    return NextResponse.json({ error: `AI returned invalid JSON: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 });
   }
 
   if (typeof parsed.error === "string") {

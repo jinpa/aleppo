@@ -1,16 +1,12 @@
 1- Look for the list of instructions, create one instruction in the
-json representation for each instruction in the list. Add the list of
-the raw text of the instructions you found under the key
-"found_instructions" at the toplevel of the final json result.
+json representation for each instruction in the list.
 
 2- Look for a list of ingredients, create one ingredient in the json
-representation for each in ingredient in the list. Add a list of the
-raw text for the ingredients you found under the key
-"found_ingredients" at the toplevel of the final json result.
+representation for each in ingredient in the list.
 
 3- List each ingredient using the unit found in the recipe, in the
 format: {"raw": "<full ingredient text>, "name": "<ingredient name>",
-"units": "<ingredient unit>", "amount":"<ingrecient amount as
+"units": "<ingredient unit>", "amount":"<ingredient amount as
 string>"}.  The following units are available: "grams", "kilograms",
 "ounces", "pounds", "cups", "tablespoons", "teaspoons", "liters",
 "deciliters", "centiliters", "milliliters".
@@ -37,9 +33,6 @@ one of:
 
   6.b- A number or portions or people being fed, like "4 people", or
   "4 porciones", or "4 servings", use {"servings": 4}.
-  
-Add the raw text you found for servings to under the key
-"found_servings".
 
 7- Add a list of the rules you applied, explaining how they were
 applied, to the key "applied_rules" at the toplevel of the final json
