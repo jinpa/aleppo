@@ -60,7 +60,7 @@ export default function LoginScreen() {
         <View style={styles.logo}>
           <Text style={styles.logoText}>🍳</Text>
         </View>
-        <Text style={styles.title}>Welcome back</Text>
+        <Text style={styles.title}>Welcome back to back</Text>
         <Text style={styles.subtitle}>Sign in to your cooking diary</Text>
 
         {error && (
