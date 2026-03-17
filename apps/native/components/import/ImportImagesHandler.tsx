@@ -1,22 +1,25 @@
 import { useState } from "react";
-import { View, Text, Image, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "@/constants/api";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { sharedStyles } from "./importStyles";
+import { CookingSpinner } from "@/components/CookingSpinner";
 import type { ImportOutcome } from "./types";
 
 type ImportImagesHandlerProps = {
   token: string | null;
   onComplete: (outcome: ImportOutcome) => void;
+  onAttempt?: () => void;
 };
 
-export function ImportImagesHandler({ token, onComplete }: ImportImagesHandlerProps) {
+export function ImportImagesHandler({ token, onComplete, onAttempt }: ImportImagesHandlerProps) {
   const [photos, setPhotos] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
 
   const handleImagesImport = async () => {
     if (photos.length === 0) return;
+    onAttempt?.();
     setImporting(true);
     try {
       const body = new FormData();
@@ -46,6 +49,10 @@ export function ImportImagesHandler({ token, onComplete }: ImportImagesHandlerPr
     }
   };
 
+  if (importing) {
+    return <CookingSpinner label="Analysing photos…" sublabel="Extracting the recipe with AI, this takes a few seconds." />;
+  }
+
   return (
     <View style={styles.container}>
       <Text style={sharedStyles.heading}>Import from photos</Text>
@@ -73,14 +80,11 @@ export function ImportImagesHandler({ token, onComplete }: ImportImagesHandlerPr
         )}
       </PhotoPicker>
       <TouchableOpacity
-        style={[sharedStyles.importButton, (photos.length === 0 || importing) && sharedStyles.fetchButtonDisabled]}
+        style={[sharedStyles.importButton, photos.length === 0 && sharedStyles.fetchButtonDisabled]}
         onPress={handleImagesImport}
-        disabled={photos.length === 0 || importing}
+        disabled={photos.length === 0}
       >
-        {importing
-          ? <ActivityIndicator size="small" color="#fff" />
-          : <Text style={sharedStyles.fetchButtonText}>Import</Text>
-        }
+        <Text style={sharedStyles.fetchButtonText}>Import</Text>
       </TouchableOpacity>
     </View>
   );

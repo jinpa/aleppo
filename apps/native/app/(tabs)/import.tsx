@@ -108,6 +108,7 @@ export default function ImportScreen() {
           modeParam={modeParam}
           shareUrl={shareUrl}
           onComplete={handleComplete}
+          onAttempt={() => setError(null)}
         />
       )}
 
@@ -115,6 +116,7 @@ export default function ImportScreen() {
         <ImportImagesHandler
           token={token}
           onComplete={handleComplete}
+          onAttempt={() => setError(null)}
         />
       )}
 
@@ -126,6 +128,7 @@ export default function ImportScreen() {
         <ImportTextHandler
           token={token}
           onComplete={handleComplete}
+          onAttempt={() => setError(null)}
         />
       )}
     </KeyboardAwareScrollView>

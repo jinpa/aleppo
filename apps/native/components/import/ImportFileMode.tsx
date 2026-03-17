@@ -13,6 +13,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "@/constants/api";
 import { sharedStyles } from "./importStyles";
+import { CookingSpinner } from "@/components/CookingSpinner";
 
 type FileImportStep = "upload" | "preview" | "importing" | "done";
 type FileImportItem = {
@@ -239,11 +240,10 @@ export function ImportFileMode({ token, router }: ImportFileModeProps) {
       )}
 
       {fileStep === "importing" && (
-        <View style={styles.fileCentered}>
-          <ActivityIndicator size="large" color="#d97706" />
-          <Text style={styles.fileImportingText}>Importing recipes…</Text>
-          <Text style={styles.fileImportingSubtext}>This may take a minute for large libraries. Please don't close this page.</Text>
-        </View>
+        <CookingSpinner
+          label="Importing recipes…"
+          sublabel="This may take a minute for large libraries. Please don't close this page."
+        />
       )}
 
       {fileStep === "done" && (

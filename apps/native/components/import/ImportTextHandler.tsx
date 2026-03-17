@@ -1,20 +1,23 @@
 import { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { API_URL } from "@/constants/api";
 import { sharedStyles } from "./importStyles";
+import { CookingSpinner } from "@/components/CookingSpinner";
 import type { ImportOutcome } from "./types";
 
 type ImportTextHandlerProps = {
   token: string | null;
   onComplete: (outcome: ImportOutcome) => void;
+  onAttempt?: () => void;
 };
 
-export function ImportTextHandler({ token, onComplete }: ImportTextHandlerProps) {
+export function ImportTextHandler({ token, onComplete, onAttempt }: ImportTextHandlerProps) {
   const [textInput, setTextInput] = useState("");
   const [importing, setImporting] = useState(false);
 
   const handleTextImport = async () => {
     if (!textInput.trim()) return;
+    onAttempt?.();
     setImporting(true);
     try {
       const body = new FormData();
@@ -37,6 +40,10 @@ export function ImportTextHandler({ token, onComplete }: ImportTextHandlerProps)
     }
   };
 
+  if (importing) {
+    return <CookingSpinner label="Extracting recipe…" sublabel="Reading your text with AI, this takes a few seconds." />;
+  }
+
   return (
     <View style={styles.container}>
       <Text style={sharedStyles.heading}>Import from text</Text>
@@ -54,14 +61,11 @@ export function ImportTextHandler({ token, onComplete }: ImportTextHandlerProps)
         autoCorrect={false}
       />
       <TouchableOpacity
-        style={[sharedStyles.importButton, (!textInput.trim() || importing) && sharedStyles.fetchButtonDisabled]}
+        style={[sharedStyles.importButton, !textInput.trim() && sharedStyles.fetchButtonDisabled]}
         onPress={handleTextImport}
-        disabled={!textInput.trim() || importing}
+        disabled={!textInput.trim()}
       >
-        {importing
-          ? <ActivityIndicator size="small" color="#fff" />
-          : <Text style={sharedStyles.fetchButtonText}>Import</Text>
-        }
+        <Text style={sharedStyles.fetchButtonText}>Import</Text>
       </TouchableOpacity>
     </View>
   );

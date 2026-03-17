@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Platform } from "react-native";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "@/constants/api";
 import { sharedStyles } from "./importStyles";
-import { ImportBookmarkletWaiting } from "./ImportBookmarkletWaiting";
+import { RecipeWebExtractor } from "@/components/RecipeWebExtractor";
+import { CookingSpinner } from "@/components/CookingSpinner";
 import type { ImportOutcome } from "./types";
 
 type ImportUrlHandlerProps = {
@@ -11,9 +12,10 @@ type ImportUrlHandlerProps = {
   modeParam?: string;
   shareUrl?: string;
   onComplete: (outcome: ImportOutcome) => void;
+  onAttempt?: () => void;
 };
 
-export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete }: ImportUrlHandlerProps) {
+export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAttempt }: ImportUrlHandlerProps) {
   const [url, setUrl] = useState("");
   const [fetching, setFetching] = useState(false);
   const [extracting, setExtracting] = useState(!!shareUrl);
@@ -176,6 +178,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete }: Imp
 
   const handleFetch = () => {
     if (!url.trim()) return;
+    onAttempt?.();
     // Always use client-side WebView extraction first; handleExtractError
     // falls back to server-side scraping if the WebView fails.
     extractionDone.current = false;
@@ -183,19 +186,13 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete }: Imp
     setExtracting(true);
   };
 
-  // Full-screen overlay during extraction / bookmarklet wait
-  if ((extracting && extractionUrl) || waitingForBookmarklet) {
-    return (
-      <View style={styles.fullScreen}>
-        <ImportBookmarkletWaiting
-          extracting={extracting}
-          extractionUrl={extractionUrl}
-          waitingForBookmarklet={waitingForBookmarklet}
-          handleExtractResult={handleExtractResult}
-          handleExtractError={handleExtractError}
-        />
-      </View>
-    );
+  const busy = fetching || extracting || waitingForBookmarklet;
+  let spinnerLabel = "Fetching recipe…";
+  if (waitingForBookmarklet) spinnerLabel = "Receiving recipe from your browser…";
+  else if (extracting && extractionUrl) {
+    let hostname = "";
+    try { hostname = new URL(extractionUrl).hostname; } catch {}
+    spinnerLabel = `Extracting recipe from ${hostname || "page"}…`;
   }
 
   return (
@@ -219,25 +216,39 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete }: Imp
           onSubmitEditing={handleFetch}
         />
         <TouchableOpacity
-          style={[sharedStyles.fetchButton, (!url.trim() || fetching) && sharedStyles.fetchButtonDisabled]}
+          style={[sharedStyles.fetchButton, (!url.trim() || busy) && sharedStyles.fetchButtonDisabled]}
           onPress={handleFetch}
-          disabled={!url.trim() || fetching}
+          disabled={!url.trim() || busy}
         >
-          {fetching
-            ? <ActivityIndicator size="small" color="#fff" />
-            : <Text style={sharedStyles.fetchButtonText}>Import</Text>
-          }
+          <Text style={sharedStyles.fetchButtonText}>Import</Text>
         </TouchableOpacity>
       </View>
 
-      <View style={styles.hintBox}>
-        <Text style={styles.hintTitle}>Works well with:</Text>
-        <Text style={styles.hintItem}>· AllRecipes, Simply Recipes, NYT Cooking</Text>
-        <Text style={styles.hintItem}>· Food Network, Epicurious, King Arthur</Text>
-        <Text style={styles.hintItem}>· Most sites using Schema.org recipe markup</Text>
-      </View>
+      {/* WebView extractor runs hidden — no overlay needed */}
+      {extracting && extractionUrl && (
+        <View style={styles.hidden}>
+          <RecipeWebExtractor
+            url={extractionUrl}
+            onResult={handleExtractResult}
+            onError={handleExtractError}
+          />
+        </View>
+      )}
 
-      <BookmarkletSection />
+      {busy ? (
+        <CookingSpinner label={spinnerLabel} />
+      ) : (
+        <>
+          <View style={styles.hintBox}>
+            <Text style={styles.hintTitle}>Works well with:</Text>
+            <Text style={styles.hintItem}>· AllRecipes, Simply Recipes, NYT Cooking</Text>
+            <Text style={styles.hintItem}>· Food Network, Epicurious, King Arthur</Text>
+            <Text style={styles.hintItem}>· Most sites using Schema.org recipe markup</Text>
+          </View>
+
+          <BookmarkletSection />
+        </>
+      )}
     </>
   );
 }
@@ -327,11 +338,7 @@ function BookmarkletSection() {
 }
 
 const styles = StyleSheet.create({
-  fullScreen: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "#fafaf9",
-    zIndex: 100,
-  },
+  hidden: { height: 0, overflow: "hidden" },
   urlRow: { flexDirection: "row", gap: 8 },
   urlInput: { flex: 1 },
   hintBox: {
