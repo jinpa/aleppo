@@ -78,26 +78,19 @@ export async function GET(req: Request) {
 
   const dirFn = dir === "asc" ? asc : desc;
 
-  const listColumns = {
-    id: recipes.id,
-    title: recipes.title,
-    description: recipes.description,
-    imageUrl: recipes.imageUrl,
-    tags: recipes.tags,
-    prepTime: recipes.prepTime,
-    cookTime: recipes.cookTime,
-    sourceName: recipes.sourceName,
-  };
-
   const listColumnsSql = `"recipes"."id", "recipes"."title", "recipes"."description", "recipes"."imageUrl", "recipes"."tags", "recipes"."prepTime", "recipes"."cookTime", "recipes"."sourceName"`;
+  const cookStatsSql = `COALESCE(COUNT("cookLogs".id), 0)::int AS "cookCount", MAX("cookLogs"."cookedOn") AS "lastCookedOn"`;
+  const baseJoinSql = `FROM "recipes" LEFT JOIN "cookLogs" ON "cookLogs"."recipeId" = "recipes".id`;
 
   // Default to relevance when searching without explicit sort
   if (!sortKey && search) {
-    const result = await db
-      .select(listColumns)
-      .from(recipes)
-      .where(and(...conditions))
-      .orderBy(sql`ts_rank("search_tsv", websearch_to_tsquery('english', ${search})) DESC`);
+    const result = await db.execute(sql`
+      SELECT ${sql.raw(listColumnsSql)}, ${sql.raw(cookStatsSql)}
+      ${sql.raw(baseJoinSql)}
+      WHERE ${and(...conditions)}
+      GROUP BY "recipes".id
+      ORDER BY ts_rank("search_tsv", websearch_to_tsquery('english', ${search})) DESC
+    `);
     return NextResponse.json(result);
   }
 
@@ -109,9 +102,8 @@ export async function GET(req: Request) {
       ? sql`COALESCE(COUNT("cookLogs".id), 0) ASC`
       : sql`COALESCE(COUNT("cookLogs".id), 0) DESC`;
     const result = await db.execute(sql`
-      SELECT ${sql.raw(listColumnsSql)}
-      FROM "recipes"
-      LEFT JOIN "cookLogs" ON "cookLogs"."recipeId" = "recipes".id
+      SELECT ${sql.raw(listColumnsSql)}, ${sql.raw(cookStatsSql)}
+      ${sql.raw(baseJoinSql)}
       WHERE ${and(...conditions)}
       GROUP BY "recipes".id
       ORDER BY ${orderExpr}
@@ -124,9 +116,8 @@ export async function GET(req: Request) {
       ? sql`MAX("cookLogs"."cookedOn") ASC NULLS FIRST`
       : sql`MAX("cookLogs"."cookedOn") DESC NULLS LAST`;
     const result = await db.execute(sql`
-      SELECT ${sql.raw(listColumnsSql)}
-      FROM "recipes"
-      LEFT JOIN "cookLogs" ON "cookLogs"."recipeId" = "recipes".id
+      SELECT ${sql.raw(listColumnsSql)}, ${sql.raw(cookStatsSql)}
+      ${sql.raw(baseJoinSql)}
       WHERE ${and(...conditions)}
       GROUP BY "recipes".id
       ORDER BY ${orderExpr}
@@ -136,28 +127,32 @@ export async function GET(req: Request) {
 
   // totalTime: recipes with no times sort last
   if (effectiveSort === "totalTime") {
-    const bothNull = sql`CASE WHEN "prepTime" IS NULL AND "cookTime" IS NULL THEN 1 ELSE 0 END`;
-    const totalTimeExpr = sql`COALESCE("prepTime", 0) + COALESCE("cookTime", 0)`;
-    const result = await db
-      .select(listColumns)
-      .from(recipes)
-      .where(and(...conditions))
-      .orderBy(asc(bothNull), dirFn(totalTimeExpr));
+    const bothNull = `CASE WHEN "prepTime" IS NULL AND "cookTime" IS NULL THEN 1 ELSE 0 END`;
+    const totalTimeExpr = `COALESCE("prepTime", 0) + COALESCE("cookTime", 0)`;
+    const result = await db.execute(sql`
+      SELECT ${sql.raw(listColumnsSql)}, ${sql.raw(cookStatsSql)}
+      ${sql.raw(baseJoinSql)}
+      WHERE ${and(...conditions)}
+      GROUP BY "recipes".id
+      ORDER BY ${sql.raw(bothNull)} ASC, ${sql.raw(totalTimeExpr)} ${dir === "asc" ? sql`ASC` : sql`DESC`}
+    `);
     return NextResponse.json(result);
   }
 
   // Simple column sorts: date, title, updated
-  const columnMap = {
-    date: recipes.createdAt,
-    title: recipes.title,
-    updated: recipes.updatedAt,
-  } as const;
+  const columnMap: Record<string, string> = {
+    date: `"recipes"."createdAt"`,
+    title: `"recipes"."title"`,
+    updated: `"recipes"."updatedAt"`,
+  };
 
-  const result = await db
-    .select(listColumns)
-    .from(recipes)
-    .where(and(...conditions))
-    .orderBy(dirFn(columnMap[effectiveSort as keyof typeof columnMap]));
+  const result = await db.execute(sql`
+    SELECT ${sql.raw(listColumnsSql)}, ${sql.raw(cookStatsSql)}
+    ${sql.raw(baseJoinSql)}
+    WHERE ${and(...conditions)}
+    GROUP BY "recipes".id
+    ORDER BY ${sql.raw(columnMap[effectiveSort])} ${dir === "asc" ? sql`ASC` : sql`DESC`}
+  `);
   return NextResponse.json(result);
 }
 

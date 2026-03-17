@@ -2,9 +2,23 @@
 
 Your cooking diary — save recipes, log every cook, and follow friends to see what they've been cooking.
 
+## Prerequisites
+
+Install [pnpm](https://pnpm.io) v10 (the project's package manager):
+
+```bash
+npm install -g pnpm
+```
+
 ## Running locally
 
 ```bash
+# Install dependencies (all workspaces)
+pnpm install
+
+# Build the Expo web SPA first (required before starting the server)
+sh scripts/build-spa.sh
+
 # Web backend + Expo web SPA (localhost:3000)
 pnpm dev:web
 
