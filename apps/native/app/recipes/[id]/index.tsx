@@ -513,7 +513,7 @@ export default function RecipeDetailScreen() {
               setShowModifyModal(true);
             }}
           >
-            <Ionicons name="sparkles-outline" size={16} color="#1c1917" />
+            <Ionicons name="color-wand-outline" size={16} color="#1c1917" />
             <Text style={styles.actionButtonText}>Modify with AI</Text>
           </TouchableOpacity>
         </View>
