@@ -21,6 +21,7 @@ import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 import { scaleIngredient } from "@/lib/scale-ingredient";
 import ImageViewerModal from "@/components/ImageViewerModal";
+import { NavShell } from "@/components/NavShell";
 import type { RecipeDetailResponse, CookLog } from "@aleppo/shared";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -53,55 +54,6 @@ const SCALE_PRESETS = [
   { label: "2×", value: 2 },
   { label: "3×", value: 3 },
 ];
-
-// ─── Tab Bar ─────────────────────────────────────────────────────────────────
-
-const TAB_ITEMS = [
-  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
-  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
-  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
-  { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
-  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
-] as const;
-
-function TabBar() {
-  const router = useRouter();
-  return (
-    <View style={tabStyles.bar}>
-      {TAB_ITEMS.map((item) => (
-        <TouchableOpacity
-          key={item.name}
-          style={tabStyles.tab}
-          onPress={() => router.navigate(item.route)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={item.icon}
-            size={24}
-            color={item.amber ? "#d97706" : "#a8a29e"}
-          />
-          <Text style={[tabStyles.label, item.amber && tabStyles.labelAmber]}>
-            {item.name}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
-const tabStyles = StyleSheet.create({
-  bar: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderTopWidth: 1,
-    borderTopColor: "#e7e5e4",
-    paddingBottom: Platform.OS === "ios" ? 28 : 8,
-    paddingTop: 8,
-  },
-  tab: { flex: 1, alignItems: "center", gap: 2 },
-  label: { fontSize: 11, fontWeight: "500", color: "#a8a29e" },
-  labelAmber: { color: "#d97706" },
-});
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -313,19 +265,18 @@ export default function RecipeDetailScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
-        <View style={styles.centered}>
+      <NavShell>
+        <View style={[styles.centered, { flex: 1, backgroundColor: "#fafaf9" }]}>
           <ActivityIndicator size="large" color="#1c1917" />
         </View>
-        <TabBar />
-      </View>
+      </NavShell>
     );
   }
 
   if (error || !detail) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
-        <View style={styles.centered}>
+      <NavShell>
+        <View style={[styles.centered, { flex: 1, backgroundColor: "#fafaf9" }]}>
           <Text style={styles.errorText}>{error ?? "Recipe not found"}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => fetchDetail()}>
             <Text style={styles.retryText}>Try again</Text>
@@ -334,8 +285,7 @@ export default function RecipeDetailScreen() {
             <Text style={styles.retryText}>Go back</Text>
           </TouchableOpacity>
         </View>
-        <TabBar />
-      </View>
+      </NavShell>
     );
   }
 
@@ -603,7 +553,7 @@ export default function RecipeDetailScreen() {
 
   return (
     <>
-      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+      <NavShell>
         <FlatList
           style={styles.container}
           data={[]}
@@ -616,8 +566,7 @@ export default function RecipeDetailScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1c1917" />
           }
         />
-        <TabBar />
-      </View>
+      </NavShell>
 
       {/* Image Viewer */}
       {recipe.imageUrl ? (

@@ -6,6 +6,7 @@ import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
 import { parseIngredients } from "@/lib/parse-ingredients";
+import { deleteR2ByUrl } from "@/lib/r2";
 
 const updateSchema = z.object({
   title: z.string().min(1).max(300).optional(),
@@ -76,6 +77,19 @@ export async function PATCH(
     ? parseIngredients(parsed.data.ingredients.map((i) => i.raw))
     : undefined;
 
+  // If imageUrl is changing, fetch the old one so we can clean up R2
+  let oldImageUrl: string | null = null;
+  if ("imageUrl" in parsed.data) {
+    const [existing] = await db
+      .select({ imageUrl: recipes.imageUrl })
+      .from(recipes)
+      .where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
+      .limit(1);
+    if (existing?.imageUrl && existing.imageUrl !== parsed.data.imageUrl) {
+      oldImageUrl = existing.imageUrl;
+    }
+  }
+
   const [updated] = await db
     .update(recipes)
     .set({ ...parsed.data, ...(ingredients && { ingredients }), updatedAt: new Date() })
@@ -84,6 +98,11 @@ export async function PATCH(
 
   if (!updated) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Clean up old image from R2 (fire-and-forget)
+  if (oldImageUrl) {
+    deleteR2ByUrl(oldImageUrl).catch(() => {});
   }
 
   return NextResponse.json(updated);
@@ -103,10 +122,15 @@ export async function DELETE(
   const [deleted] = await db
     .delete(recipes)
     .where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
-    .returning({ id: recipes.id });
+    .returning({ id: recipes.id, imageUrl: recipes.imageUrl });
 
   if (!deleted) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Clean up image from R2 (fire-and-forget)
+  if (deleted.imageUrl) {
+    deleteR2ByUrl(deleted.imageUrl).catch(() => {});
   }
 
   return NextResponse.json({ success: true });
