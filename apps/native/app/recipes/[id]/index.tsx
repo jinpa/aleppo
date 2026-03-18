@@ -13,6 +13,7 @@ import {
   Modal,
   Pressable,
   KeyboardAvoidingView,
+  useWindowDimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
@@ -54,7 +55,14 @@ const SCALE_PRESETS = [
   { label: "3×", value: 3 },
 ];
 
-// ─── Tab Bar ─────────────────────────────────────────────────────────────────
+// ─── Responsive Nav ──────────────────────────────────────────────────────────
+// Mirrors the responsive logic from (tabs)/_layout.tsx so detail screens
+// show the nav in the same position (top / left / bottom) as the tab bar.
+
+const PHONE_MAX = 600;
+const ACTIVE_COLOR = "#1c1917";
+const INACTIVE_COLOR = "#a8a29e";
+const AMBER_COLOR = "#d97706";
 
 const TAB_ITEMS = [
   { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
@@ -64,23 +72,74 @@ const TAB_ITEMS = [
   { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
 ] as const;
 
-function TabBar() {
+type NavLayout = "top" | "left" | "bottom";
+
+function useNavLayout(): NavLayout {
+  const { width, height } = useWindowDimensions();
+  if (width > height && width >= PHONE_MAX) return "left";
+  if (width >= PHONE_MAX) return "top";
+  return "bottom";
+}
+
+function TopNav() {
   const router = useRouter();
   return (
-    <View style={tabStyles.bar}>
+    <View style={navStyles.topBar}>
+      {TAB_ITEMS.map((item) => {
+        const color = item.amber ? AMBER_COLOR : INACTIVE_COLOR;
+        return (
+          <Pressable
+            key={item.name}
+            onPress={() => router.navigate(item.route)}
+            style={navStyles.topTab}
+          >
+            <Ionicons name={item.icon} size={20} color={color} />
+            <Text style={[navStyles.topLabel, { color }]}>{item.name}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function SidebarNav() {
+  const router = useRouter();
+  return (
+    <View style={navStyles.sidebar}>
+      {TAB_ITEMS.map((item) => {
+        const color = item.amber ? AMBER_COLOR : INACTIVE_COLOR;
+        return (
+          <Pressable
+            key={item.name}
+            onPress={() => router.navigate(item.route)}
+            style={navStyles.sidebarTab}
+          >
+            <Ionicons name={item.icon} size={22} color={color} />
+            <Text style={[navStyles.sidebarLabel, { color }]}>{item.name}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+function BottomTabBar() {
+  const router = useRouter();
+  return (
+    <View style={navStyles.bottomBar}>
       {TAB_ITEMS.map((item) => (
         <TouchableOpacity
           key={item.name}
-          style={tabStyles.tab}
+          style={navStyles.bottomTab}
           onPress={() => router.navigate(item.route)}
           activeOpacity={0.7}
         >
           <Ionicons
             name={item.icon}
             size={24}
-            color={item.amber ? "#d97706" : "#a8a29e"}
+            color={item.amber ? AMBER_COLOR : INACTIVE_COLOR}
           />
-          <Text style={[tabStyles.label, item.amber && tabStyles.labelAmber]}>
+          <Text style={[navStyles.bottomLabel, item.amber && navStyles.bottomLabelAmber]}>
             {item.name}
           </Text>
         </TouchableOpacity>
@@ -89,8 +148,53 @@ function TabBar() {
   );
 }
 
-const tabStyles = StyleSheet.create({
-  bar: {
+/** Wraps children with the correct nav position (top bar, left sidebar, or bottom tab bar). */
+function NavShell({ children }: { children: React.ReactNode }) {
+  const layout = useNavLayout();
+  if (layout === "left") {
+    return (
+      <View style={{ flex: 1, flexDirection: "row" }}>
+        <SidebarNav />
+        <View style={{ flex: 1 }}>{children}</View>
+      </View>
+    );
+  }
+  if (layout === "top") {
+    return (
+      <View style={{ flex: 1 }}>
+        <TopNav />
+        {children}
+      </View>
+    );
+  }
+  return (
+    <View style={{ flex: 1 }}>
+      {children}
+      <BottomTabBar />
+    </View>
+  );
+}
+
+const navStyles = StyleSheet.create({
+  topBar: {
+    flexDirection: "row",
+    backgroundColor: "#ffffff",
+    borderBottomWidth: 1,
+    borderBottomColor: "#e7e5e4",
+    paddingTop: Platform.OS === "ios" ? 50 : 0,
+  },
+  topTab: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 12 },
+  topLabel: { fontSize: 13, fontWeight: "500" },
+  sidebar: {
+    width: 200,
+    backgroundColor: "#ffffff",
+    borderRightWidth: 1,
+    borderRightColor: "#e7e5e4",
+    paddingTop: 24,
+  },
+  sidebarTab: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 12 },
+  sidebarLabel: { fontSize: 14, fontWeight: "500" },
+  bottomBar: {
     flexDirection: "row",
     backgroundColor: "#ffffff",
     borderTopWidth: 1,
@@ -98,9 +202,9 @@ const tabStyles = StyleSheet.create({
     paddingBottom: Platform.OS === "ios" ? 28 : 8,
     paddingTop: 8,
   },
-  tab: { flex: 1, alignItems: "center", gap: 2 },
-  label: { fontSize: 11, fontWeight: "500", color: "#a8a29e" },
-  labelAmber: { color: "#d97706" },
+  bottomTab: { flex: 1, alignItems: "center", gap: 2 },
+  bottomLabel: { fontSize: 11, fontWeight: "500", color: INACTIVE_COLOR },
+  bottomLabelAmber: { color: AMBER_COLOR },
 });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
@@ -313,19 +417,18 @@ export default function RecipeDetailScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
-        <View style={styles.centered}>
+      <NavShell>
+        <View style={[styles.centered, { flex: 1, backgroundColor: "#fafaf9" }]}>
           <ActivityIndicator size="large" color="#1c1917" />
         </View>
-        <TabBar />
-      </View>
+      </NavShell>
     );
   }
 
   if (error || !detail) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
-        <View style={styles.centered}>
+      <NavShell>
+        <View style={[styles.centered, { flex: 1, backgroundColor: "#fafaf9" }]}>
           <Text style={styles.errorText}>{error ?? "Recipe not found"}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => fetchDetail()}>
             <Text style={styles.retryText}>Try again</Text>
@@ -334,8 +437,7 @@ export default function RecipeDetailScreen() {
             <Text style={styles.retryText}>Go back</Text>
           </TouchableOpacity>
         </View>
-        <TabBar />
-      </View>
+      </NavShell>
     );
   }
 
@@ -603,7 +705,7 @@ export default function RecipeDetailScreen() {
 
   return (
     <>
-      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+      <NavShell>
         <FlatList
           style={styles.container}
           data={[]}
@@ -616,8 +718,7 @@ export default function RecipeDetailScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1c1917" />
           }
         />
-        <TabBar />
-      </View>
+      </NavShell>
 
       {/* Image Viewer */}
       {recipe.imageUrl ? (
