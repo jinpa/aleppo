@@ -13,7 +13,6 @@ import {
   Modal,
   Pressable,
   KeyboardAvoidingView,
-  useWindowDimensions,
 } from "react-native";
 import { Image } from "expo-image";
 import { useLocalSearchParams, useRouter, useNavigation } from "expo-router";
@@ -22,6 +21,7 @@ import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 import { scaleIngredient } from "@/lib/scale-ingredient";
 import ImageViewerModal from "@/components/ImageViewerModal";
+import { NavShell } from "@/components/NavShell";
 import type { RecipeDetailResponse, CookLog } from "@aleppo/shared";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -54,158 +54,6 @@ const SCALE_PRESETS = [
   { label: "2×", value: 2 },
   { label: "3×", value: 3 },
 ];
-
-// ─── Responsive Nav ──────────────────────────────────────────────────────────
-// Mirrors the responsive logic from (tabs)/_layout.tsx so detail screens
-// show the nav in the same position (top / left / bottom) as the tab bar.
-
-const PHONE_MAX = 600;
-const ACTIVE_COLOR = "#1c1917";
-const INACTIVE_COLOR = "#a8a29e";
-const AMBER_COLOR = "#d97706";
-
-const TAB_ITEMS = [
-  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
-  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
-  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
-  { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
-  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
-] as const;
-
-type NavLayout = "top" | "left" | "bottom";
-
-function useNavLayout(): NavLayout {
-  const { width, height } = useWindowDimensions();
-  if (width > height && width >= PHONE_MAX) return "left";
-  if (width >= PHONE_MAX) return "top";
-  return "bottom";
-}
-
-function TopNav() {
-  const router = useRouter();
-  return (
-    <View style={navStyles.topBar}>
-      {TAB_ITEMS.map((item) => {
-        const color = item.amber ? AMBER_COLOR : INACTIVE_COLOR;
-        return (
-          <Pressable
-            key={item.name}
-            onPress={() => router.navigate(item.route)}
-            style={navStyles.topTab}
-          >
-            <Ionicons name={item.icon} size={20} color={color} />
-            <Text style={[navStyles.topLabel, { color }]}>{item.name}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-function SidebarNav() {
-  const router = useRouter();
-  return (
-    <View style={navStyles.sidebar}>
-      {TAB_ITEMS.map((item) => {
-        const color = item.amber ? AMBER_COLOR : INACTIVE_COLOR;
-        return (
-          <Pressable
-            key={item.name}
-            onPress={() => router.navigate(item.route)}
-            style={navStyles.sidebarTab}
-          >
-            <Ionicons name={item.icon} size={22} color={color} />
-            <Text style={[navStyles.sidebarLabel, { color }]}>{item.name}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-function BottomTabBar() {
-  const router = useRouter();
-  return (
-    <View style={navStyles.bottomBar}>
-      {TAB_ITEMS.map((item) => (
-        <TouchableOpacity
-          key={item.name}
-          style={navStyles.bottomTab}
-          onPress={() => router.navigate(item.route)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={item.icon}
-            size={24}
-            color={item.amber ? AMBER_COLOR : INACTIVE_COLOR}
-          />
-          <Text style={[navStyles.bottomLabel, item.amber && navStyles.bottomLabelAmber]}>
-            {item.name}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
-/** Wraps children with the correct nav position (top bar, left sidebar, or bottom tab bar). */
-function NavShell({ children }: { children: React.ReactNode }) {
-  const layout = useNavLayout();
-  if (layout === "left") {
-    return (
-      <View style={{ flex: 1, flexDirection: "row" }}>
-        <SidebarNav />
-        <View style={{ flex: 1 }}>{children}</View>
-      </View>
-    );
-  }
-  if (layout === "top") {
-    return (
-      <View style={{ flex: 1 }}>
-        <TopNav />
-        {children}
-      </View>
-    );
-  }
-  return (
-    <View style={{ flex: 1 }}>
-      {children}
-      <BottomTabBar />
-    </View>
-  );
-}
-
-const navStyles = StyleSheet.create({
-  topBar: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#e7e5e4",
-    paddingTop: Platform.OS === "ios" ? 50 : 0,
-  },
-  topTab: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 16, paddingVertical: 12 },
-  topLabel: { fontSize: 13, fontWeight: "500" },
-  sidebar: {
-    width: 200,
-    backgroundColor: "#ffffff",
-    borderRightWidth: 1,
-    borderRightColor: "#e7e5e4",
-    paddingTop: 24,
-  },
-  sidebarTab: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 20, paddingVertical: 12 },
-  sidebarLabel: { fontSize: 14, fontWeight: "500" },
-  bottomBar: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderTopWidth: 1,
-    borderTopColor: "#e7e5e4",
-    paddingBottom: Platform.OS === "ios" ? 28 : 8,
-    paddingTop: 8,
-  },
-  bottomTab: { flex: 1, alignItems: "center", gap: 2 },
-  bottomLabel: { fontSize: 11, fontWeight: "500", color: INACTIVE_COLOR },
-  bottomLabelAmber: { color: AMBER_COLOR },
-});
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
