@@ -159,15 +159,26 @@ export default function EditRecipeScreen() {
     setImages((prev) => prev.filter((_, i) => i !== index));
   };
 
+  const hasRole = (img: RecipeImage, r: "thumbnail" | "banner") =>
+    img.role === r || img.role === "both";
+
   const toggleImageRole = (index: number, role: "thumbnail" | "banner") => {
+    const other = role === "thumbnail" ? "banner" : "thumbnail";
     setImages((prev) =>
       prev.map((img, i) => {
         if (i === index) {
-          return { ...img, role: img.role === role ? undefined : role };
+          // Toggle this role on/off for the tapped image
+          if (hasRole(img, role)) {
+            // Remove this role: if "both", keep the other; if exact match, clear
+            return { ...img, role: img.role === "both" ? other : undefined };
+          } else {
+            // Add this role: if already has the other, become "both"
+            return { ...img, role: hasRole(img, other) ? "both" : role };
+          }
         }
-        // Only one image can have each role
-        if (img.role === role) {
-          return { ...img, role: undefined };
+        // Clear this role from other images (only one image per role)
+        if (hasRole(img, role)) {
+          return { ...img, role: img.role === "both" ? other : undefined };
         }
         return img;
       })
@@ -268,7 +279,7 @@ export default function EditRecipeScreen() {
         >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity onPress={() => router.navigate(`/recipes/${id}`)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
             <Ionicons name="close" size={24} color="#1c1917" />
           </TouchableOpacity>
           <Text style={styles.heading}>Edit Recipe</Text>
@@ -330,17 +341,17 @@ export default function EditRecipeScreen() {
                   <View style={styles.imageRoleBadges}>
                     <TouchableOpacity
                       onPress={() => toggleImageRole(i, "banner")}
-                      style={[styles.imageRoleBadge, img.role === "banner" && styles.imageRoleBadgeActive]}
+                      style={[styles.imageRoleBadge, hasRole(img, "banner") && styles.imageRoleBadgeActive]}
                       accessibilityLabel="Set as banner image"
                     >
-                      <Ionicons name="camera-outline" size={12} color={img.role === "banner" ? "#fff" : "#78716c"} />
+                      <Ionicons name="camera-outline" size={12} color={hasRole(img, "banner") ? "#fff" : "#78716c"} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => toggleImageRole(i, "thumbnail")}
-                      style={[styles.imageRoleBadge, img.role === "thumbnail" && styles.imageRoleBadgeActive]}
+                      style={[styles.imageRoleBadge, hasRole(img, "thumbnail") && styles.imageRoleBadgeActive]}
                       accessibilityLabel="Set as thumbnail image"
                     >
-                      <Ionicons name="grid-outline" size={12} color={img.role === "thumbnail" ? "#fff" : "#78716c"} />
+                      <Ionicons name="grid-outline" size={12} color={hasRole(img, "thumbnail") ? "#fff" : "#78716c"} />
                     </TouchableOpacity>
                   </View>
                 </View>

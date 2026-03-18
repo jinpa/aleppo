@@ -324,7 +324,7 @@ export default function RecipeDetailScreen() {
       {/* Hero image */}
       {(() => {
         const images = recipe.images ?? [];
-        const heroUrl = images.find((i) => i.role === "banner")?.url ?? images[0]?.url ?? recipe.imageUrl;
+        const heroUrl = images.find((i) => i.role === "banner" || i.role === "both")?.url ?? images[0]?.url ?? recipe.imageUrl;
         return heroUrl ? (
           <>
             <TouchableOpacity activeOpacity={0.9} onPress={() => setViewerImageUrl(heroUrl)}>

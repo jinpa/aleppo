@@ -24,7 +24,7 @@ export type NutritionalInfo = {
 
 export type RecipeImage = {
   url: string;
-  role?: "thumbnail" | "banner";
+  role?: "thumbnail" | "banner" | "both";
 };
 
 export type Author = {

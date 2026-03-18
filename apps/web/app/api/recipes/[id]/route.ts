@@ -11,7 +11,7 @@ import type { RecipeImage } from "@aleppo/shared";
 
 const imageSchema = z.object({
   url: z.string(),
-  role: z.enum(["thumbnail", "banner"]).optional(),
+  role: z.enum(["thumbnail", "banner", "both"]).optional(),
 });
 
 const updateSchema = z.object({
@@ -105,7 +105,7 @@ export async function PATCH(
     }
     // Derive imageUrl from new images
     const newImages = parsed.data.images;
-    updateFields.imageUrl = newImages.find((i) => i.role === "banner")?.url
+    updateFields.imageUrl = newImages.find((i) => i.role === "banner" || i.role === "both")?.url
       ?? newImages[0]?.url ?? null;
   } else if ("imageUrl" in parsed.data) {
     const [existing] = await db

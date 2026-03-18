@@ -63,7 +63,7 @@ export function RecipeCard({
         </View>
       ) : null}
       {(() => {
-        const thumbUrl = recipe.images?.find((i) => i.role === "thumbnail")?.url
+        const thumbUrl = recipe.images?.find((i) => i.role === "thumbnail" || i.role === "both")?.url
           ?? recipe.images?.[0]?.url ?? recipe.imageUrl;
         return thumbUrl ? (
         <Image

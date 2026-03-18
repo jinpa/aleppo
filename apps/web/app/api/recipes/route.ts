@@ -23,7 +23,7 @@ const DEFAULT_DIR: Record<SortKey, "asc" | "desc"> = {
 
 const imageSchema = z.object({
   url: z.string(),
-  role: z.enum(["thumbnail", "banner"]).optional(),
+  role: z.enum(["thumbnail", "banner", "both"]).optional(),
 });
 
 const createSchema = z.object({
@@ -209,7 +209,7 @@ export async function POST(req: Request) {
     }))
   );
   // Derive imageUrl from images (banner → first → null)
-  const imageUrl = images.find((i) => i.role === "banner")?.url
+  const imageUrl = images.find((i) => i.role === "banner" || i.role === "both")?.url
     ?? images[0]?.url ?? null;
 
   const ingredients = parseIngredients(parsed.data.ingredients.map((i) => i.raw));
