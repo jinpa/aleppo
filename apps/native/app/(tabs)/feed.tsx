@@ -48,6 +48,7 @@ export default function FeedScreen() {
 
   const fetchFeed = useCallback(
     async (opts?: { silent?: boolean }) => {
+      if (!token) return;
       if (!opts?.silent) setLoading(true);
       setError(null);
       try {

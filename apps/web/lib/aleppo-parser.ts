@@ -47,6 +47,7 @@ export type AleppoRecipeInsertValues = {
   sourceUrl: string | null;
   sourceName: string | null;
   imageUrl: string | null;
+  images: { url: string }[];
   ingredients: Ingredient[];
   instructions: InstructionStep[];
   tags: string[];
@@ -79,6 +80,7 @@ export async function buildRecipeValues(
     sourceUrl: r.sourceUrl,
     sourceName: r.sourceName,
     imageUrl,
+    images: imageUrl ? [{ url: imageUrl }] : [],
     ingredients: r.ingredients ?? [],
     instructions: r.instructions ?? [],
     tags: r.tags ?? [],

@@ -97,6 +97,7 @@ export type PaprikaRecipeInsertValues = {
   sourceUrl: string | null;
   sourceName: string | null;
   imageUrl: string | null;
+  images: { url: string }[];
   ingredients: Ingredient[];
   instructions: InstructionStep[];
   tags: string[];
@@ -132,6 +133,7 @@ export function buildRecipeValues(
     sourceUrl: r.source_url?.trim() || null,
     sourceName: r.source?.trim() || null,
     imageUrl,
+    images: imageUrl ? [{ url: imageUrl }] : [],
     ingredients: parseIngredients(ingredientLines),
     instructions: parseDirections(r.directions ?? ""),
     tags: r.categories?.filter(Boolean) ?? [],

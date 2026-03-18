@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -91,7 +92,7 @@ export default function RecipeDetailScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
-  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [viewerImageUrl, setViewerImageUrl] = useState<string | null>(null);
   const [showLogModal, setShowLogModal] = useState(false);
   const [logDate, setLogDate] = useState(todayString());
   const [logNotes, setLogNotes] = useState("");
@@ -100,6 +101,7 @@ export default function RecipeDetailScreen() {
 
   const fetchDetail = useCallback(
     async (opts?: { silent?: boolean }) => {
+      if (!token) return; // wait for auth to load
       if (!opts?.silent) setLoading(true);
       setError(null);
       try {
@@ -320,11 +322,26 @@ export default function RecipeDetailScreen() {
       </View>
 
       {/* Hero image */}
-      {recipe.imageUrl ? (
-        <TouchableOpacity activeOpacity={0.9} onPress={() => setShowImageViewer(true)}>
-          <Image source={{ uri: recipe.imageUrl }} style={styles.heroImage} contentFit="cover" transition={300} />
-        </TouchableOpacity>
-      ) : null}
+      {(() => {
+        const images = recipe.images ?? [];
+        const heroUrl = images.find((i) => i.role === "banner" || i.role === "both")?.url ?? images[0]?.url ?? recipe.imageUrl;
+        return heroUrl ? (
+          <>
+            <TouchableOpacity activeOpacity={0.9} onPress={() => setViewerImageUrl(heroUrl)}>
+              <Image source={{ uri: heroUrl }} style={styles.heroImage} contentFit="cover" transition={300} />
+            </TouchableOpacity>
+            {images.length > 1 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryStrip} contentContainerStyle={styles.galleryStripContent}>
+                {images.map((img) => (
+                  <TouchableOpacity key={img.url} onPress={() => setViewerImageUrl(img.url)} activeOpacity={0.8}>
+                    <Image source={{ uri: img.url }} style={styles.galleryThumb} contentFit="cover" transition={200} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : null}
+          </>
+        ) : null;
+      })()}
 
       <View style={styles.content}>
         {/* Title + owner actions */}
@@ -569,11 +586,11 @@ export default function RecipeDetailScreen() {
       </NavShell>
 
       {/* Image Viewer */}
-      {recipe.imageUrl ? (
+      {viewerImageUrl ? (
         <ImageViewerModal
-          uri={recipe.imageUrl}
-          visible={showImageViewer}
-          onClose={() => setShowImageViewer(false)}
+          uri={viewerImageUrl}
+          visible={!!viewerImageUrl}
+          onClose={() => setViewerImageUrl(null)}
         />
       ) : null}
 
@@ -685,6 +702,9 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
   },
   heroImage: { width: "100%", height: 240 },
+  galleryStrip: { marginTop: 8 },
+  galleryStripContent: { paddingHorizontal: 16, gap: 8 },
+  galleryThumb: { width: 60, height: 60, borderRadius: 8 },
   content: { paddingHorizontal: 16, paddingTop: 16 },
   titleRow: {
     flexDirection: "row", alignItems: "flex-start",
