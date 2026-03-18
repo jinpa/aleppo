@@ -30,6 +30,7 @@ export default function QueueScreen() {
 
   const fetchQueue = useCallback(
     async (opts?: { silent?: boolean }) => {
+      if (!token) return;
       if (!opts?.silent) setLoading(true);
       setError(null);
       try {

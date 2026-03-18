@@ -95,6 +95,7 @@ export default function SettingsScreen() {
   };
 
   const fetchSettings = useCallback(async () => {
+    if (!token) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/users/me`, {
