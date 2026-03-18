@@ -22,6 +22,11 @@ export type NutritionalInfo = {
   fiber?: number;
 };
 
+export type RecipeImage = {
+  url: string;
+  role?: "thumbnail" | "banner";
+};
+
 export type Author = {
   id: string;
   name: string | null;
@@ -48,6 +53,7 @@ export type Recipe = {
   sourceUrl: string | null;
   sourceName: string | null;
   imageUrl: string | null;
+  images: RecipeImage[];
   ingredients: Ingredient[];
   instructions: InstructionStep[];
   tags: string[];

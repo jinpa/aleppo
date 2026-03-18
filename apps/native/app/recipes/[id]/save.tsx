@@ -66,6 +66,7 @@ export default function SaveRecipeScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const loadRecipe = useCallback(async () => {
+    if (!token) return;
     try {
       const res = await fetch(`${API_URL}/api/recipes/${id}/detail`, {
         headers: { Authorization: `Bearer ${token}` },

@@ -62,9 +62,12 @@ export function RecipeCard({
           />
         </View>
       ) : null}
-      {recipe.imageUrl ? (
+      {(() => {
+        const thumbUrl = recipe.images?.find((i) => i.role === "thumbnail")?.url
+          ?? recipe.images?.[0]?.url ?? recipe.imageUrl;
+        return thumbUrl ? (
         <Image
-          source={{ uri: recipe.imageUrl }}
+          source={{ uri: thumbUrl }}
           style={styles.cardImage}
           contentFit="cover"
           transition={200}
@@ -73,7 +76,8 @@ export function RecipeCard({
         <View style={styles.cardImagePlaceholder}>
           <Text style={styles.cardImagePlaceholderText}>🍳</Text>
         </View>
-      )}
+      );
+      })()}
       <View style={styles.cardBody}>
         <Text style={styles.cardTitle} numberOfLines={2}>
           {recipe.title}

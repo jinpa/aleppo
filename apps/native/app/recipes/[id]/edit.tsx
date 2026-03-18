@@ -18,7 +18,7 @@ import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { NavShell } from "@/components/NavShell";
-import type { Ingredient, InstructionStep, Recipe } from "@aleppo/shared";
+import type { Ingredient, InstructionStep, Recipe, RecipeImage } from "@aleppo/shared";
 
 type RawIngredient = Pick<Ingredient, "raw">;
 
@@ -42,7 +42,7 @@ export default function EditRecipeScreen() {
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
 
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
+  const [images, setImages] = useState<RecipeImage[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
 
   const [hasSourceAttribution, setHasSourceAttribution] = useState(false);
@@ -52,6 +52,7 @@ export default function EditRecipeScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const loadRecipe = useCallback(async () => {
+    if (!token) return;
     try {
       const res = await fetch(`${API_URL}/api/recipes/${id}/detail`, {
         headers: { Authorization: `Bearer ${token}` },
@@ -68,7 +69,9 @@ export default function EditRecipeScreen() {
       setCookTime(r.cookTime ? String(r.cookTime) : "");
       setServings(r.servings ? String(r.servings) : "");
       setIsPublic(r.isPublic);
-      setImageUrl(r.imageUrl ?? null);
+      setImages(
+        r.images?.length ? r.images : r.imageUrl ? [{ url: r.imageUrl }] : []
+      );
       setNotes(r.notes ?? "");
       setSourceUrl(r.sourceUrl ?? "");
       setSourceName(r.sourceName ?? "");
@@ -94,6 +97,7 @@ export default function EditRecipeScreen() {
     const e: Record<string, string> = {};
     if (!title.trim()) e.title = "Title is required";
     if (title.length > 300) e.title = "Max 300 characters";
+    if (images.length > 10) e._form = "Maximum 10 photos allowed. Please remove some before saving.";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -116,35 +120,58 @@ export default function EditRecipeScreen() {
   };
 
   const uploadImage = async (uris: string[]) => {
-    const uri = uris[0];
-    if (!uri) return;
+    if (!uris.length || images.length >= 10) return;
     setImageUploading(true);
+    let count = images.length;
     try {
-      const formData = new FormData();
-      if (Platform.OS === "web") {
-        const resp = await fetch(uri);
-        const blob = await resp.blob();
-        formData.append("file", blob, "photo.jpg");
-      } else {
-        formData.append("file", {
-          uri,
-          name: "photo.jpg",
-          type: "image/jpeg",
-        } as unknown as Blob);
+      for (const uri of uris) {
+        if (count >= 10) break;
+        const formData = new FormData();
+        if (Platform.OS === "web") {
+          const resp = await fetch(uri);
+          const blob = await resp.blob();
+          formData.append("file", blob, "photo.jpg");
+        } else {
+          formData.append("file", {
+            uri,
+            name: "photo.jpg",
+            type: "image/jpeg",
+          } as unknown as Blob);
+        }
+        const res = await fetch(`${API_URL}/api/upload`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: formData,
+        });
+        if (!res.ok) throw new Error("Upload failed");
+        const data = await res.json();
+        setImages((prev) => [...prev, { url: data.url }]);
+        count++;
       }
-      const res = await fetch(`${API_URL}/api/upload`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Upload failed");
-      const data = await res.json();
-      setImageUrl(data.url);
     } catch {
       setErrors((prev) => ({ ...prev, _form: "Failed to upload image. Please try again." }));
     } finally {
       setImageUploading(false);
     }
+  };
+
+  const removeImage = (index: number) => {
+    setImages((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const toggleImageRole = (index: number, role: "thumbnail" | "banner") => {
+    setImages((prev) =>
+      prev.map((img, i) => {
+        if (i === index) {
+          return { ...img, role: img.role === role ? undefined : role };
+        }
+        // Only one image can have each role
+        if (img.role === role) {
+          return { ...img, role: undefined };
+        }
+        return img;
+      })
+    );
   };
 
   const addTag = () => {
@@ -159,7 +186,7 @@ export default function EditRecipeScreen() {
     try {
       const body: Record<string, unknown> = {
         title: title.trim(),
-        imageUrl: imageUrl || null,
+        images,
         description: description.trim() || null,
         ingredients: ingredients.filter((i) => i.raw.trim()),
         instructions: instructions
@@ -195,11 +222,14 @@ export default function EditRecipeScreen() {
         },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to save recipe. Please try again.");
+      }
       // Replace with fresh detail screen so updated data loads immediately
       router.replace(`/recipes/${id}`);
-    } catch {
-      setErrors({ _form: "Failed to save recipe. Please try again." });
+    } catch (err) {
+      setErrors({ _form: err instanceof Error ? err.message : "Failed to save recipe. Please try again." });
     } finally {
       setSaving(false);
     }
@@ -286,34 +316,43 @@ export default function EditRecipeScreen() {
           {errors.title ? <Text style={styles.fieldError}>{errors.title}</Text> : null}
         </View>
 
-        {/* Photo */}
+        {/* Photos */}
         <View style={styles.field}>
-          <Text style={styles.label}>Photo</Text>
-          <PhotoPicker mode="single" onPhotos={uploadImage}>
-            {(open, _photos, _remove, isDragging) => imageUrl ? (
-              <View style={[styles.imagePreviewContainer, isDragging && styles.imageDragging]}>
-                <Image source={{ uri: imageUrl }} style={styles.imagePreview} contentFit="cover" transition={200} />
-                <View style={styles.imageActions}>
-                  <TouchableOpacity style={styles.imageActionButton} onPress={open} disabled={imageUploading}>
-                    <Ionicons name="camera-outline" size={16} color="#57534e" />
-                    <Text style={styles.imageActionText}>Change</Text>
+          <Text style={styles.label}>Photos {images.length > 0 ? `(${images.length}/10)` : ""}</Text>
+          {images.length > 0 ? (
+            <ScrollView horizontal showsHorizontalScrollIndicator={true} style={styles.imageStrip} nestedScrollEnabled>
+              {images.map((img, i) => (
+                <View key={img.url} style={styles.imageThumbContainer}>
+                  <Image source={{ uri: img.url }} style={styles.imageThumb} contentFit="cover" transition={200} />
+                  <TouchableOpacity style={styles.imageRemoveBtn} onPress={() => removeImage(i)}>
+                    <Ionicons name="close-circle" size={20} color="#b91c1c" />
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.imageActionButton} onPress={() => setImageUrl(null)} disabled={imageUploading}>
-                    <Ionicons name="trash-outline" size={16} color="#b91c1c" />
-                    <Text style={[styles.imageActionText, { color: "#b91c1c" }]}>Remove</Text>
-                  </TouchableOpacity>
-                </View>
-                {imageUploading ? (
-                  <View style={styles.imageUploadOverlay}>
-                    <ActivityIndicator size="small" color="#fff" />
+                  <View style={styles.imageRoleBadges}>
+                    <TouchableOpacity
+                      onPress={() => toggleImageRole(i, "banner")}
+                      style={[styles.imageRoleBadge, img.role === "banner" && styles.imageRoleBadgeActive]}
+                      accessibilityLabel="Set as banner image"
+                    >
+                      <Ionicons name="camera-outline" size={12} color={img.role === "banner" ? "#fff" : "#78716c"} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => toggleImageRole(i, "thumbnail")}
+                      style={[styles.imageRoleBadge, img.role === "thumbnail" && styles.imageRoleBadgeActive]}
+                      accessibilityLabel="Set as thumbnail image"
+                    >
+                      <Ionicons name="grid-outline" size={12} color={img.role === "thumbnail" ? "#fff" : "#78716c"} />
+                    </TouchableOpacity>
                   </View>
-                ) : null}
-              </View>
-            ) : (
+                </View>
+              ))}
+            </ScrollView>
+          ) : null}
+          <PhotoPicker mode="multiple" onPhotos={uploadImage}>
+            {(open, _photos, _remove, isDragging) => (
               <TouchableOpacity
-                style={[styles.imagePickerEmpty, isDragging && styles.imageDragging]}
+                style={[styles.imagePickerEmpty, isDragging && styles.imageDragging, images.length >= 10 && { opacity: 0.4 }]}
                 onPress={open}
-                disabled={imageUploading}
+                disabled={imageUploading || images.length >= 10}
               >
                 {imageUploading ? (
                   <ActivityIndicator size="small" color="#78716c" />
@@ -321,7 +360,7 @@ export default function EditRecipeScreen() {
                   <>
                     <Ionicons name={isDragging ? "image-outline" : "camera-outline"} size={28} color={isDragging ? "#d97706" : "#a8a29e"} />
                     <Text style={[styles.imagePickerEmptyText, isDragging && { color: "#92400e" }]}>
-                      {isDragging ? "Drop image here" : "Add a photo"}
+                      {isDragging ? "Drop image here" : images.length > 0 ? "Add more photos" : "Add photos"}
                     </Text>
                   </>
                 )}
@@ -579,20 +618,17 @@ const styles = StyleSheet.create({
     paddingVertical: 14, alignItems: "center",
   },
   bottomSaveButtonText: { fontSize: 16, fontWeight: "600", color: "#fff" },
-  imagePreviewContainer: { position: "relative", borderRadius: 10, overflow: "hidden" },
-  imagePreview: { width: "100%", height: 200, borderRadius: 10 },
-  imageActions: { flexDirection: "row", gap: 10, marginTop: 10 },
-  imageActionButton: {
-    flexDirection: "row", alignItems: "center", gap: 4,
-    paddingHorizontal: 12, paddingVertical: 7,
-    borderRadius: 8, borderWidth: 1, borderColor: "#e7e5e4", backgroundColor: "#fff",
-  },
-  imageActionText: { fontSize: 13, fontWeight: "500", color: "#57534e" },
-  imageUploadOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)", borderRadius: 10,
+  imageStrip: { marginBottom: 10 },
+  imageThumbContainer: { position: "relative", marginRight: 10 },
+  imageThumb: { width: 80, height: 80, borderRadius: 8 },
+  imageRemoveBtn: { position: "absolute", top: -6, right: -6, backgroundColor: "#fff", borderRadius: 10 },
+  imageRoleBadges: { flexDirection: "row", justifyContent: "center", gap: 4, marginTop: 4 },
+  imageRoleBadge: {
+    width: 24, height: 24, borderRadius: 12,
+    backgroundColor: "#f5f5f4", borderWidth: 1, borderColor: "#e7e5e4",
     justifyContent: "center", alignItems: "center",
   },
+  imageRoleBadgeActive: { backgroundColor: "#1c1917", borderColor: "#1c1917" },
   imagePickerEmpty: {
     borderWidth: 1, borderColor: "#e7e5e4", borderStyle: "dashed",
     borderRadius: 10, paddingVertical: 32, alignItems: "center", gap: 8,

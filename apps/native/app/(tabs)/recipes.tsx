@@ -53,6 +53,7 @@ export default function RecipesScreen() {
 
   const fetchRecipes = useCallback(
     async (opts?: { silent?: boolean }) => {
+      if (!token) return;
       if (!opts?.silent) setLoading(true);
       setError(null);
       try {

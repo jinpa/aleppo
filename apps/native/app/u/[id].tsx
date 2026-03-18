@@ -36,6 +36,7 @@ export default function UserProfileScreen() {
 
   const fetchProfile = useCallback(
     async (opts?: { silent?: boolean }) => {
+      if (!token) return;
       if (!opts?.silent) setLoading(true);
       setError(null);
       try {

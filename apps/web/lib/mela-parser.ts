@@ -80,6 +80,7 @@ export type MelaRecipeInsertValues = {
   sourceUrl: string | null;
   sourceName: string | null;
   imageUrl: string | null;
+  images: { url: string }[];
   ingredients: Ingredient[];
   instructions: InstructionStep[];
   tags: string[];
@@ -112,6 +113,7 @@ export async function buildRecipeValues(
     sourceUrl: r.link?.trim() || null,
     sourceName: null,
     imageUrl,
+    images: imageUrl ? [{ url: imageUrl }] : [],
     ingredients: parseIngredients(ingredientLines),
     instructions: parseDirections(r.instructions ?? ""),
     tags: r.categories?.filter(Boolean) ?? [],
