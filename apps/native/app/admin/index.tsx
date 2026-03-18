@@ -14,47 +14,7 @@ import {
 import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
-
-const TAB_ITEMS = [
-  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
-  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
-  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
-  { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
-  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
-] as const;
-
-function TabBar() {
-  const router = useRouter();
-  return (
-    <View style={tabStyles.bar}>
-      {TAB_ITEMS.map((item) => (
-        <TouchableOpacity
-          key={item.name}
-          style={tabStyles.tab}
-          onPress={() => router.navigate(item.route)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name={item.icon} size={24} color={item.amber ? "#d97706" : "#a8a29e"} />
-          <Text style={[tabStyles.label, item.amber && tabStyles.labelAmber]}>{item.name}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
-const tabStyles = StyleSheet.create({
-  bar: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderTopWidth: 1,
-    borderTopColor: "#e7e5e4",
-    paddingBottom: Platform.OS === "ios" ? 28 : 8,
-    paddingTop: 8,
-  },
-  tab: { flex: 1, alignItems: "center", gap: 2 },
-  label: { fontSize: 11, fontWeight: "500", color: "#a8a29e" },
-  labelAmber: { color: "#d97706" },
-});
+import { NavShell } from "@/components/NavShell";
 
 type Totals = { users: number; recipes: number; cookLogs: number; follows: number; totalStorageBytes: number };
 
@@ -335,7 +295,7 @@ export default function AdminScreen() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+    <NavShell>
       <View style={styles.container}>
         {/* Title bar */}
         <View style={styles.titleBar}>
@@ -354,8 +314,7 @@ export default function AdminScreen() {
           }
         />
       </View>
-      <TabBar />
-    </View>
+    </NavShell>
   );
 }
 
