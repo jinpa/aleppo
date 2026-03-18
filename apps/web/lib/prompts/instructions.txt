@@ -7,9 +7,10 @@ representation for each in ingredient in the list.
 3- List each ingredient using the unit found in the recipe, in the
 format: {"raw": "<full ingredient text>, "name": "<ingredient name>",
 "units": "<ingredient unit>", "amount":"<ingredient amount as
-string>"}.  The following units are available: "grams", "kilograms",
-"ounces", "pounds", "cups", "tablespoons", "teaspoons", "liters",
-"deciliters", "centiliters", "milliliters".
+string>", "quantity": <ingredient amount as number>}.  The following
+units are available: "grams", "kilograms", "ounces", "pounds", "cups",
+"tablespoons", "teaspoons", "liters", "deciliters", "centiliters",
+"milliliters".
 
 If the recipe is not in English, map the units to English names. For
 example "c. à c." is French for "teaspoon".

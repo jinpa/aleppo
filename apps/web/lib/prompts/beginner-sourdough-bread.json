@@ -6,43 +6,50 @@
       "raw": "stoneground whole wheat flour 38 g",
       "name": "stoneground whole wheat flour",
       "unit": "grams",
-      "amount": "38"
+      "amount": "38",
+      "quantity": 38
     },
     {
       "raw": "bread flour 810 g",
       "name": "bread flour",
       "unit": "grams",
-      "amount": "810"
+      "amount": "810",
+      "quantity": 810
     },
     {
       "raw": "water 730 g",
       "name": "water",
       "unit": "grams",
-      "amount": "730"
+      "amount": "730",
+      "quantity": 730
     },
     {
       "raw": "ripe sourdough starter 38 g",
       "name": "ripe sourdough starter",
       "unit": "grams",
-      "amount": "38"
+      "amount": "38",
+      "quantity": 38
     },
     {
       "raw": "whole wheat flour 115 g",
       "name": "whole wheat flour",
       "unit": "grams",
-      "amount": "115"
+      "amount": "115",
+      "quantity": 115
     },
     {
       "raw": "whole grain rye flour 51 g",
       "name": "whole grain rye flour",
       "unit": "grams",
-      "amount": "51"
+      "amount": "51",
+      "quantity": 51
     },
     {
       "raw": "fine sea salt 18 g",
       "name": "fine sea salt",
       "unit": "grams",
-      "amount": "18"
+      "amount": "18",
+      "quantity": 18
     }
   ],
   "instructions": [

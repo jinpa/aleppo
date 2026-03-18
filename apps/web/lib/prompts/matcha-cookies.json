@@ -6,49 +6,57 @@
       "raw": "unsalted butter 4 oz",
       "name": "unsalted butter",
       "unit": "ounces",
-      "amount": "4"
+      "amount": "4",
+      "quantity": 4
     },
     {
       "raw": "granulated sugar ⅔ cups",
       "name": "granulated sugar",
       "unit": "cups",
-      "amount": "⅔"
+      "amount": "⅔",
+      "quantity": 0.666
     },
     {
       "raw": "large egg yolks 2",
       "name": "large egg yolks",
       "unit": "count",
-      "amount": "2"
+      "amount": "2",
+      "quantity": 2
     },
     {
       "raw": "vanilla extract 1 tsp",
       "name": "vanilla extract",
       "unit": "teaspoons",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "all-purpose flour 1¼ cups",
       "name": "all-purpose flour",
       "unit": "cups",
-      "amount": "1¼"
+      "amount": "1¼",
+      "quantity": 1.25
     },
     {
       "raw": "matcha powder 8 g",
       "name": "matcha powder",
       "unit": "grams",
-      "amount": "8"
+      "amount": "8",
+      "quantity": 8
     },
     {
       "raw": "baking soda ½ tsp",
       "name": "baking soda",
       "unit": "teaspoons",
-      "amount": "½"
+      "amount": "½",
+      "quantity": 0.5
     },
     {
       "raw": "salt ¼ tsp",
       "name": "salt",
       "unit": "teaspoons",
-      "amount": "¼"
+      "amount": "¼",
+      "quantity": 0.25
     }
   ],
   "instructions": [
