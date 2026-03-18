@@ -110,7 +110,7 @@ export function ImportReview({ recipe, parseError, aiGenerated, token, onBack, r
       });
       if (!res.ok) throw new Error();
       const saved = await res.json();
-      router.replace(`/recipes/${saved.id}`);
+      router.replace("/(tabs)/recipes");
     } catch {
       setErrors({ _form: "Failed to save recipe. Please try again." });
     } finally {
