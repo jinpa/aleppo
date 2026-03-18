@@ -41,6 +41,7 @@ export default function EditRecipeScreen() {
   const [notes, setNotes] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
+  const [commentsUrl, setCommentsUrl] = useState("");
 
   const [images, setImages] = useState<RecipeImage[]>([]);
   const [imageUploading, setImageUploading] = useState(false);
@@ -75,12 +76,13 @@ export default function EditRecipeScreen() {
       setNotes(r.notes ?? "");
       setSourceUrl(r.sourceUrl ?? "");
       setSourceName(r.sourceName ?? "");
+      setCommentsUrl(r.commentsUrl ?? "");
       setHasSourceAttribution(!!(r.forkedFromRecipeId || r.sourceUrl || r.sourceName));
       setOriginalContent(JSON.stringify({
         title: r.title,
         description: r.description ?? "",
         ingredients: r.ingredients.length > 0 ? r.ingredients.map((i: Ingredient) => i.raw) : [],
-        instructions: r.instructions.length > 0 ? r.instructions.map((i: Instruction) => i.text) : [],
+        instructions: r.instructions.length > 0 ? r.instructions.map((i: InstructionStep) => i.text) : [],
       }));
     } catch {
       setErrors({ _load: "Could not load recipe for editing." });
@@ -211,6 +213,7 @@ export default function EditRecipeScreen() {
         notes: notes.trim() || null,
         sourceUrl: sourceUrl.trim() || null,
         sourceName: sourceName.trim() || null,
+        commentsUrl: commentsUrl.trim() || null,
       };
       // Only mark as adapted when recipe content (not just metadata) changes
       if (hasSourceAttribution) {
@@ -498,7 +501,13 @@ export default function EditRecipeScreen() {
         <View style={styles.field}>
           <Text style={styles.label}>Source</Text>
           <TextInput style={[styles.input, { marginBottom: 8 }]} value={sourceUrl} onChangeText={setSourceUrl} placeholder="Source URL (optional)" placeholderTextColor="#a8a29e" autoCapitalize="none" keyboardType="url" />
-          <TextInput style={styles.input} value={sourceName} onChangeText={setSourceName} placeholder="Source name (optional)" placeholderTextColor="#a8a29e" />
+          <TextInput style={[styles.input, { marginBottom: 8 }]} value={sourceName} onChangeText={setSourceName} placeholder="Source name (optional)" placeholderTextColor="#a8a29e" />
+        </View>
+
+        {/* Comments link */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Comments link</Text>
+          <TextInput style={styles.input} value={commentsUrl} onChangeText={setCommentsUrl} placeholder="URL to comments thread (optional)" placeholderTextColor="#a8a29e" autoCapitalize="none" keyboardType="url" />
         </View>
 
         {/* Notes */}
