@@ -6,151 +6,170 @@
       "raw": "pechugas de pollo 5",
       "name": "pechugas de pollo",
       "unit": "count",
-      "amount": "5"
+      "amount": "5",
+      "quantity": 5
     },
     {
       "raw": "cebolla blanca ½",
       "name": "cebolla blanca",
       "unit": "count",
-      "amount": "½"
+      "amount": "½",
+      "quantity": 0.5
     },
     {
       "raw": "diente de ajo 1",
       "name": "diente de ajo",
       "unit": "count",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "hoja de laurel 1",
       "name": "hoja de laurel",
       "unit": "count",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "sal 1 Tbsp",
       "name": "sal",
       "unit": "tablespoons",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "pimienta negra en grano 2 tsp",
       "name": "pimienta negra en grano",
       "unit": "teaspoons",
-      "amount": "2"
+      "amount": "2",
+      "quantity": 2
     },
     {
       "raw": "agua 1.2 L",
       "name": "agua",
       "unit": "liters",
-      "amount": "1.2"
+      "amount": "1.2",
+      "quantity": 1.2
     },
     {
       "raw": "Aceite de oliva ",
       "name": "Aceite de oliva",
       "unit": "some",
-      "amount": ""
     },
     {
       "raw": "tomates 5",
       "name": "tomates",
       "unit": "count",
-      "amount": "5"
+      "amount": "5",
+      "quantity": 5
     },
     {
       "raw": "cebolla blanca (picada) 1",
       "name": "cebolla blanca (picada)",
       "unit": "count",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "dientes de ajo (pelados) 2",
       "name": "dientes de ajo (pelados)",
       "unit": "count",
-      "amount": "2"
+      "amount": "2",
+      "quantity": 2
     },
     {
       "raw": "cacahuates 150 g",
       "name": "cacahuates",
       "unit": "grams",
-      "amount": "150"
+      "amount": "150",
+      "quantity": 150
     },
     {
       "raw": "semillas de ajonjolí ⅓ cups",
       "name": "semillas de ajonjolí",
       "unit": "cups",
-      "amount": "⅓"
+      "amount": "⅓",
+      "quantity": 0.333
     },
     {
       "raw": "trozo pequeño de pan blanco duro 1",
       "name": "trozo pequeño de pan blanco duro",
       "unit": "count",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "rama de canela 1",
       "name": "rama de canela",
       "unit": "count",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "clavo molido ¼ tsp",
       "name": "clavo molido",
       "unit": "teaspoons",
-      "amount": "¼"
+      "amount": "¼",
+      "quantity": 0.25
     },
     {
       "raw": "semillas de cilantro 1 Tbsp",
       "name": "semillas de cilantro",
       "unit": "tablespoons",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "plátano verde 1",
       "name": "plátano verde",
       "unit": "count",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "pasas 150 g",
       "name": "pasas",
       "unit": "grams",
-      "amount": "150"
+      "amount": "150",
+      "quantity": 150
     },
     {
       "raw": "pasta de chipotle Gran Luchito 2 Tbsp",
       "name": "pasta de chipotle Gran Luchito",
       "unit": "tablespoons",
-      "amount": "2"
+      "amount": "2",
+      "quantity": 2
     },
     {
-      "raw": "caldo de pollo 1.0 L",
+      "raw": "caldo de pollo 1L",
       "name": "caldo de pollo",
       "unit": "liters",
-      "amount": "1.0"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "chocolate negro 120 g",
       "name": "chocolate negro",
       "unit": "grams",
-      "amount": "120"
+      "amount": "120",
+      "quantity": 120
     },
     {
       "raw": "Sal y pimienta negra recién molida ",
       "name": "Sal y pimienta negra recién molida",
       "unit": "some",
-      "amount": ""
     },
     {
       "raw": "ajonjolí tostado ",
       "name": "ajonjolí tostado",
       "unit": "some",
-      "amount": ""
     },
     {
       "raw": "Arroz mexicano 1",
       "name": "Arroz mexicano",
       "unit": "count",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     }
   ],
   "instructions": [

@@ -6,6 +6,8 @@ import { GoogleGenAI } from "@google/genai";
 import sharp from "sharp";
 import fs from "fs";
 import path from "path";
+import { formatIngredientDisplay } from "@aleppo/shared";
+import { parseFractionString } from "@/lib/scale-ingredient";
 
 const PROMPTS_DIR = path.join(process.cwd(), "lib/prompts");
 
@@ -29,7 +31,9 @@ function buildPrompt(inputText?: string): string {
     "utf-8"
   );
 
-  const base = `${prefix}\n${shots}\n---\nRULES:\n0- Keep the recipe in its original language\n${instructions}\n---\n`;
+  // const translate = "0- Keep the recipe in its original language.\n";
+  const translate = "0- Translate the recipe to English.\n";
+  const base = `${prefix}\n${shots}\n---\nRULES:\n${translate}\n${instructions}\n---\n`;
 
   if (inputText) {
     return `${base}Process the following text and output the recipe JSON.\nTEXT: ${inputText}\nJSON:`;
@@ -161,10 +165,40 @@ export async function POST(req: Request) {
   }
 
   // Pick only the fields that belong to ScrapedRecipe
+  const ingredients = Array.isArray(parsed.ingredients)
+    ? parsed.ingredients.map((ing: any) => {
+        const name = typeof ing.name === "string" ? ing.name : "";
+        const unit = typeof ing.units === "string" ? ing.units : (typeof ing.unit === "string" ? ing.unit : undefined);
+        const notes = typeof ing.notes === "string" ? ing.notes : undefined;
+        
+        // Prioritize quantity as a number if provided by the AI
+        let quantity = typeof ing.quantity === "number" ? ing.quantity : undefined;
+        const amountStr = typeof ing.amount === "string" ? ing.amount : undefined;
+        
+        // Fallback to parsing amount string if quantity is missing
+        if (quantity === undefined && amountStr) {
+          quantity = parseFractionString(amountStr)?.valueOf();
+        }
+
+        // Use the new formatter to fill-in the raw attribute
+        let raw = formatIngredientDisplay({ name, unit, quantity });
+        if (notes) raw += ` (${notes})`;
+
+        return {
+          raw: raw || (typeof ing.raw === "string" ? ing.raw : ""),
+          name,
+          unit,
+          amount: amountStr,
+          quantity,
+          notes,
+        };
+      })
+    : undefined;
+
   const recipe = {
     ...(typeof parsed.title === "string" && { title: parsed.title }),
     ...(typeof parsed.description === "string" && { description: parsed.description }),
-    ...(Array.isArray(parsed.ingredients) && { ingredients: parsed.ingredients }),
+    ...(ingredients && { ingredients }),
     ...(Array.isArray(parsed.instructions) && { instructions: parsed.instructions }),
     ...(Array.isArray(parsed.tags) && { tags: parsed.tags }),
     ...(parsed.prepTime != null && { prepTime: Number(parsed.prepTime) }),
