@@ -30,6 +30,9 @@ test.describe("formatIngredientDisplay", () => {
 
   test("formats tablespoons", () => {
     expect(formatIngredientDisplay({ name: "Honey", unit: "tbsp", quantity: 2 })).toBe("Honey 2 tbsp");
+    expect(formatIngredientDisplay({ name: "Honey", unit: "tbsp", quantity: 8 })).toBe("Honey 8 tbsp");
+    expect(formatIngredientDisplay({ name: "Honey", unit: "tbsp", quantity: 12 })).toBe("Honey 12 tbsp");
+    expect(formatIngredientDisplay({ name: "Honey", unit: "tbsp", quantity: 16 })).toBe("Honey 1 cup");
   });
 
   test("formats counts correctly", () => {

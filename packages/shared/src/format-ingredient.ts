@@ -95,6 +95,7 @@ function normalize(amount: number, unit: IngredientUnits): { amount: number; uni
 }
 
 function beautify(amount: number, unit: IngredientUnits): { amount: number; unit: IngredientUnits } {
+  const originalUnits = unit;
   const norm = normalize(amount, unit);
 
   switch (norm.unit) {
@@ -109,7 +110,10 @@ function beautify(amount: number, unit: IngredientUnits): { amount: number; unit
       }
       return norm;
     case IngredientUnits.cups:
-      if (norm.amount >= 0.25) {
+      // If the original unit was not "cups" (it was spoons) keep using spoons
+      // till 1 cup. If it was "cups", start using spoons below 1/4 cups.
+      if ((originalUnits == IngredientUnits.cups && norm.amount >= 0.25) ||
+          norm.amount >= 1.0) {
         return norm;
       } else {
         const tbsps = norm.amount * 16.0;
