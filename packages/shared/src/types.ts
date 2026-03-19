@@ -64,6 +64,7 @@ export type Recipe = {
   prepTime: number | null;
   cookTime: number | null;
   servings: number | null;
+  servingName: string | undefined;
   nutritionalInfo: NutritionalInfo | null;
   forkedFromRecipeId: string | null;
   createdAt: string;

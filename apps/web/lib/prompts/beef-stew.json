@@ -3,126 +3,91 @@
   "description": "This easy beef stew recipe is a family favorite. Tender veggies and\nbeef in a rich brown broth.\n",
   "ingredients": [
     {
-      "raw": "stewing beef 2 lb",
       "name": "stewing beef",
       "unit": "pounds",
-      "amount": "2",
       "quantity": 2
     },
     {
-      "raw": "all-purpose flour 3 Tbsp",
       "name": "all-purpose flour",
       "unit": "tablespoons",
-      "amount": "3",
       "quantity": 3
     },
     {
-      "raw": "garlic powder ½ tsp",
       "name": "garlic powder",
       "unit": "teaspoons",
-      "amount": "½",
       "quantity": 0.5
     },
     {
-      "raw": "salt ½ tsp",
       "name": "salt",
       "unit": "teaspoons",
-      "amount": "½",
       "quantity": 0.5
     },
     {
-      "raw": "black pepper ½ tsp",
       "name": "black pepper",
       "unit": "teaspoons",
-      "amount": "½",
       "quantity": 05
     },
     {
-      "raw": "olive oil 3 Tbsp",
       "name": "olive oil",
       "unit": "tablespoons",
-      "amount": "3",
       "quantity": 3
     },
     {
-      "raw": "onion 1",
       "name": "onion",
       "unit": "count",
-      "amount": "1",
       "quantity": 1
     },
     {
-      "raw": "beef broth 6 cups",
       "name": "beef broth",
       "unit": "cups",
-      "amount": "6",
       "quantity": 6
     },
     {
-      "raw": "red wine ½ cups",
       "name": "red wine",
       "unit": "cups",
-      "amount": "½",
       "quantity": 0.5
     },
     {
-      "raw": "potatoes 1 lb",
       "name": "potatoes",
       "unit": "pounds",
-      "amount": "1",
       "quantity": 1
     },
     {
-      "raw": "carrots 4",
       "name": "carrots",
       "unit": "count",
-      "amount": "4",
       "quantity": 4
     },
     {
-      "raw": "celery 4",
       "name": "celery",
       "unit": "count",
-      "amount": "4",
       "quantity": 4
     },
     {
-      "raw": "tomato paste 3 Tbsp",
       "name": "tomato paste",
       "unit": "tablespoons",
-      "amount": "3",
       "quantity": 3
     },
     {
-      "raw": "dried rosemary 1 tsp",
       "name": "dried rosemary",
       "unit": "teaspoons",
-      "amount": "1",
       "quantity": 1
     },
     {
-      "raw": "cornstarch 2 Tbsp",
       "name": "cornstarch",
       "unit": "tablespoons",
-      "amount": "2",
       "quantity": 2
     },
     {
-      "raw": "water 2 Tbsp",
       "name": "water",
       "unit": "tablespoons",
-      "amount": "2",
       "quantity": 2
     },
     {
-      "raw": "peas ¾ cups",
       "name": "peas",
       "unit": "cups",
-      "amount": "¾",
       "quantity": 0.75
     },
     {
-      "raw": "salt & pepper ",
       "name": "salt & pepper",
       "unit": "some",
     }

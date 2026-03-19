@@ -132,6 +132,7 @@ export const recipes = pgTable(
     prepTime: integer("prepTime"),
     cookTime: integer("cookTime"),
     servings: integer("servings"),
+    servingName: text("servingName"),
     nutritionalInfo: jsonb("nutritionalInfo").$type<NutritionalInfo>(),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().notNull(),

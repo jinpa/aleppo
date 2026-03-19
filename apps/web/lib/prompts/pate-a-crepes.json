@@ -3,31 +3,23 @@
   "description": "Découvrez la recette authentique de la célèbre crêpe de blé noir\nbretonne, sans gluten, sans lactose et riche en fibres, à la crêpière\ntraditionnelle.\n",
   "ingredients": [
     {
-      "raw": "farine de sarrasin 500 g",
       "name": "farine de sarrasin",
       "unit": "grams",
-      "amount": "500",
       "quantity": 500
     },
     {
-      "raw": "gros sel 15 g",
       "name": "gros sel",
       "unit": "grams",
-      "amount": "15",
       "quantity": 15
     },
     {
-      "raw": "eau 4¼ cups",
       "name": "eau",
       "unit": "cups",
-      "amount": "4¼",
       "quantity": 4.25
     },
     {
-      "raw": "miel 1 tsp",
       "name": "miel",
       "unit": "teaspoons",
-      "amount": "1",
       "quantity": 1
     }
   ],

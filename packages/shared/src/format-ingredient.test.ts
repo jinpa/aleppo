@@ -30,6 +30,9 @@ test.describe("formatIngredientDisplay", () => {
 
   test("formats tablespoons", () => {
     expect(formatIngredientDisplay({ name: "Honey", unit: "tbsp", quantity: 2 })).toBe("Honey 2 tbsp");
+    expect(formatIngredientDisplay({ name: "Honey", unit: "tbsp", quantity: 8 })).toBe("Honey 8 tbsp");
+    expect(formatIngredientDisplay({ name: "Honey", unit: "tbsp", quantity: 12 })).toBe("Honey 12 tbsp");
+    expect(formatIngredientDisplay({ name: "Honey", unit: "tbsp", quantity: 16 })).toBe("Honey 1 cup");
   });
 
   test("formats counts correctly", () => {
@@ -59,4 +62,10 @@ test.describe("formatIngredientDisplay", () => {
   test("handles complex fractions like 1/8", () => {
     expect(formatIngredientDisplay({ name: "Cinnamon", unit: "tsp", quantity: 0.125 })).toBe("Cinnamon ⅛ tsp");
   });
+
+  test("formats unkown", () => {
+    expect(formatIngredientDisplay({ name: "Sugar", unit: "package", quantity: 1 })).toBe("Sugar 1 package");
+    expect(formatIngredientDisplay({ name: "Sugar", unit: "pinch", quantity: 1.5 })).toBe("Sugar 1½ pinch");
+  });
+
 });

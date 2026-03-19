@@ -43,6 +43,7 @@ export function ImportReview({ recipe, parseError, aiGenerated, commentsUrl: ini
   const [prepTime, setPrepTime] = useState(recipe.prepTime ? String(recipe.prepTime) : "");
   const [cookTime, setCookTime] = useState(recipe.cookTime ? String(recipe.cookTime) : "");
   const [servings, setServings] = useState(recipe.servings ? String(recipe.servings) : "");
+  const [servingName, setServingName] = useState(recipe.servingName ?? "");
   const [isPublic, setIsPublic] = useState(false);
   const [imageUrl] = useState<string | undefined>(recipe.imageUrl ?? undefined);
   const [recipeSourceUrl, setRecipeSourceUrl] = useState(recipe.sourceUrl ?? "");
@@ -97,6 +98,7 @@ export function ImportReview({ recipe, parseError, aiGenerated, commentsUrl: ini
         prepTime: prepTime ? parseInt(prepTime, 10) : undefined,
         cookTime: cookTime ? parseInt(cookTime, 10) : undefined,
         servings: servings ? parseInt(servings, 10) : undefined,
+        servingName: servingName.trim() || undefined,
         isPublic,
         imageUrl: imageUrl || undefined,
         sourceUrl: recipeSourceUrl.trim() || undefined,
@@ -221,6 +223,11 @@ export function ImportReview({ recipe, parseError, aiGenerated, commentsUrl: ini
             <Text style={styles.subLabel}>Servings</Text>
             <TextInput style={styles.input} value={servings} onChangeText={setServings}
               placeholder="0" placeholderTextColor="#a8a29e" keyboardType="number-pad" />
+          </View>
+          <View style={styles.row3Item}>
+            <Text style={styles.subLabel}>Serving name</Text>
+            <TextInput style={styles.input} value={servingName} onChangeText={setServingName}
+              placeholder="e.g. slice" placeholderTextColor="#a8a29e" />
           </View>
         </View>
       </View>
