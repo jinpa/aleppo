@@ -458,6 +458,15 @@ export default function RecipeDetailScreen() {
           </View>
         ) : null}
 
+        {/* Comments link */}
+        {recipe.commentsUrl ? (
+          <TouchableOpacity onPress={() => Linking.openURL(recipe.commentsUrl!)} style={styles.sourceLink}>
+            <Ionicons name="chatbubble-outline" size={13} color="#78716c" />
+            <Text style={styles.sourceLinkText} numberOfLines={1}>Comments</Text>
+            <Ionicons name="open-outline" size={12} color="#a8a29e" />
+          </TouchableOpacity>
+        ) : null}
+
         {/* Tags */}
         {recipe.tags.length > 0 ? (
           <View style={styles.tagRow}>
