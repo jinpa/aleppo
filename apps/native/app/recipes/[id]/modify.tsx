@@ -162,30 +162,37 @@ export default function ModifyPreviewScreen() {
     }
   };
 
-  const buildBody = () => ({
-    title: title.trim(),
-    description: description.trim() || null,
-    ingredients: ingredients.filter((i) => i.raw.trim()),
-    instructions: instructions
-      .filter((i) => i.text.trim())
-      .map((i, idx) => ({ step: idx + 1, text: i.text.trim() })),
-    tags,
-    prepTime: prepTime ? parseInt(prepTime, 10) : null,
-    cookTime: cookTime ? parseInt(cookTime, 10) : null,
-    servings: servings ? parseInt(servings, 10) : null,
-    isPublic,
-    notes: notes.trim() || null,
-    images: aiImageAccepted && aiImageUrl
-      ? [{ url: aiImageUrl, role: "both" as const }]
-      : originalImages,
-  });
+  const hasUnresolvedImage = !!(aiImageUrl && !aiImageAccepted);
+  const [showImagePrompt, setShowImagePrompt] = useState(false);
+  const [pendingSave, setPendingSave] = useState<"new" | "apply" | null>(null);
 
-  const saveAsNew = async () => {
+  const buildBody = (useAiImage?: boolean) => {
+    const includeAi = useAiImage ?? aiImageAccepted;
+    return {
+      title: title.trim(),
+      description: description.trim() || null,
+      ingredients: ingredients.filter((i) => i.raw.trim()),
+      instructions: instructions
+        .filter((i) => i.text.trim())
+        .map((i, idx) => ({ step: idx + 1, text: i.text.trim() })),
+      tags,
+      prepTime: prepTime ? parseInt(prepTime, 10) : null,
+      cookTime: cookTime ? parseInt(cookTime, 10) : null,
+      servings: servings ? parseInt(servings, 10) : null,
+      isPublic,
+      notes: notes.trim() || null,
+      images: includeAi && aiImageUrl
+        ? [{ url: aiImageUrl, role: "both" as const }]
+        : originalImages,
+    };
+  };
+
+  const doSaveAsNew = async (useAiImage?: boolean) => {
     if (!validate()) return;
     setSaving(true);
     try {
       const body = {
-        ...buildBody(),
+        ...buildBody(useAiImage),
         isAdapted: true,
         forkedFromRecipeId: id,
         sourceUrl: originalSourceUrl || null,
@@ -193,10 +200,7 @@ export default function ModifyPreviewScreen() {
       };
       const res = await fetch(`${API_URL}/api/recipes`, {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
@@ -209,20 +213,14 @@ export default function ModifyPreviewScreen() {
     }
   };
 
-  const applyToOriginal = async () => {
+  const doApplyToOriginal = async (useAiImage?: boolean) => {
     if (!validate()) return;
     setSaving(true);
     try {
-      const body = {
-        ...buildBody(),
-        isAdapted: true,
-      };
+      const body = { ...buildBody(useAiImage), isAdapted: true };
       const res = await fetch(`${API_URL}/api/recipes/${id}`, {
         method: "PATCH",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error();
@@ -234,11 +232,42 @@ export default function ModifyPreviewScreen() {
     }
   };
 
+  const handleSave = (which: "new" | "apply") => {
+    if (hasUnresolvedImage) {
+      setPendingSave(which);
+      setShowImagePrompt(true);
+      return;
+    }
+    if (which === "new") doSaveAsNew(); else doApplyToOriginal();
+  };
+
+  const resolveImagePrompt = (useImage: boolean) => {
+    setShowImagePrompt(false);
+    if (useImage) setAiImageAccepted(true);
+    else { setAiImageUrl(null); setAiImageAccepted(false); }
+    const which = pendingSave;
+    setPendingSave(null);
+    if (which === "new") doSaveAsNew(useImage); else doApplyToOriginal(useImage);
+  };
+
   const saveButtons = (
     <View style={styles.saveSection}>
+      {showImagePrompt && (
+        <View style={styles.imagePromptBanner}>
+          <Text style={styles.imagePromptText}>Use the AI-generated image?</Text>
+          <View style={styles.imagePromptActions}>
+            <TouchableOpacity style={styles.imagePromptYes} onPress={() => resolveImagePrompt(true)}>
+              <Text style={styles.imagePromptYesText}>Use image</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.imagePromptNo} onPress={() => resolveImagePrompt(false)}>
+              <Text style={styles.imagePromptNoText}>Discard</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
       <TouchableOpacity
         style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-        onPress={saveAsNew}
+        onPress={() => handleSave("new")}
         disabled={saving}
       >
         {saving ? (
@@ -251,7 +280,7 @@ export default function ModifyPreviewScreen() {
       {isOwner ? (
         <TouchableOpacity
           style={[styles.applyButton, saving && styles.saveButtonDisabled]}
-          onPress={applyToOriginal}
+          onPress={() => handleSave("apply")}
           disabled={saving}
         >
           {saving ? (
@@ -653,4 +682,20 @@ const styles = StyleSheet.create({
   },
   aiImageButtonText: { fontSize: 13, fontWeight: "500", color: "#57534e" },
   aiImageErrorText: { fontSize: 12, color: "#b91c1c", marginTop: 6 },
+  imagePromptBanner: {
+    backgroundColor: "#fffbeb", borderWidth: 1, borderColor: "#fde68a",
+    borderRadius: 10, padding: 12, gap: 10,
+  },
+  imagePromptText: { fontSize: 14, fontWeight: "600", color: "#92400e" },
+  imagePromptActions: { flexDirection: "row", gap: 10 },
+  imagePromptYes: {
+    flex: 1, backgroundColor: "#166534", borderRadius: 8,
+    paddingVertical: 9, alignItems: "center",
+  },
+  imagePromptYesText: { fontSize: 14, fontWeight: "600", color: "#fff" },
+  imagePromptNo: {
+    flex: 1, backgroundColor: "#fff", borderRadius: 8, borderWidth: 1, borderColor: "#e7e5e4",
+    paddingVertical: 9, alignItems: "center",
+  },
+  imagePromptNoText: { fontSize: 14, fontWeight: "500", color: "#57534e" },
 });

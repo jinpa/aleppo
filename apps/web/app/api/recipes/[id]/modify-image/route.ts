@@ -53,10 +53,23 @@ export async function POST(
   const client = new GoogleGenAI({ apiKey });
   const modelId = "gemini-3.1-flash-image-preview";
 
+  // Summarise recipe details for the image prompt
+  const ingredientList = (recipe.ingredients as { raw?: string }[] | null)
+    ?.map((i) => i.raw).filter(Boolean).join(", ") || "";
+  const instructionText = (recipe.instructions as { text?: string }[] | null)
+    ?.map((i) => i.text).filter(Boolean).join(" ") || "";
+  const recipeContext = [
+    recipeDescription ? `Description: ${recipeDescription}.` : "",
+    ingredientList ? `Ingredients: ${ingredientList}.` : "",
+    instructionText ? `Method summary: ${instructionText}` : "",
+  ].filter(Boolean).join("\n");
+
   // Build prompt
+  const strictRules = `IMPORTANT: Only show ingredients and garnishes that are explicitly listed above. Do not add any garnishes, toppings, or decorations not mentioned in the recipe. Pay close attention to equipment details (pan shape, serving vessel, etc.) described in the method.`;
+
   const promptText = mode === "edit"
-    ? `This is a photo of the original recipe "${recipe.title}". The recipe has been modified and is now called "${recipeTitle}". ${recipeDescription ? `Description: ${recipeDescription}.` : ""} Please edit this image to reflect the modified recipe. Make it look like an appetizing food photo of the new dish.`
-    : `Generate an appetizing, professional-looking food photo of a dish called "${recipeTitle}". ${recipeDescription ? `Description: ${recipeDescription}.` : ""} The image should look like a real photograph, shot from above at a slight angle, with natural lighting and a clean background.`;
+    ? `This is a photo of the original recipe "${recipe.title}". The recipe has been modified and is now called "${recipeTitle}".\n${recipeContext}\n${strictRules}\nPlease edit this image to reflect the modified recipe. Make it look like an appetizing food photo of the new dish.`
+    : `Generate an appetizing, professional-looking food photo of a dish called "${recipeTitle}".\n${recipeContext}\n${strictRules}\nThe image should look like a real photograph, shot from above at a slight angle, with natural lighting and a clean background.`;
 
   // Build content parts
   const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [
