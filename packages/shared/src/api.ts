@@ -184,6 +184,7 @@ export type ScrapedRecipe = {
   prepTime?: number | null;
   cookTime?: number | null;
   servings?: number | null;
+  servingName?: string;
   sourceUrl?: string;
   sourceName?: string;
   imageUrl?: string;

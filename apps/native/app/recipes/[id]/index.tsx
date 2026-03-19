@@ -420,7 +420,7 @@ export default function RecipeDetailScreen() {
             <View style={[styles.metaChip, scaleFactor !== 1 && styles.metaChipAmber]}>
               <Ionicons name="people-outline" size={13} color={scaleFactor !== 1 ? "#92400e" : "#78716c"} />
               <Text style={[styles.metaChipText, scaleFactor !== 1 && styles.metaChipTextAmber]}>
-                {scaledServings} servings
+                {scaledServings} {recipe.servingName ?? "servings"}
               </Text>
             </View>
           ) : null}

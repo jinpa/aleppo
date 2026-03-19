@@ -95,6 +95,7 @@ function normalize(amount: number, unit: IngredientUnits): { amount: number; uni
 }
 
 function beautify(amount: number, unit: IngredientUnits): { amount: number; unit: IngredientUnits } {
+  const originalUnits = unit;
   const norm = normalize(amount, unit);
 
   switch (norm.unit) {
@@ -109,7 +110,10 @@ function beautify(amount: number, unit: IngredientUnits): { amount: number; unit
       }
       return norm;
     case IngredientUnits.cups:
-      if (norm.amount >= 0.25) {
+      // If the original unit was not "cups" (it was spoons) keep using spoons
+      // till 1 cup. If it was "cups", start using spoons below 1/4 cups.
+      if ((originalUnits == IngredientUnits.cups && norm.amount >= 0.25) ||
+          norm.amount >= 1.0) {
         return norm;
       } else {
         const tbsps = norm.amount * 16.0;
@@ -241,16 +245,33 @@ function formatAmount(amount: number, unit: IngredientUnits): string {
   }
 }
 
-function getUnitLabel(unit: IngredientUnits, amount: number): string {
+/**
+ * Return the label for the unit.
+ *
+ * This is where we take care of "cup" vs. "cups" (to be reviewed in
+ * i18n), and of unknown units like "package", passed as `rawUnit`.
+ */
+function getUnitLabel(unit: IngredientUnits, amount: number, 
+                      rawUnit: string | undefined): string {
   if (unit === IngredientUnits.cups) {
     return amount <= 1.0 ? "cup" : "cups";
+  }
+  if (unit == IngredientUnits.count && rawUnit != undefined && rawUnit != "count") {
+    return rawUnit;
   }
   return UNIT_LABELS[unit];
 }
 
 /**
  * Formats an Aleppo ingredient into a display string.
- * Mimics the smart_scaler Dart implementation.
+ * 
+ * This supports formatting a rescaled ingredient, and here "unit" is
+ * the original unit that the ingredient was specified as, and
+ * "quantity" the current, maybe scaled, quantity.
+ *
+ * Ingredients with unknown units (e.g. "pinch" or "package") are
+ * treated as "count" ingredients: They are rounded to halves. So "1.3
+ * package" will be displayed as "1 1/2 package".
  */
 export function formatIngredientDisplay(ingredient: Pick<Ingredient, "name" | "unit" | "quantity">): string {
   const { name, unit: rawUnit, quantity } = ingredient;
@@ -263,7 +284,13 @@ export function formatIngredientDisplay(ingredient: Pick<Ingredient, "name" | "u
   const { amount: beautyAmount, unit: beautyUnit } = beautify(quantity, initialUnit);
   
   const amountStr = formatAmount(beautyAmount, beautyUnit);
-  const unitLabel = getUnitLabel(beautyUnit, beautyAmount);
+  var displayUnit = beautyUnit;
+  var unitLabel;
+  if (displayUnit == IngredientUnits.count && rawUnit != undefined && rawUnit != "count") {
+    unitLabel = rawUnit;
+  } else {
+    unitLabel = getUnitLabel(beautyUnit, beautyAmount, rawUnit);
+  }
 
   const parts: string[] = [];
   if (name) parts.push(name);
