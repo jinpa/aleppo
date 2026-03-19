@@ -62,4 +62,10 @@ test.describe("formatIngredientDisplay", () => {
   test("handles complex fractions like 1/8", () => {
     expect(formatIngredientDisplay({ name: "Cinnamon", unit: "tsp", quantity: 0.125 })).toBe("Cinnamon ⅛ tsp");
   });
+
+  test("formats unkown", () => {
+    expect(formatIngredientDisplay({ name: "Sugar", unit: "package", quantity: 1 })).toBe("Sugar 1 package");
+    expect(formatIngredientDisplay({ name: "Sugar", unit: "pinch", quantity: 1.5 })).toBe("Sugar 1½ pinch");
+  });
+
 });
