@@ -3,87 +3,63 @@
   "description": "These pinwheel-style cookies use a classic sugar dough, rolled around\na layer of quick cranberry jam made with red wine. The cranberries’\nacidity plays so well with the tannins in the wine, and their pectin\nfirms up the jam so that it doesn’t seep out when baked. While I’d\nnever recommend baking (or cooking) with your best bottle, you can\ncertainly serve these cookies alongside glasses of the good\nstuff. They’re not too sweet and just as at home on a cheese plate as\nthey are after dinner.\n",
   "ingredients": [
     {
-      "raw": "baking powder ½ tsp",
       "name": "baking powder",
       "unit": "teaspoons",
-      "amount": "½",
       "quantity": 0.5
     },
     {
-      "raw": "all-purpose flour 1¾ cups",
       "name": "all-purpose flour",
       "unit": "cups",
-      "amount": "1¾",
       "quantity": 1.75
     },
     {
-      "raw": "kosher salt ½ tsp",
       "name": "kosher salt",
       "unit": "teaspoons",
-      "amount": "½",
       "quantity": 0.5
     },
     {
-      "raw": "granulated sugar ⅞ cups",
       "name": "granulated sugar",
       "unit": "cups",
-      "amount": "⅞",
       "quantity": 0.875
     },
     {
-      "raw": "orange 1",
       "name": "orange",
       "unit": "count",
-      "amount": "1",
       "quantity": 1
     },
     {
-      "raw": "unsalted butter ⅝ cups",
       "name": "unsalted butter",
       "unit": "cups",
-      "amount": "⅝",
       "quantity": 0.625
     },
     {
-      "raw": "egg yolk 1",
       "name": "egg yolk",
       "unit": "count",
-      "amount": "1",
       "quantity": 1
     },
     {
-      "raw": "vanilla extract 1½ tsp",
       "name": "vanilla extract",
       "unit": "teaspoons",
-      "amount": "1½",
       "quantity": 1.5
     },
     {
-      "raw": "cranberries 1¼ cups",
       "name": "cranberries",
       "unit": "cups",
-      "amount": "1¼",
       "quantity": 1.25
     },
     {
-      "raw": "red wine 1 cups",
       "name": "red wine",
       "unit": "cups",
-      "amount": "1",
       "quantity": 1
     },
     {
-      "raw": "egg white 1",
       "name": "egg white",
       "unit": "count",
-      "amount": "1",
       "quantity": 1
     },
     {
-      "raw": "sanding sugar 1",
       "name": "sanding sugar",
       "unit": "count",
-      "amount": "1",
       "quantity": 1
     }
   ],

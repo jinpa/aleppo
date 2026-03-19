@@ -3,73 +3,53 @@
   "description": "These delicate cookies are shockingly easy to make considering how\nhard this recipe was for me to crack! Also known as French butter\ncakes, madeleines are well-known, easily-recognizable, sophisticated\nlittle cakes. They have a reputation for being fussy, and what they’re\nreally known for is their scalloped shell-shape and their\ncharacteristic bump. It took weeks upon weeks to finally get this\nrecipe perfected, but it was definitely worth it.\n",
   "ingredients": [
     {
-      "raw": "unsalted butter 1 Tbsp",
       "name": "unsalted butter",
       "unit": "tablespoons",
-      "amount": "1",
       "quantity": 1
     },
     {
-      "raw": "all-purpose flour 1½ tsp",
       "name": "all-purpose flour",
       "unit": "teaspoons",
-      "amount": "1½",
       "quantity": 1.5
     },
     {
-      "raw": "unsalted butter ⅝ cups",
       "name": "unsalted butter",
       "unit": "cups",
-      "amount": "⅝",
       "quantity": 0.625
     },
     {
-      "raw": "large eggs 2",
       "name": "large eggs",
       "unit": "count",
-      "amount": "2",
       "quantity": 2
     },
     {
-      "raw": "granulated sugar ½ cups",
       "name": "granulated sugar",
       "unit": "cups",
-      "amount": "½",
       "quantity": 0.5
     },
     {
-      "raw": "light brown sugar 3 Tbsp",
       "name": "light brown sugar",
       "unit": "tablespoons",
-      "amount": "3",
       "quantity": 3
     },
     {
-      "raw": "vanilla extract 2 tsp",
       "name": "vanilla extract",
       "unit": "teaspoons",
-      "amount": "2",
       "quantity": 2
     },
     {
-      "raw": "salt ⅛ tsp",
       "name": "salt",
       "unit": "teaspoons",
-      "amount": "⅛",
       "quantity":0.125
     },
     {
-      "raw": "all-purpose flour 1¼ cups",
       "name": "all-purpose flour",
       "unit": "cups",
-      "amount": "1¼",
       "quantity": 1.25
     },
     {
-      "raw": "lemon or orange zest 2 tsp",
       "name": "lemon or orange zest",
       "unit": "teaspoons",
-      "amount": "2",
       "quantity": 2
     }
   ],

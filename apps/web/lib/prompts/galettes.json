@@ -3,35 +3,26 @@
   "description": "La complète est une incontournable des crêpes salées. Il en existe\nplusieurs variantes, mais commencons par la plus classique\nd'entre-elles : la galette complète à base de jambon, oeuf et fromage\nrâpé.\n",
   "ingredients": [
     {
-      "raw": "farine de sarrasin 500 g",
       "name": "farine de sarrasin",
       "unit": "grams",
-      "amount": "500",
       "quantity": 500
     },
     {
-      "raw": "gros sel 15 g",
       "name": "gros sel",
       "unit": "grams",
-      "amount": "15",
       "quantity": 15
     },
     {
-      "raw": "eau 1L",
       "name": "eau",
       "unit": "liters",
-      "amount": "1",
       "quantity": 1.0
     },
     {
-      "raw": "miel 1 tsp",
       "name": "miel",
       "unit": "teaspoons",
-      "amount": "1",
       "quantity": 1
     },
     {
-      "raw": "eau ",
       "name": "eau",
       "unit": "some",
     }
