@@ -6,6 +6,13 @@ import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
 import { parseIngredients } from "@/lib/parse-ingredients";
+import { deleteR2ByUrl } from "@/lib/r2";
+import type { RecipeImage } from "@aleppo/shared";
+
+const imageSchema = z.object({
+  url: z.string(),
+  role: z.enum(["thumbnail", "banner", "both"]).optional(),
+});
 
 const updateSchema = z.object({
   title: z.string().min(1).max(300).optional(),
@@ -13,6 +20,7 @@ const updateSchema = z.object({
   sourceUrl: z.string().url().optional().or(z.literal("")).nullable(),
   sourceName: z.string().max(200).optional().nullable(),
   imageUrl: z.string().optional().nullable(),
+  images: z.array(imageSchema).max(10).optional(),
   ingredients: z.array(z.object({ raw: z.string() })).optional(),
   instructions: z
     .array(z.object({ step: z.number(), text: z.string() }))
@@ -76,14 +84,53 @@ export async function PATCH(
     ? parseIngredients(parsed.data.ingredients.map((i) => i.raw))
     : undefined;
 
+  // If images or imageUrl is changing, fetch old images so we can clean up R2
+  let removedUrls: string[] = [];
+  const updateFields: Record<string, unknown> = {
+    ...parsed.data,
+    ...(ingredients && { ingredients }),
+    updatedAt: new Date(),
+  };
+
+  if (parsed.data.images) {
+    const [existing] = await db
+      .select({ images: recipes.images, imageUrl: recipes.imageUrl })
+      .from(recipes)
+      .where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
+      .limit(1);
+    if (existing) {
+      const oldUrls = new Set((existing.images ?? []).map((i: RecipeImage) => i.url));
+      const newUrls = new Set(parsed.data.images.map((i) => i.url));
+      removedUrls = [...oldUrls].filter((u) => !newUrls.has(u));
+    }
+    // Derive imageUrl from new images
+    const newImages = parsed.data.images;
+    updateFields.imageUrl = newImages.find((i) => i.role === "banner" || i.role === "both")?.url
+      ?? newImages[0]?.url ?? null;
+  } else if ("imageUrl" in parsed.data) {
+    const [existing] = await db
+      .select({ imageUrl: recipes.imageUrl })
+      .from(recipes)
+      .where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
+      .limit(1);
+    if (existing?.imageUrl && existing.imageUrl !== parsed.data.imageUrl) {
+      removedUrls = [existing.imageUrl];
+    }
+  }
+
   const [updated] = await db
     .update(recipes)
-    .set({ ...parsed.data, ...(ingredients && { ingredients }), updatedAt: new Date() })
+    .set(updateFields)
     .where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
     .returning();
 
   if (!updated) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Clean up removed images from R2 (fire-and-forget)
+  for (const url of removedUrls) {
+    deleteR2ByUrl(url).catch(() => {});
   }
 
   return NextResponse.json(updated);
@@ -103,10 +150,19 @@ export async function DELETE(
   const [deleted] = await db
     .delete(recipes)
     .where(and(eq(recipes.id, id), eq(recipes.userId, userId)))
-    .returning({ id: recipes.id });
+    .returning({ id: recipes.id, images: recipes.images, imageUrl: recipes.imageUrl });
 
   if (!deleted) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Clean up all images from R2 (fire-and-forget)
+  const allUrls = (deleted.images ?? []).map((i: RecipeImage) => i.url);
+  if (deleted.imageUrl && !allUrls.includes(deleted.imageUrl)) {
+    allUrls.push(deleted.imageUrl);
+  }
+  for (const url of allUrls) {
+    deleteR2ByUrl(url).catch(() => {});
   }
 
   return NextResponse.json({ success: true });

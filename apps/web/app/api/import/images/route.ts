@@ -6,10 +6,12 @@ import { GoogleGenAI } from "@google/genai";
 import sharp from "sharp";
 import fs from "fs";
 import path from "path";
+import { formatIngredientDisplay } from "@aleppo/shared";
+import { parseFractionString } from "@/lib/scale-ingredient";
 
 const PROMPTS_DIR = path.join(process.cwd(), "lib/prompts");
 
-function buildPrompt(inputText?: string): string {
+function buildPrompt(inputText?: string, language?: string): string {
   const prefix = fs.readFileSync(path.join(PROMPTS_DIR, "prefix.txt"), "utf-8");
 
   const shotFiles = fs
@@ -29,7 +31,11 @@ function buildPrompt(inputText?: string): string {
     "utf-8"
   );
 
-  const base = `${prefix}\n${shots}\n---\nRULES:\n0- Keep the recipe in its original language\n${instructions}\n---\n`;
+  const translate = language
+    ? `0- Translate the recipe (title, description, ingredients, instructions) to ${language}.\n`
+    : "0- Keep the recipe in its original language.\n";
+
+  const base = `${prefix}\n${shots}\n---\nRULES:\n${translate}\n${instructions}\n---\n`;
 
   if (inputText) {
     return `${base}Process the following text and output the recipe JSON.\nTEXT: ${inputText}\nJSON:`;
@@ -55,6 +61,7 @@ export async function POST(req: Request) {
   const formData = await req.formData();
   const imageEntries = formData.getAll("images");
   const inputText = formData.get("text");
+  const language = formData.get("language");
 
   if (imageEntries.length === 0 && !inputText) {
     return NextResponse.json(
@@ -64,7 +71,8 @@ export async function POST(req: Request) {
   }
 
   const textInput = typeof inputText === "string" ? inputText : undefined;
-  const prompt = buildPrompt(textInput);
+  const targetLanguage = typeof language === "string" ? language : undefined;
+  const prompt = buildPrompt(textInput, targetLanguage);
   const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [
     { text: prompt },
   ];
@@ -96,11 +104,18 @@ export async function POST(req: Request) {
     const stream = await client.models.generateContentStream({
       model: modelId,
       contents: [{ role: "user", parts }],
-      config: { thinkingConfig: { thinkingBudget: 0 } },
+      config: { thinkingConfig: { thinkingBudget: 0 }, maxOutputTokens: 8192 },
     });
     let text = "";
+    let finishReason: string | undefined;
     for await (const chunk of stream) {
       if (chunk.text) text += chunk.text;
+      const reason = chunk.candidates?.[0]?.finishReason;
+      if (reason) finishReason = reason;
+    }
+    console.log("[import/images] Gemini finish reason:", finishReason, "chars:", text.length);
+    if (finishReason === "RECITATION") {
+      throw new Error("RECITATION");
     }
     return text;
   })();
@@ -123,7 +138,19 @@ export async function POST(req: Request) {
     }
   })();
 
-  const [responseText, uploadedImageUrl] = await Promise.all([geminiPromise, imageUrlPromise]);
+  let responseText: string;
+  let uploadedImageUrl: string | null;
+  try {
+    [responseText, uploadedImageUrl] = await Promise.all([geminiPromise, imageUrlPromise]);
+  } catch (err) {
+    if (err instanceof Error && err.message === "RECITATION") {
+      return NextResponse.json(
+        { error: "The AI stopped because this recipe may be from a copyrighted source. Try importing it by URL instead, or enter it manually." },
+        { status: 422 }
+      );
+    }
+    throw err;
+  }
 
   console.log("[import/images] Gemini raw response:\n", responseText);
 
@@ -133,15 +160,49 @@ export async function POST(req: Request) {
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(cleaned);
-  } catch {
-    return NextResponse.json({ error: "AI returned invalid JSON" }, { status: 502 });
+  } catch (e) {
+    return NextResponse.json({ error: `AI returned invalid JSON: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 });
+  }
+
+  if (typeof parsed.error === "string") {
+    return NextResponse.json({ error: parsed.error }, { status: 422 });
   }
 
   // Pick only the fields that belong to ScrapedRecipe
+  const ingredients = Array.isArray(parsed.ingredients)
+    ? parsed.ingredients.map((ing: any) => {
+        const name = typeof ing.name === "string" ? ing.name : "";
+        const unit = typeof ing.units === "string" ? ing.units : (typeof ing.unit === "string" ? ing.unit : undefined);
+        const notes = typeof ing.notes === "string" ? ing.notes : undefined;
+        
+        // Prioritize quantity as a number if provided by the AI
+        let quantity = typeof ing.quantity === "number" ? ing.quantity : undefined;
+        const amountStr = typeof ing.amount === "string" ? ing.amount : undefined;
+        
+        // Fallback to parsing amount string if quantity is missing
+        if (quantity === undefined && amountStr) {
+          quantity = parseFractionString(amountStr)?.valueOf();
+        }
+
+        // Use the new formatter to fill-in the raw attribute
+        let raw = formatIngredientDisplay({ name, unit, quantity });
+        if (notes) raw += ` (${notes})`;
+
+        return {
+          raw: raw || (typeof ing.raw === "string" ? ing.raw : ""),
+          name,
+          unit,
+          amount: amountStr,
+          quantity,
+          notes,
+        };
+      })
+    : undefined;
+
   const recipe = {
     ...(typeof parsed.title === "string" && { title: parsed.title }),
     ...(typeof parsed.description === "string" && { description: parsed.description }),
-    ...(Array.isArray(parsed.ingredients) && { ingredients: parsed.ingredients }),
+    ...(ingredients && { ingredients }),
     ...(Array.isArray(parsed.instructions) && { instructions: parsed.instructions }),
     ...(Array.isArray(parsed.tags) && { tags: parsed.tags }),
     ...(parsed.prepTime != null && { prepTime: Number(parsed.prepTime) }),

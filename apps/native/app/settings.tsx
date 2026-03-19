@@ -15,50 +15,8 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
+import { NavShell } from "@/components/NavShell";
 import type { UserSettings } from "@aleppo/shared";
-
-// ─── Tab Bar ─────────────────────────────────────────────────────────────────
-
-const TAB_ITEMS = [
-  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
-  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
-  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
-  { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
-  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
-] as const;
-
-function TabBar() {
-  const router = useRouter();
-  return (
-    <View style={tabStyles.bar}>
-      {TAB_ITEMS.map((item) => (
-        <TouchableOpacity
-          key={item.name}
-          style={tabStyles.tab}
-          onPress={() => router.navigate(item.route)}
-          activeOpacity={0.7}
-        >
-          <Ionicons name={item.icon} size={24} color={item.amber ? "#d97706" : "#a8a29e"} />
-          <Text style={[tabStyles.label, item.amber && tabStyles.labelAmber]}>{item.name}</Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
-const tabStyles = StyleSheet.create({
-  bar: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderTopWidth: 1,
-    borderTopColor: "#e7e5e4",
-    paddingBottom: Platform.OS === "ios" ? 28 : 8,
-    paddingTop: 8,
-  },
-  tab: { flex: 1, alignItems: "center", gap: 2 },
-  label: { fontSize: 11, fontWeight: "500", color: "#a8a29e" },
-  labelAmber: { color: "#d97706" },
-});
 
 export default function SettingsScreen() {
   const router = useRouter();
@@ -76,6 +34,7 @@ export default function SettingsScreen() {
   const [isPublic, setIsPublic] = useState(true);
   const [defaultTagsEnabled, setDefaultTagsEnabled] = useState(true);
   const [defaultRecipeIsPublic, setDefaultRecipeIsPublic] = useState(false);
+  const [translateAI, setTranslateAI] = useState(true);
   const [notifyOnNewFollower, setNotifyOnNewFollower] = useState(true);
 
   // Export state
@@ -137,6 +96,7 @@ export default function SettingsScreen() {
   };
 
   const fetchSettings = useCallback(async () => {
+    if (!token) return;
     setLoading(true);
     try {
       const res = await fetch(`${API_URL}/api/users/me`, {
@@ -150,6 +110,7 @@ export default function SettingsScreen() {
       setIsPublic(data.isPublic);
       setDefaultTagsEnabled(data.defaultTagsEnabled);
       setDefaultRecipeIsPublic(data.defaultRecipeIsPublic);
+      setTranslateAI(data.translateAI ?? true);
       setNotifyOnNewFollower(data.notifyOnNewFollower ?? true);
     } catch {
       setError("Could not load settings");
@@ -182,6 +143,7 @@ export default function SettingsScreen() {
           isPublic,
           defaultTagsEnabled,
           defaultRecipeIsPublic,
+          translateAI,
           notifyOnNewFollower,
         }),
       });
@@ -197,17 +159,16 @@ export default function SettingsScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+      <NavShell>
         <View style={styles.centered}>
           <ActivityIndicator size="large" color="#1c1917" />
         </View>
-        <TabBar />
-      </View>
+      </NavShell>
     );
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+    <NavShell>
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -344,6 +305,24 @@ export default function SettingsScreen() {
               thumbColor="#fff"
             />
           </View>
+          <View style={styles.divider} />
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Ionicons name="language-outline" size={20} color="#57534e" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.toggleLabel}>Translate AI imports</Text>
+                <Text style={styles.toggleSub}>
+                  Always translate recipe details to your language
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={translateAI}
+              onValueChange={setTranslateAI}
+              trackColor={{ false: "#e7e5e4", true: "#1c1917" }}
+              thumbColor="#fff"
+            />
+          </View>
         </View>
 
         {/* Notifications section */}
@@ -446,8 +425,7 @@ export default function SettingsScreen() {
         <View style={{ height: 48 }} />
       </ScrollView>
     </KeyboardAvoidingView>
-    <TabBar />
-    </View>
+    </NavShell>
   );
 }
 

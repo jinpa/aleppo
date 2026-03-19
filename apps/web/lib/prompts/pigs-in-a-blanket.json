@@ -6,31 +6,36 @@
       "raw": "large egg 1",
       "name": "large egg",
       "unit": "count",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "water 1 tsp",
       "name": "water",
       "unit": "teaspoons",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "cocktail-sized smoked sausages or little smokies 14 oz",
       "name": "cocktail-sized smoked sausages or little smokies",
       "unit": "ounces",
-      "amount": "14"
+      "amount": "14",
+      "quantity": 14
     },
     {
       "raw": "refrigerated crescent roll dough 8 oz",
       "name": "refrigerated crescent roll dough",
       "unit": "ounces",
-      "amount": "8"
+      "amount": "8",
+      "quantity": 8
     },
     {
       "raw": "flaky salt or everything bagel seasoning 1",
       "name": "flaky salt or everything bagel seasoning",
       "unit": "count",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     }
   ],
   "instructions": [

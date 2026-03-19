@@ -20,6 +20,11 @@ Run the commands from the repo root:
    # To get the server started
    pnpm dev:web
    ```
+   ```bash
+   # Note for problems connecting to the back end from metro
+   # Try this to make it bind to all hosts so it can be found (instead of pnpm dev:web)
+   cd apps/web && pnpm exec next dev -H 0.0.0.0
+   ```
 
    ```bash
    # To start the web app

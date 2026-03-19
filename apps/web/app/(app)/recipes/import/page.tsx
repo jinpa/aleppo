@@ -27,7 +27,11 @@ export default async function ImportPage({
     .where(eq(users.id, session.user.id))
     .limit(1);
 
-  const userPrefs = userPrefsRow ?? { defaultTagsEnabled: true, defaultRecipeIsPublic: false };
+  const userPrefs = userPrefsRow ?? {
+    defaultTagsEnabled: true,
+    defaultRecipeIsPublic: false,
+    translateAI: true,
+  };
 
   // Bookmarklet flow: page was opened by the bookmarklet via window.open.
   // The client-side ImportFlow component handles the postMessage handshake.

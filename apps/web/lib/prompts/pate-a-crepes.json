@@ -6,25 +6,29 @@
       "raw": "farine de sarrasin 500 g",
       "name": "farine de sarrasin",
       "unit": "grams",
-      "amount": "500"
+      "amount": "500",
+      "quantity": 500
     },
     {
       "raw": "gros sel 15 g",
       "name": "gros sel",
       "unit": "grams",
-      "amount": "15"
+      "amount": "15",
+      "quantity": 15
     },
     {
       "raw": "eau 4¼ cups",
       "name": "eau",
       "unit": "cups",
-      "amount": "4¼"
+      "amount": "4¼",
+      "quantity": 4.25
     },
     {
       "raw": "miel 1 tsp",
       "name": "miel",
       "unit": "teaspoons",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     }
   ],
   "instructions": [

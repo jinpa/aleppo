@@ -39,6 +39,7 @@ export default function NotificationsScreen() {
 
   const fetchNotifications = useCallback(
     async (opts?: { silent?: boolean }) => {
+      if (!token) return;
       if (!opts?.silent) setLoading(true);
       try {
         const res = await fetch(`${API_URL}/api/notifications`, {

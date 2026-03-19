@@ -3,6 +3,11 @@ import { Image } from "expo-image";
 import { Ionicons } from "@expo/vector-icons";
 import type { Recipe } from "@aleppo/shared";
 
+type RecipeWithCookStats = Recipe & {
+  cookCount?: number;
+  lastCookedOn?: string | null;
+};
+
 function totalTime(recipe: Recipe): string | null {
   const mins = (recipe.prepTime ?? 0) + (recipe.cookTime ?? 0);
   if (!mins) return null;
@@ -12,8 +17,21 @@ function totalTime(recipe: Recipe): string | null {
   return m ? `${h}h ${m}m` : `${h}h`;
 }
 
+function formatLastCooked(dateStr: string): string {
+  const d = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return "today";
+  if (diffDays === 1) return "yesterday";
+  if (diffDays < 7) return `${diffDays}d ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)}w ago`;
+  if (diffDays < 365) return `${Math.floor(diffDays / 30)}mo ago`;
+  return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+}
+
 type RecipeCardProps = {
-  recipe: Recipe;
+  recipe: RecipeWithCookStats;
   onPress: () => void;
   editMode?: boolean;
   selected?: boolean;
@@ -44,9 +62,12 @@ export function RecipeCard({
           />
         </View>
       ) : null}
-      {recipe.imageUrl ? (
+      {(() => {
+        const thumbUrl = recipe.images?.find((i) => i.role === "thumbnail" || i.role === "both")?.url
+          ?? recipe.images?.[0]?.url ?? recipe.imageUrl;
+        return thumbUrl ? (
         <Image
-          source={{ uri: recipe.imageUrl }}
+          source={{ uri: thumbUrl }}
           style={styles.cardImage}
           contentFit="cover"
           transition={200}
@@ -55,7 +76,8 @@ export function RecipeCard({
         <View style={styles.cardImagePlaceholder}>
           <Text style={styles.cardImagePlaceholderText}>🍳</Text>
         </View>
-      )}
+      );
+      })()}
       <View style={styles.cardBody}>
         <Text style={styles.cardTitle} numberOfLines={2}>
           {recipe.title}
@@ -72,21 +94,17 @@ export function RecipeCard({
               {recipe.sourceName}
             </Text>
           ) : null}
+          {recipe.cookCount ? (
+            <Text style={styles.cardMetaText}>
+              Made {recipe.cookCount}×
+            </Text>
+          ) : null}
+          {recipe.lastCookedOn ? (
+            <Text style={styles.cardMetaText}>
+              {formatLastCooked(recipe.lastCookedOn)}
+            </Text>
+          ) : null}
         </View>
-        {recipe.tags.length > 0 ? (
-          <View style={styles.tagRow}>
-            {recipe.tags.slice(0, 3).map((tag) => (
-              <View key={tag} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
-              </View>
-            ))}
-            {recipe.tags.length > 3 ? (
-              <Text style={styles.tagOverflow}>
-                +{recipe.tags.length - 3}
-              </Text>
-            ) : null}
-          </View>
-        ) : null}
       </View>
     </TouchableOpacity>
   );
@@ -150,27 +168,5 @@ const styles = StyleSheet.create({
   cardMetaText: {
     fontSize: 11,
     color: "#a8a29e",
-  },
-  tagRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 4,
-    marginTop: 4,
-  },
-  tag: {
-    backgroundColor: "#f5f5f4",
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  tagText: {
-    fontSize: 10,
-    color: "#57534e",
-    fontWeight: "500",
-  },
-  tagOverflow: {
-    fontSize: 10,
-    color: "#a8a29e",
-    alignSelf: "center",
   },
 });

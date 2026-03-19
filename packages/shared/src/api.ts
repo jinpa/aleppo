@@ -90,6 +90,7 @@ export type UserSettings = {
   isPublic: boolean;
   defaultTagsEnabled: boolean;
   defaultRecipeIsPublic: boolean;
+  translateAI: boolean;
   createdAt: string;
   hasPassword: boolean;
   notifyOnNewFollower: boolean;

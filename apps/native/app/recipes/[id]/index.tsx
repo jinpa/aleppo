@@ -3,6 +3,7 @@ import {
   View,
   Text,
   FlatList,
+  ScrollView,
   TextInput,
   TouchableOpacity,
   StyleSheet,
@@ -20,6 +21,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
 import { API_URL } from "@/constants/api";
 import { scaleIngredient } from "@/lib/scale-ingredient";
+import ImageViewerModal from "@/components/ImageViewerModal";
+import { NavShell } from "@/components/NavShell";
+import { AI_MODIFY_PRESETS } from "@/constants/ai-presets";
+import { setPendingModification } from "@/stores/ai-modify";
 import type { RecipeDetailResponse, CookLog } from "@aleppo/shared";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -52,55 +57,6 @@ const SCALE_PRESETS = [
   { label: "2×", value: 2 },
   { label: "3×", value: 3 },
 ];
-
-// ─── Tab Bar ─────────────────────────────────────────────────────────────────
-
-const TAB_ITEMS = [
-  { name: "Recipes", icon: "book-outline" as const, route: "/(tabs)/recipes", amber: false },
-  { name: "Queue", icon: "time-outline" as const, route: "/(tabs)/queue", amber: false },
-  { name: "Feed", icon: "people-outline" as const, route: "/(tabs)/feed", amber: false },
-  { name: "New", icon: "add-circle-outline" as const, route: "/(tabs)/new", amber: true },
-  { name: "Import", icon: "arrow-down-circle-outline" as const, route: "/(tabs)/import", amber: false },
-] as const;
-
-function TabBar() {
-  const router = useRouter();
-  return (
-    <View style={tabStyles.bar}>
-      {TAB_ITEMS.map((item) => (
-        <TouchableOpacity
-          key={item.name}
-          style={tabStyles.tab}
-          onPress={() => router.navigate(item.route)}
-          activeOpacity={0.7}
-        >
-          <Ionicons
-            name={item.icon}
-            size={24}
-            color={item.amber ? "#d97706" : "#a8a29e"}
-          />
-          <Text style={[tabStyles.label, item.amber && tabStyles.labelAmber]}>
-            {item.name}
-          </Text>
-        </TouchableOpacity>
-      ))}
-    </View>
-  );
-}
-
-const tabStyles = StyleSheet.create({
-  bar: {
-    flexDirection: "row",
-    backgroundColor: "#ffffff",
-    borderTopWidth: 1,
-    borderTopColor: "#e7e5e4",
-    paddingBottom: Platform.OS === "ios" ? 28 : 8,
-    paddingTop: 8,
-  },
-  tab: { flex: 1, alignItems: "center", gap: 2 },
-  label: { fontSize: 11, fontWeight: "500", color: "#a8a29e" },
-  labelAmber: { color: "#d97706" },
-});
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -138,14 +94,21 @@ export default function RecipeDetailScreen() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
+  const [viewerImageUrl, setViewerImageUrl] = useState<string | null>(null);
   const [showLogModal, setShowLogModal] = useState(false);
   const [logDate, setLogDate] = useState(todayString());
   const [logNotes, setLogNotes] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
 
+  const [showModifyModal, setShowModifyModal] = useState(false);
+  const [modifyPrompt, setModifyPrompt] = useState("");
+  const [modifyLoading, setModifyLoading] = useState(false);
+  const [modifyError, setModifyError] = useState<string | null>(null);
+
   const fetchDetail = useCallback(
     async (opts?: { silent?: boolean }) => {
+      if (!token) return; // wait for auth to load
       if (!opts?.silent) setLoading(true);
       setError(null);
       try {
@@ -240,6 +203,39 @@ export default function RecipeDetailScreen() {
     }
   };
 
+  const submitModify = async () => {
+    if (!detail || !modifyPrompt.trim()) return;
+    setModifyError(null);
+    setModifyLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/recipes/${id}/modify`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt: modifyPrompt.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to modify recipe");
+      }
+      const data = await res.json();
+      setPendingModification({
+        original: detail.recipe,
+        modified: data.recipe,
+        isOwner,
+      });
+      setShowModifyModal(false);
+      setModifyPrompt("");
+      router.push(`/recipes/${id}/modify`);
+    } catch (err) {
+      setModifyError(err instanceof Error ? err.message : "Failed to modify recipe. Please try again.");
+    } finally {
+      setModifyLoading(false);
+    }
+  };
+
   const deleteLog = async (logId: string) => {
     const prev = cookLogs;
     setCookLogs((logs) => logs.filter((l) => l.id !== logId));
@@ -311,19 +307,18 @@ export default function RecipeDetailScreen() {
 
   if (loading) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
-        <View style={styles.centered}>
+      <NavShell>
+        <View style={[styles.centered, { flex: 1, backgroundColor: "#fafaf9" }]}>
           <ActivityIndicator size="large" color="#1c1917" />
         </View>
-        <TabBar />
-      </View>
+      </NavShell>
     );
   }
 
   if (error || !detail) {
     return (
-      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
-        <View style={styles.centered}>
+      <NavShell>
+        <View style={[styles.centered, { flex: 1, backgroundColor: "#fafaf9" }]}>
           <Text style={styles.errorText}>{error ?? "Recipe not found"}</Text>
           <TouchableOpacity style={styles.retryButton} onPress={() => fetchDetail()}>
             <Text style={styles.retryText}>Try again</Text>
@@ -332,8 +327,7 @@ export default function RecipeDetailScreen() {
             <Text style={styles.retryText}>Go back</Text>
           </TouchableOpacity>
         </View>
-        <TabBar />
-      </View>
+      </NavShell>
     );
   }
 
@@ -368,9 +362,26 @@ export default function RecipeDetailScreen() {
       </View>
 
       {/* Hero image */}
-      {recipe.imageUrl ? (
-        <Image source={{ uri: recipe.imageUrl }} style={styles.heroImage} contentFit="cover" transition={300} />
-      ) : null}
+      {(() => {
+        const images = recipe.images ?? [];
+        const heroUrl = images.find((i) => i.role === "banner" || i.role === "both")?.url ?? images[0]?.url ?? recipe.imageUrl;
+        return heroUrl ? (
+          <>
+            <TouchableOpacity activeOpacity={0.9} onPress={() => setViewerImageUrl(heroUrl)}>
+              <Image source={{ uri: heroUrl }} style={styles.heroImage} contentFit="cover" transition={300} />
+            </TouchableOpacity>
+            {images.length > 1 ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.galleryStrip} contentContainerStyle={styles.galleryStripContent}>
+                {images.map((img) => (
+                  <TouchableOpacity key={img.url} onPress={() => setViewerImageUrl(img.url)} activeOpacity={0.8}>
+                    <Image source={{ uri: img.url }} style={styles.galleryThumb} contentFit="cover" transition={200} />
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : null}
+          </>
+        ) : null;
+      })()}
 
       <View style={styles.content}>
         {/* Title + owner actions */}
@@ -447,6 +458,15 @@ export default function RecipeDetailScreen() {
           </View>
         ) : null}
 
+        {/* Comments link */}
+        {recipe.commentsUrl ? (
+          <TouchableOpacity onPress={() => Linking.openURL(recipe.commentsUrl!)} style={styles.sourceLink}>
+            <Ionicons name="chatbubble-outline" size={13} color="#78716c" />
+            <Text style={styles.sourceLinkText} numberOfLines={1}>Comments</Text>
+            <Ionicons name="open-outline" size={12} color="#a8a29e" />
+          </TouchableOpacity>
+        ) : null}
+
         {/* Tags */}
         {recipe.tags.length > 0 ? (
           <View style={styles.tagRow}>
@@ -493,6 +513,18 @@ export default function RecipeDetailScreen() {
               <Text style={styles.actionButtonText}>Save to mine</Text>
             </TouchableOpacity>
           )}
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              setModifyPrompt("");
+              setModifyError(null);
+              setShowModifyModal(true);
+            }}
+          >
+            <Ionicons name="color-wand-outline" size={16} color="#1c1917" />
+            <Text style={styles.actionButtonText}>Modify with AI</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Description */}
@@ -599,7 +631,7 @@ export default function RecipeDetailScreen() {
 
   return (
     <>
-      <View style={{ flex: 1, backgroundColor: "#fafaf9" }}>
+      <NavShell>
         <FlatList
           style={styles.container}
           data={[]}
@@ -612,8 +644,16 @@ export default function RecipeDetailScreen() {
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1c1917" />
           }
         />
-        <TabBar />
-      </View>
+      </NavShell>
+
+      {/* Image Viewer */}
+      {viewerImageUrl ? (
+        <ImageViewerModal
+          uri={viewerImageUrl}
+          visible={!!viewerImageUrl}
+          onClose={() => setViewerImageUrl(null)}
+        />
+      ) : null}
 
       {/* Cook Log Modal */}
       <Modal visible={showLogModal} transparent animationType="slide" onRequestClose={() => setShowLogModal(false)}>
@@ -699,6 +739,65 @@ export default function RecipeDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* AI Modify Modal */}
+      <Modal visible={showModifyModal} transparent animationType="slide" onRequestClose={() => !modifyLoading && setShowModifyModal(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => !modifyLoading && setShowModifyModal(false)} />
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalWrapper}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Modify with AI</Text>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetStrip} contentContainerStyle={styles.presetStripContent}>
+              {AI_MODIFY_PRESETS.map((preset) => (
+                <TouchableOpacity
+                  key={preset.label}
+                  style={[styles.presetChip, modifyPrompt === preset.prompt && styles.presetChipActive]}
+                  onPress={() => setModifyPrompt(preset.prompt)}
+                  disabled={modifyLoading}
+                >
+                  <Text style={[styles.presetChipText, modifyPrompt === preset.prompt && styles.presetChipTextActive]}>
+                    {preset.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TextInput
+              style={[styles.modalInput, styles.modalTextarea]}
+              value={modifyPrompt}
+              onChangeText={setModifyPrompt}
+              placeholder="Or describe how to modify this recipe..."
+              placeholderTextColor="#a8a29e"
+              multiline
+              maxLength={500}
+              textAlignVertical="top"
+              editable={!modifyLoading}
+            />
+
+            {modifyError ? <Text style={styles.logErrorText}>{modifyError}</Text> : null}
+
+            <TouchableOpacity
+              style={[styles.modalSubmit, (!modifyPrompt.trim() || modifyLoading) && styles.modalSubmitDisabled]}
+              onPress={submitModify}
+              disabled={!modifyPrompt.trim() || modifyLoading}
+            >
+              {modifyLoading ? (
+                <View style={styles.modifyLoadingRow}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.modalSubmitText}>Modifying recipe...</Text>
+                </View>
+              ) : (
+                <Text style={styles.modalSubmitText}>Modify</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.modalCancel} onPress={() => !modifyLoading && setShowModifyModal(false)}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </>
   );
 }
@@ -723,6 +822,9 @@ const styles = StyleSheet.create({
     justifyContent: "center", alignItems: "center",
   },
   heroImage: { width: "100%", height: 240 },
+  galleryStrip: { marginTop: 8 },
+  galleryStripContent: { paddingHorizontal: 16, gap: 8 },
+  galleryThumb: { width: 60, height: 60, borderRadius: 8 },
   content: { paddingHorizontal: 16, paddingTop: 16 },
   titleRow: {
     flexDirection: "row", alignItems: "flex-start",
@@ -752,7 +854,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f4", borderWidth: 1, borderColor: "#e7e5e4",
   },
   tagText: { fontSize: 13, color: "#57534e", fontWeight: "500" },
-  actionRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  actionRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 },
   actionButton: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 14, paddingVertical: 9,
@@ -870,4 +972,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#b91c1c", minWidth: 70, alignItems: "center",
   },
   centeredModalDestructiveText: { fontSize: 14, fontWeight: "600", color: "#fff" },
+  presetStrip: { marginBottom: 12 },
+  presetStripContent: { gap: 8 },
+  presetChip: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+    borderWidth: 1, borderColor: "#e7e5e4", backgroundColor: "#fff",
+  },
+  presetChipActive: { backgroundColor: "#1c1917", borderColor: "#1c1917" },
+  presetChipText: { fontSize: 14, fontWeight: "500", color: "#57534e" },
+  presetChipTextActive: { color: "#fff" },
+  modifyLoadingRow: { flexDirection: "row", alignItems: "center", gap: 8, justifyContent: "center" },
 });

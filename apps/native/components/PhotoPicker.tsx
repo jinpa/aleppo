@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -42,14 +42,16 @@ type PhotoPickerProps = {
   onPhotos: (uris: string[]) => void;
   /**
    * Render prop.
-   * - Single mode: children(open)
-   * - Multiple mode: children(open, photos, removePhoto)
-   *   — photos and removePhoto let the parent render thumbnails wherever it wants.
+   * - open: opens the picker sheet (mobile) or file dialog (web)
+   * - photos: current accumulated URIs
+   * - removePhoto: removes a photo by index
+   * - isDragging: true while a file is being dragged over the drop zone (web only)
    */
   children: (
     open: () => void,
     photos: string[],
     removePhoto: (index: number) => void,
+    isDragging: boolean,
   ) => React.ReactNode;
 };
 
@@ -57,10 +59,15 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
   const [visible, setVisible] = useState(false);
   const [accumulated, setAccumulated] = useState<string[]>([]);
   const [showSpinner, setShowSpinner] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const pendingAction = useRef<(() => void) | null>(null);
   const spinnerTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Ref mirrors accumulated so async callbacks (paste, drop) always see current list.
+  const accumulatedRef = useRef<string[]>([]);
+  const dropZoneRef = useRef<View>(null);
 
   const updateAccumulated = (next: string[]) => {
+    accumulatedRef.current = next;
     setAccumulated(next);
     onPhotos(next);
   };
@@ -72,7 +79,7 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
       if (mode === "single") {
         onPhotos(resized);
       } else {
-        updateAccumulated([...accumulated, ...resized]);
+        updateAccumulated([...accumulatedRef.current, ...resized]);
       }
     } finally {
       if (spinnerTimer.current) clearTimeout(spinnerTimer.current);
@@ -80,9 +87,66 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
     }
   };
 
+  // Stable ref so event listeners always call the latest process without re-attaching.
+  const processRef = useRef(process);
+  processRef.current = process;
+
   const removePhoto = (index: number) => {
-    updateAccumulated(accumulated.filter((_, i) => i !== index));
+    updateAccumulated(accumulatedRef.current.filter((_, i) => i !== index));
   };
+
+  // Web: global paste listener — fires whenever the user pastes anywhere on the page.
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const handlePaste = async (e: ClipboardEvent) => {
+      const items = Array.from(e.clipboardData?.items ?? []);
+      const imageItems = items.filter((item) => item.type.startsWith("image/"));
+      if (imageItems.length === 0) return;
+      e.preventDefault();
+      const uris = imageItems
+        .map((item) => {
+          const file = item.getAsFile();
+          return file ? URL.createObjectURL(file) : null;
+        })
+        .filter((u): u is string => u !== null);
+      if (uris.length) await processRef.current(uris);
+    };
+    document.addEventListener("paste", handlePaste);
+    return () => document.removeEventListener("paste", handlePaste);
+  }, []);
+
+  // Web: drag-and-drop on the container.
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const el = dropZoneRef.current as unknown as HTMLElement | null;
+    if (!el) return;
+
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(true);
+    };
+    const handleDragLeave = (e: DragEvent) => {
+      if (!el.contains(e.relatedTarget as Node)) setIsDragging(false);
+    };
+    const handleDrop = async (e: DragEvent) => {
+      e.preventDefault();
+      setIsDragging(false);
+      const files = Array.from(e.dataTransfer?.files ?? []).filter((f) =>
+        f.type.startsWith("image/")
+      );
+      const uris = files.map((f) => URL.createObjectURL(f));
+      if (uris.length) await processRef.current(uris);
+    };
+
+    el.addEventListener("dragover", handleDragOver);
+    el.addEventListener("dragleave", handleDragLeave);
+    el.addEventListener("drop", handleDrop);
+    return () => {
+      el.removeEventListener("dragover", handleDragOver);
+      el.removeEventListener("dragleave", handleDragLeave);
+      el.removeEventListener("drop", handleDrop);
+    };
+  }, []);
 
   // On iOS the modal slide animation must fully complete before a native picker
   // can be presented. Store the action and fire it in onDismiss.
@@ -102,13 +166,8 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
       Alert.alert("Permission needed", "Camera access is required to take photos.");
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ["images"],
-      quality: 1,
-    });
-    if (!result.canceled) {
-      await process([result.assets[0].uri]);
-    }
+    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 1 });
+    if (!result.canceled) await process([result.assets[0].uri]);
   });
 
   const fromLibrary = () => dismissThen(async () => {
@@ -122,9 +181,7 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
       allowsMultipleSelection: mode === "multiple",
       quality: 1,
     });
-    if (!result.canceled) {
-      await process(result.assets.map((a: ImagePicker.ImagePickerAsset) => a.uri));
-    }
+    if (!result.canceled) await process(result.assets.map((a: ImagePicker.ImagePickerAsset) => a.uri));
   });
 
   const fromFiles = async () => {
@@ -134,16 +191,36 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
       multiple: mode === "multiple",
       copyToCacheDirectory: true,
     });
-    if (!result.canceled) {
-      await process(result.assets.map((a: DocumentPicker.DocumentPickerAsset) => a.uri));
-    }
+    if (!result.canceled) await process(result.assets.map((a: DocumentPicker.DocumentPickerAsset) => a.uri));
   };
 
-  // On web: camera and library are both just file pickers, so go directly to Browse Files.
-  // On mobile: camera + photo library only (no file browser).
+  // iOS only — Android blocks clipboard image access.
+  // Lazy-loaded to avoid crashing if the native module isn't linked yet.
+  const fromClipboard = () => dismissThen(async () => {
+    let clipboardModule: typeof import("expo-clipboard") | null = null;
+    try {
+      clipboardModule = await import("expo-clipboard");
+    } catch {
+      Alert.alert("Not available", "Clipboard paste requires a native rebuild.");
+      return;
+    }
+    const hasImage = await clipboardModule.hasImageAsync();
+    if (!hasImage) {
+      Alert.alert("No image", "No image found in clipboard.");
+      return;
+    }
+    const result = await clipboardModule.getImageAsync({ format: "png" });
+    if (!result?.data) {
+      Alert.alert("No image", "Could not read image from clipboard.");
+      return;
+    }
+    await process([`data:image/png;base64,${result.data}`]);
+  });
+
   const showCamera = Platform.OS !== "web";
   const showLibrary = Platform.OS !== "web";
   const showFiles = Platform.OS === "web";
+  const showPaste = false; // expo-clipboard autolinking doesn't work with pnpm — revisit later
 
   const open = () => {
     if (showFiles && !showCamera && !showLibrary) {
@@ -155,7 +232,9 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
 
   return (
     <>
-      {children(open, accumulated, removePhoto)}
+      <View ref={dropZoneRef}>
+        {children(open, accumulated, removePhoto, isDragging)}
+      </View>
       <Modal
         visible={visible}
         transparent
@@ -188,6 +267,15 @@ export function PhotoPicker({ mode, onPhotos, children }: PhotoPickerProps) {
                 <Ionicons name="images-outline" size={22} color="#1c1917" />
               </View>
               <Text style={styles.optionText}>Photo library</Text>
+            </TouchableOpacity>
+          )}
+
+          {showPaste && (
+            <TouchableOpacity style={styles.option} onPress={fromClipboard}>
+              <View style={styles.optionIcon}>
+                <Ionicons name="clipboard-outline" size={22} color="#1c1917" />
+              </View>
+              <Text style={styles.optionText}>Paste from clipboard</Text>
             </TouchableOpacity>
           )}
 
@@ -295,7 +383,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 14,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
+    shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,

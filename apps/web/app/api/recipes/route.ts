@@ -5,7 +5,8 @@ import { eq, desc, asc, and, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { recipes } from "@/db/schema";
 import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
-import { reuploadImageToR2 } from "@/lib/r2";
+import { reuploadImageToR2, r2KeyFromUrl } from "@/lib/r2";
+import type { RecipeImage } from "@aleppo/shared";
 import { parseIngredients } from "@/lib/parse-ingredients";
 
 const SORT_KEYS = ["date", "title", "cooks", "lastCooked", "updated", "totalTime"] as const;
@@ -20,12 +21,18 @@ const DEFAULT_DIR: Record<SortKey, "asc" | "desc"> = {
   totalTime: "asc",
 };
 
+const imageSchema = z.object({
+  url: z.string(),
+  role: z.enum(["thumbnail", "banner", "both"]).optional(),
+});
+
 const createSchema = z.object({
   title: z.string().min(1).max(300),
   description: z.string().max(2000).optional().nullable(),
   sourceUrl: z.string().url().optional().or(z.literal("")).nullable(),
   sourceName: z.string().max(200).optional().nullable(),
   imageUrl: z.string().optional(),
+  images: z.array(imageSchema).max(10).default([]),
   ingredients: z.array(z.object({ raw: z.string() })).default([]),
   instructions: z
     .array(z.object({ step: z.number(), text: z.string() }))
@@ -78,26 +85,19 @@ export async function GET(req: Request) {
 
   const dirFn = dir === "asc" ? asc : desc;
 
-  const listColumns = {
-    id: recipes.id,
-    title: recipes.title,
-    description: recipes.description,
-    imageUrl: recipes.imageUrl,
-    tags: recipes.tags,
-    prepTime: recipes.prepTime,
-    cookTime: recipes.cookTime,
-    sourceName: recipes.sourceName,
-  };
-
-  const listColumnsSql = `"recipes"."id", "recipes"."title", "recipes"."description", "recipes"."imageUrl", "recipes"."tags", "recipes"."prepTime", "recipes"."cookTime", "recipes"."sourceName"`;
+  const listColumnsSql = `"recipes"."id", "recipes"."title", "recipes"."description", "recipes"."imageUrl", "recipes"."images", "recipes"."tags", "recipes"."prepTime", "recipes"."cookTime", "recipes"."sourceName"`;
+  const cookStatsSql = `COALESCE(COUNT("cookLogs".id), 0)::int AS "cookCount", MAX("cookLogs"."cookedOn") AS "lastCookedOn"`;
+  const baseJoinSql = `FROM "recipes" LEFT JOIN "cookLogs" ON "cookLogs"."recipeId" = "recipes".id`;
 
   // Default to relevance when searching without explicit sort
   if (!sortKey && search) {
-    const result = await db
-      .select(listColumns)
-      .from(recipes)
-      .where(and(...conditions))
-      .orderBy(sql`ts_rank("search_tsv", websearch_to_tsquery('english', ${search})) DESC`);
+    const result = await db.execute(sql`
+      SELECT ${sql.raw(listColumnsSql)}, ${sql.raw(cookStatsSql)}
+      ${sql.raw(baseJoinSql)}
+      WHERE ${and(...conditions)}
+      GROUP BY "recipes".id
+      ORDER BY ts_rank("search_tsv", websearch_to_tsquery('english', ${search})) DESC
+    `);
     return NextResponse.json(result);
   }
 
@@ -109,9 +109,8 @@ export async function GET(req: Request) {
       ? sql`COALESCE(COUNT("cookLogs".id), 0) ASC`
       : sql`COALESCE(COUNT("cookLogs".id), 0) DESC`;
     const result = await db.execute(sql`
-      SELECT ${sql.raw(listColumnsSql)}
-      FROM "recipes"
-      LEFT JOIN "cookLogs" ON "cookLogs"."recipeId" = "recipes".id
+      SELECT ${sql.raw(listColumnsSql)}, ${sql.raw(cookStatsSql)}
+      ${sql.raw(baseJoinSql)}
       WHERE ${and(...conditions)}
       GROUP BY "recipes".id
       ORDER BY ${orderExpr}
@@ -124,9 +123,8 @@ export async function GET(req: Request) {
       ? sql`MAX("cookLogs"."cookedOn") ASC NULLS FIRST`
       : sql`MAX("cookLogs"."cookedOn") DESC NULLS LAST`;
     const result = await db.execute(sql`
-      SELECT ${sql.raw(listColumnsSql)}
-      FROM "recipes"
-      LEFT JOIN "cookLogs" ON "cookLogs"."recipeId" = "recipes".id
+      SELECT ${sql.raw(listColumnsSql)}, ${sql.raw(cookStatsSql)}
+      ${sql.raw(baseJoinSql)}
       WHERE ${and(...conditions)}
       GROUP BY "recipes".id
       ORDER BY ${orderExpr}
@@ -136,28 +134,32 @@ export async function GET(req: Request) {
 
   // totalTime: recipes with no times sort last
   if (effectiveSort === "totalTime") {
-    const bothNull = sql`CASE WHEN "prepTime" IS NULL AND "cookTime" IS NULL THEN 1 ELSE 0 END`;
-    const totalTimeExpr = sql`COALESCE("prepTime", 0) + COALESCE("cookTime", 0)`;
-    const result = await db
-      .select(listColumns)
-      .from(recipes)
-      .where(and(...conditions))
-      .orderBy(asc(bothNull), dirFn(totalTimeExpr));
+    const bothNull = `CASE WHEN "prepTime" IS NULL AND "cookTime" IS NULL THEN 1 ELSE 0 END`;
+    const totalTimeExpr = `COALESCE("prepTime", 0) + COALESCE("cookTime", 0)`;
+    const result = await db.execute(sql`
+      SELECT ${sql.raw(listColumnsSql)}, ${sql.raw(cookStatsSql)}
+      ${sql.raw(baseJoinSql)}
+      WHERE ${and(...conditions)}
+      GROUP BY "recipes".id
+      ORDER BY ${sql.raw(bothNull)} ASC, ${sql.raw(totalTimeExpr)} ${dir === "asc" ? sql`ASC` : sql`DESC`}
+    `);
     return NextResponse.json(result);
   }
 
   // Simple column sorts: date, title, updated
-  const columnMap = {
-    date: recipes.createdAt,
-    title: recipes.title,
-    updated: recipes.updatedAt,
-  } as const;
+  const columnMap: Record<string, string> = {
+    date: `"recipes"."createdAt"`,
+    title: `"recipes"."title"`,
+    updated: `"recipes"."updatedAt"`,
+  };
 
-  const result = await db
-    .select(listColumns)
-    .from(recipes)
-    .where(and(...conditions))
-    .orderBy(dirFn(columnMap[effectiveSort as keyof typeof columnMap]));
+  const result = await db.execute(sql`
+    SELECT ${sql.raw(listColumnsSql)}, ${sql.raw(cookStatsSql)}
+    ${sql.raw(baseJoinSql)}
+    WHERE ${and(...conditions)}
+    GROUP BY "recipes".id
+    ORDER BY ${sql.raw(columnMap[effectiveSort])} ${dir === "asc" ? sql`ASC` : sql`DESC`}
+  `);
   return NextResponse.json(result);
 }
 
@@ -194,10 +196,22 @@ export async function POST(req: Request) {
     forkedFromRecipeId = source.id;
   }
 
-  let imageUrl = parsed.data.imageUrl;
-  if (imageUrl) {
-    imageUrl = await reuploadImageToR2(imageUrl, userId);
+  // Build images array: prefer `images` field, fall back to wrapping `imageUrl`
+  let images: RecipeImage[] = parsed.data.images;
+  if (images.length === 0 && parsed.data.imageUrl) {
+    images = [{ url: parsed.data.imageUrl }];
   }
+  // Re-upload any non-R2 URLs
+  images = await Promise.all(
+    images.map(async (img) => ({
+      ...img,
+      url: r2KeyFromUrl(img.url) ? img.url : await reuploadImageToR2(img.url, userId),
+    }))
+  );
+  // Derive imageUrl from images (banner → first → null)
+  const imageUrl = images.find((i) => i.role === "banner" || i.role === "both")?.url
+    ?? images[0]?.url ?? null;
+
   const ingredients = parseIngredients(parsed.data.ingredients.map((i) => i.raw));
 
   const [recipe] = await db
@@ -206,7 +220,8 @@ export async function POST(req: Request) {
       ...parsed.data,
       ingredients,
       userId,
-      imageUrl: imageUrl ?? null,
+      imageUrl,
+      images,
       sourceUrl: parsed.data.sourceUrl || null,
       sourceName: parsed.data.sourceName || null,
       prepTime: parsed.data.prepTime ?? null,

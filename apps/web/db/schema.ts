@@ -12,7 +12,7 @@ import {
   type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import type { Ingredient, InstructionStep, NutritionalInfo } from "@aleppo/shared";
+import type { Ingredient, InstructionStep, NutritionalInfo, RecipeImage } from "@aleppo/shared";
 
 // ─── Auth.js required tables ────────────────────────────────────────────────
 
@@ -31,6 +31,7 @@ export const users = pgTable("users", {
   // Import/creation defaults
   defaultTagsEnabled: boolean("defaultTagsEnabled").default(true).notNull(),
   defaultRecipeIsPublic: boolean("defaultRecipeIsPublic").default(false).notNull(),
+  translateAI: boolean("translateAI").default(true).notNull(),
   isAdmin: boolean("isAdmin").default(false).notNull(),
   isSuspended: boolean("isSuspended").default(false).notNull(),
   notifyOnNewFollower: boolean("notifyOnNewFollower").default(true).notNull(),
@@ -98,7 +99,7 @@ export const passwordResetTokens = pgTable("passwordResetTokens", {
 
 // ─── Shared types (re-exported for consumers that import from @/db/schema) ────
 
-export type { Ingredient, InstructionStep, NutritionalInfo };
+export type { Ingredient, InstructionStep, NutritionalInfo, RecipeImage };
 
 // ─── Recipes ─────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,7 @@ export const recipes = pgTable(
     sourceUrl: text("sourceUrl"),
     sourceName: text("sourceName"),
     imageUrl: text("imageUrl"),
+    images: jsonb("images").$type<RecipeImage[]>().default([]),
     ingredients: jsonb("ingredients").$type<Ingredient[]>().default([]),
     instructions: jsonb("instructions").$type<InstructionStep[]>().default([]),
     tags: text("tags").array().default([]),

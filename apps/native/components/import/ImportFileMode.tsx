@@ -13,6 +13,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "@/constants/api";
 import { sharedStyles } from "./importStyles";
+import { CookingSpinner } from "@/components/CookingSpinner";
 
 type FileImportStep = "upload" | "preview" | "importing" | "done";
 type FileImportItem = {
@@ -137,7 +138,7 @@ export function ImportFileMode({ token, router }: ImportFileModeProps) {
             </View>
           ) : null}
           <TouchableOpacity
-            style={[sharedStyles.fetchButton, fileParsing && sharedStyles.fetchButtonDisabled]}
+            style={[sharedStyles.importButton, fileParsing && sharedStyles.fetchButtonDisabled]}
             onPress={pickImportFile}
             disabled={fileParsing}
           >
@@ -226,7 +227,7 @@ export function ImportFileMode({ token, router }: ImportFileModeProps) {
               <Text style={styles.filePublicLabel}>Make recipes public</Text>
             </View>
             <TouchableOpacity
-              style={[sharedStyles.fetchButton, fileSelected.size === 0 && sharedStyles.fetchButtonDisabled]}
+              style={[sharedStyles.importButton, fileSelected.size === 0 && sharedStyles.fetchButtonDisabled]}
               onPress={startFileImport}
               disabled={fileSelected.size === 0}
             >
@@ -239,11 +240,10 @@ export function ImportFileMode({ token, router }: ImportFileModeProps) {
       )}
 
       {fileStep === "importing" && (
-        <View style={styles.fileCentered}>
-          <ActivityIndicator size="large" color="#d97706" />
-          <Text style={styles.fileImportingText}>Importing recipes…</Text>
-          <Text style={styles.fileImportingSubtext}>This may take a minute for large libraries. Please don't close this page.</Text>
-        </View>
+        <CookingSpinner
+          label="Importing recipes…"
+          sublabel="This may take a minute for large libraries. Please don't close this page."
+        />
       )}
 
       {fileStep === "done" && (
@@ -254,7 +254,7 @@ export function ImportFileMode({ token, router }: ImportFileModeProps) {
             {fileSaved} recipe{fileSaved !== 1 ? "s" : ""} imported
             {fileFailed > 0 ? ` · ${fileFailed} failed` : ""}
           </Text>
-          <TouchableOpacity style={sharedStyles.fetchButton} onPress={() => router.replace("/(tabs)/recipes")}>
+          <TouchableOpacity style={[sharedStyles.importButton, styles.fileFullWidth]} onPress={() => router.replace("/(tabs)/recipes")}>
             <Text style={sharedStyles.fetchButtonText}>Go to my recipes</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.fileAnotherBtn} onPress={resetFileImport}>
@@ -315,6 +315,7 @@ const styles = StyleSheet.create({
   fileImportingSubtext: { fontSize: 13, color: "#78716c", textAlign: "center", paddingHorizontal: 16 },
   fileDoneTitle: { fontSize: 22, fontWeight: "700", color: "#1c1917" },
   fileDoneSubtext: { fontSize: 14, color: "#78716c" },
+  fileFullWidth: { alignSelf: "stretch" },
   fileAnotherBtn: { marginTop: 4 },
   fileAnotherText: { fontSize: 14, color: "#78716c", textDecorationLine: "underline" },
 });

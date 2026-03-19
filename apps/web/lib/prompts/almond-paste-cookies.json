@@ -6,49 +6,57 @@
       "raw": "egg whites 2",
       "name": "egg whites",
       "unit": "count",
-      "amount": "2"
+      "amount": "2",
+      "quantity": 2
     },
     {
       "raw": "almond paste (NOT almond filling) 8 oz",
       "name": "almond paste (NOT almond filling)",
       "unit": "ounces",
-      "amount": "8"
+      "amount": "8",
+      "quantity": 8
     },
     {
       "raw": "granulated sugar ⅔ cups",
       "name": "granulated sugar",
       "unit": "cups",
-      "amount": "⅔"
+      "amount": "⅔",
+      "quantity": 0.666
     },
     {
       "raw": "salt ½ tsp",
       "name": "salt",
       "unit": "teaspoons",
-      "amount": "½"
+      "amount": "½",
+      "quantity": 0.5
     },
     {
       "raw": "vanilla extract ½ tsp",
       "name": "vanilla extract",
       "unit": "teaspoons",
-      "amount": "½"
+      "amount": "½",
+      "quantity": 0.5
     },
     {
       "raw": "almond flour ½ cups",
       "name": "almond flour",
       "unit": "cups",
-      "amount": "½"
+      "amount": "½",
+      "quantity": 0.5
     },
     {
       "raw": "powdered sugar 1",
       "name": "powdered sugar",
       "unit": "count",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     },
     {
       "raw": "sliced almonds 1",
       "name": "sliced almonds",
       "unit": "count",
-      "amount": "1"
+      "amount": "1",
+      "quantity": 1
     }
   ],
   "instructions": [
