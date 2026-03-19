@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "translateAI" boolean DEFAULT true NOT NULL;
