@@ -208,6 +208,7 @@ export async function POST(req: Request) {
     ...(parsed.prepTime != null && { prepTime: Number(parsed.prepTime) }),
     ...(parsed.cookTime != null && { cookTime: Number(parsed.cookTime) }),
     ...(parsed.servings != null && { servings: Number(parsed.servings) }),
+    ...(parsed.servingName != null && { servingName: parsed.servingName }),
     ...(typeof parsed.sourceUrl === "string" && { sourceUrl: parsed.sourceUrl }),
     ...(typeof parsed.sourceName === "string" && { sourceName: parsed.sourceName }),
     ...(uploadedImageUrl

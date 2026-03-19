@@ -3,52 +3,38 @@
   "description": "My Beginner’s Sourdough Bread has a light, open crumb (interior) with\na deeply-colored, crunchy crust.  As the new obsession set in, I\nstarted making fresh sourdough bread for every meal. There was\nsomething about the whole bread-making process that I found\ncaptivating. It was–and still is–exciting to mix such elemental\ningredients and to see them produce beautiful, life-giving sustenance:\nit is modern-day alchemy. It’s such a simple thing, and yet it brought\nme so much joy to see my family and friends tear into a freshly baked\nloaf that I wanted to bake every day of every week.\n",
   "ingredients": [
     {
-      "raw": "stoneground whole wheat flour 38 g",
       "name": "stoneground whole wheat flour",
       "unit": "grams",
-      "amount": "38",
       "quantity": 38
     },
     {
-      "raw": "bread flour 810 g",
       "name": "bread flour",
       "unit": "grams",
-      "amount": "810",
       "quantity": 810
     },
     {
-      "raw": "water 730 g",
       "name": "water",
       "unit": "grams",
-      "amount": "730",
       "quantity": 730
     },
     {
-      "raw": "ripe sourdough starter 38 g",
       "name": "ripe sourdough starter",
       "unit": "grams",
-      "amount": "38",
       "quantity": 38
     },
     {
-      "raw": "whole wheat flour 115 g",
       "name": "whole wheat flour",
       "unit": "grams",
-      "amount": "115",
       "quantity": 115
     },
     {
-      "raw": "whole grain rye flour 51 g",
       "name": "whole grain rye flour",
       "unit": "grams",
-      "amount": "51",
       "quantity": 51
     },
     {
-      "raw": "fine sea salt 18 g",
       "name": "fine sea salt",
       "unit": "grams",
-      "amount": "18",
       "quantity": 18
     }
   ],
