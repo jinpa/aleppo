@@ -52,6 +52,11 @@ export default function ModifyPreviewScreen() {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  const [aiImageUrl, setAiImageUrl] = useState<string | null>(null);
+  const [aiImageLoading, setAiImageLoading] = useState(false);
+  const [aiImageError, setAiImageError] = useState<string | null>(null);
+  const [aiImageAccepted, setAiImageAccepted] = useState(false);
+
   useEffect(() => {
     const pending = getPendingModification();
     if (!pending) {
@@ -126,6 +131,37 @@ export default function ModifyPreviewScreen() {
     setTagInput("");
   };
 
+  const generateImage = async (mode: "generate" | "edit") => {
+    setAiImageError(null);
+    setAiImageUrl(null);
+    setAiImageAccepted(false);
+    setAiImageLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/recipes/${id}/modify-image`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          mode,
+          title: title.trim(),
+          description: description.trim() || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to generate image");
+      }
+      const data = await res.json();
+      setAiImageUrl(data.imageUrl);
+    } catch (err) {
+      setAiImageError(err instanceof Error ? err.message : "Failed to generate image");
+    } finally {
+      setAiImageLoading(false);
+    }
+  };
+
   const buildBody = () => ({
     title: title.trim(),
     description: description.trim() || null,
@@ -139,7 +175,9 @@ export default function ModifyPreviewScreen() {
     servings: servings ? parseInt(servings, 10) : null,
     isPublic,
     notes: notes.trim() || null,
-    images: originalImages,
+    images: aiImageAccepted && aiImageUrl
+      ? [{ url: aiImageUrl, role: "both" as const }]
+      : originalImages,
   });
 
   const saveAsNew = async () => {
@@ -196,6 +234,36 @@ export default function ModifyPreviewScreen() {
     }
   };
 
+  const saveButtons = (
+    <View style={styles.saveSection}>
+      <TouchableOpacity
+        style={[styles.saveButton, saving && styles.saveButtonDisabled]}
+        onPress={saveAsNew}
+        disabled={saving}
+      >
+        {saving ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text style={styles.saveButtonText}>Save as new recipe</Text>
+        )}
+      </TouchableOpacity>
+
+      {isOwner ? (
+        <TouchableOpacity
+          style={[styles.applyButton, saving && styles.saveButtonDisabled]}
+          onPress={applyToOriginal}
+          disabled={saving}
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color="#1c1917" />
+          ) : (
+            <Text style={styles.applyButtonText}>Apply to this recipe</Text>
+          )}
+        </TouchableOpacity>
+      ) : null}
+    </View>
+  );
+
   if (!loaded) {
     return (
       <View style={styles.centered}>
@@ -236,11 +304,83 @@ export default function ModifyPreviewScreen() {
             </TouchableOpacity>
           </View>
 
+          {saveButtons}
+
           {errors._form ? (
             <View style={styles.formError}>
               <Text style={styles.formErrorText}>{errors._form}</Text>
             </View>
           ) : null}
+
+          {/* AI Image */}
+          <View style={styles.field}>
+            <Text style={styles.label}>AI Image</Text>
+
+            {aiImageUrl && !aiImageAccepted ? (
+              <View style={styles.aiImagePreviewContainer}>
+                <Image source={{ uri: aiImageUrl }} style={styles.aiImagePreview} contentFit="cover" transition={300} />
+                <View style={styles.aiImageActions}>
+                  <TouchableOpacity
+                    style={styles.aiImageAccept}
+                    onPress={() => setAiImageAccepted(true)}
+                  >
+                    <Ionicons name="checkmark" size={16} color="#fff" />
+                    <Text style={styles.aiImageAcceptText}>Use this image</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.aiImageDiscard}
+                    onPress={() => { setAiImageUrl(null); setAiImageAccepted(false); }}
+                  >
+                    <Ionicons name="close" size={16} color="#57534e" />
+                    <Text style={styles.aiImageDiscardText}>Discard</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : aiImageAccepted && aiImageUrl ? (
+              <View style={styles.aiImagePreviewContainer}>
+                <Image source={{ uri: aiImageUrl }} style={styles.aiImagePreview} contentFit="cover" transition={300} />
+                <View style={styles.aiImageAcceptedBadge}>
+                  <Ionicons name="checkmark-circle" size={14} color="#166534" />
+                  <Text style={styles.aiImageAcceptedText}>Image will be added to recipe</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.aiImageDiscard}
+                  onPress={() => { setAiImageUrl(null); setAiImageAccepted(false); }}
+                >
+                  <Ionicons name="close" size={14} color="#57534e" />
+                  <Text style={styles.aiImageDiscardText}>Remove</Text>
+                </TouchableOpacity>
+              </View>
+            ) : aiImageLoading ? (
+              <View style={styles.aiImageLoadingBox}>
+                <ActivityIndicator size="small" color="#78716c" />
+                <Text style={styles.aiImageLoadingText}>Generating image...</Text>
+              </View>
+            ) : (
+              <View style={styles.aiImageButtons}>
+                <TouchableOpacity
+                  style={styles.aiImageButton}
+                  onPress={() => generateImage("generate")}
+                >
+                  <Ionicons name="image-outline" size={18} color="#57534e" />
+                  <Text style={styles.aiImageButtonText}>Generate new image</Text>
+                </TouchableOpacity>
+                {originalImages.length > 0 ? (
+                  <TouchableOpacity
+                    style={styles.aiImageButton}
+                    onPress={() => generateImage("edit")}
+                  >
+                    <Ionicons name="brush-outline" size={18} color="#57534e" />
+                    <Text style={styles.aiImageButtonText}>Modify original image</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            )}
+
+            {aiImageError ? (
+              <Text style={styles.aiImageErrorText}>{aiImageError}</Text>
+            ) : null}
+          </View>
 
           {/* Title */}
           <View style={styles.field}>
@@ -399,34 +539,8 @@ export default function ModifyPreviewScreen() {
             </View>
           </View>
 
-          {/* Save buttons */}
-          <View style={styles.saveSection}>
-            <TouchableOpacity
-              style={[styles.saveButton, saving && styles.saveButtonDisabled]}
-              onPress={saveAsNew}
-              disabled={saving}
-            >
-              {saving ? (
-                <ActivityIndicator size="small" color="#fff" />
-              ) : (
-                <Text style={styles.saveButtonText}>Save as new recipe</Text>
-              )}
-            </TouchableOpacity>
-
-            {isOwner ? (
-              <TouchableOpacity
-                style={[styles.applyButton, saving && styles.saveButtonDisabled]}
-                onPress={applyToOriginal}
-                disabled={saving}
-              >
-                {saving ? (
-                  <ActivityIndicator size="small" color="#1c1917" />
-                ) : (
-                  <Text style={styles.applyButtonText}>Apply to this recipe</Text>
-                )}
-              </TouchableOpacity>
-            ) : null}
-          </View>
+          {/* Save buttons (bottom) */}
+          {saveButtons}
 
           <View style={{ height: 32 }} />
         </ScrollView>
@@ -507,4 +621,36 @@ const styles = StyleSheet.create({
     paddingVertical: 14, alignItems: "center",
   },
   applyButtonText: { fontSize: 16, fontWeight: "600", color: "#1c1917" },
+  aiImagePreviewContainer: { borderRadius: 10, overflow: "hidden", backgroundColor: "#fff", borderWidth: 1, borderColor: "#e7e5e4" },
+  aiImagePreview: { width: "100%", height: 200, borderTopLeftRadius: 10, borderTopRightRadius: 10 },
+  aiImageActions: { flexDirection: "row", gap: 10, padding: 10 },
+  aiImageAccept: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    backgroundColor: "#166534", borderRadius: 8, paddingVertical: 10,
+  },
+  aiImageAcceptText: { fontSize: 14, fontWeight: "600", color: "#fff" },
+  aiImageDiscard: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 4,
+    paddingVertical: 8, paddingHorizontal: 12,
+  },
+  aiImageDiscardText: { fontSize: 13, color: "#57534e" },
+  aiImageAcceptedBadge: {
+    flexDirection: "row", alignItems: "center", gap: 6,
+    padding: 10, backgroundColor: "#f0fdf4",
+  },
+  aiImageAcceptedText: { fontSize: 13, color: "#166534", fontWeight: "500" },
+  aiImageLoadingBox: {
+    flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10,
+    backgroundColor: "#fff", borderWidth: 1, borderColor: "#e7e5e4",
+    borderRadius: 10, paddingVertical: 24,
+  },
+  aiImageLoadingText: { fontSize: 14, color: "#78716c" },
+  aiImageButtons: { flexDirection: "row", gap: 10 },
+  aiImageButton: {
+    flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6,
+    backgroundColor: "#fff", borderWidth: 1, borderColor: "#e7e5e4",
+    borderRadius: 10, paddingVertical: 12, paddingHorizontal: 10,
+  },
+  aiImageButtonText: { fontSize: 13, fontWeight: "500", color: "#57534e" },
+  aiImageErrorText: { fontSize: 12, color: "#b91c1c", marginTop: 6 },
 });
