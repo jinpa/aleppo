@@ -538,24 +538,26 @@ export default function RecipeDetailScreen() {
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Ingredients</Text>
               <View style={styles.scaleControls}>
-                {SCALE_PRESETS.map((p) => (
-                  <TouchableOpacity
-                    key={p.label}
-                    style={[styles.scalePreset, scaleFactor === p.value && styles.scalePresetActive]}
-                    onPress={() => applyScale(p.value)}
-                  >
-                    <Text style={[styles.scalePresetText, scaleFactor === p.value && styles.scalePresetTextActive]}>
-                      {p.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <View style={styles.scalePresets}>
+                  {SCALE_PRESETS.map((p) => (
+                    <TouchableOpacity
+                      key={p.label}
+                      style={[styles.scalePreset, scaleFactor === p.value && styles.scalePresetActive]}
+                      onPress={() => applyScale(p.value)}
+                    >
+                      <Text style={[styles.scalePresetText, scaleFactor === p.value && styles.scalePresetTextActive]}>
+                        {p.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
                 <TextInput
                   style={styles.scaleInput}
                   value={customScale}
                   onChangeText={onCustomScaleChange}
                   keyboardType="decimal-pad"
                   selectTextOnFocus
-                  placeholder="×"
+                  placeholder="custom ×"
                   placeholderTextColor="#a8a29e"
                 />
               </View>
@@ -874,17 +876,18 @@ const styles = StyleSheet.create({
     marginTop: 24, marginBottom: 12,
   },
   sectionTitle: { fontSize: 18, fontWeight: "700", color: "#1c1917" },
-  scaleControls: { flexDirection: "row", alignItems: "center", gap: 4 },
+  scaleControls: { flexDirection: "column", alignItems: "stretch", gap: 4 },
+  scalePresets: { flexDirection: "row", gap: 4 },
   scalePreset: {
-    paddingHorizontal: 9, paddingVertical: 4, borderRadius: 6,
-    borderWidth: 1, borderColor: "#e7e5e4", backgroundColor: "#fff",
+    paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8,
+    borderWidth: 1.5, borderColor: "#d6d3d1", backgroundColor: "#f5f5f4",
   },
   scalePresetActive: { backgroundColor: "#1c1917", borderColor: "#1c1917" },
-  scalePresetText: { fontSize: 12, fontWeight: "500", color: "#57534e" },
+  scalePresetText: { fontSize: 12, fontWeight: "600", color: "#57534e" },
   scalePresetTextActive: { color: "#fff" },
   scaleInput: {
-    width: 40, paddingHorizontal: 6, paddingVertical: 4,
-    borderRadius: 6, borderWidth: 1, borderColor: "#e7e5e4",
+    paddingHorizontal: 8, paddingVertical: 5,
+    borderRadius: 6, borderWidth: 1, borderColor: "#d6d3d1",
     backgroundColor: "#fff", fontSize: 12, color: "#1c1917", textAlign: "center",
   },
   ingredientRow: {
