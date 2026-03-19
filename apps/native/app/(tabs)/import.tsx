@@ -1,16 +1,18 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { View, Text, TouchableOpacity, StyleSheet, Platform } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/contexts/auth";
-import type { ScrapedRecipe } from "@aleppo/shared";
+import { API_URL } from "@/constants/api";
+import type { ScrapedRecipe, UserSettings } from "@aleppo/shared";
 import { UserAvatar } from "@/components/UserAvatar";
 import { ImportUrlHandler } from "@/components/import/ImportUrlHandler";
 import { ImportImagesHandler } from "@/components/import/ImportImagesHandler";
 import { ImportTextHandler } from "@/components/import/ImportTextHandler";
 import { ImportFileMode } from "@/components/import/ImportFileMode";
 import { ImportReview } from "@/components/import/ImportReview";
+import { getClientLanguage } from "@/components/import/TranslationToggle";
 import type { ImportOutcome } from "@/components/import/types";
 
 type Mode = "url" | "images" | "text" | "file";
@@ -36,6 +38,28 @@ export default function ImportScreen() {
   const [mode, setMode] = useState<Mode>("url");
   const [reviewData, setReviewData] = useState<ReviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [targetLanguage, setTargetLanguage] = useState<string | undefined>(getClientLanguage());
+
+  const fetchSettings = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${API_URL}/api/users/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        const data: UserSettings = await res.json();
+        setTargetLanguage(data.translateAI ? getClientLanguage() : undefined);
+      }
+    } catch (err) {
+      console.error("Failed to fetch settings for import:", err);
+    }
+  }, [token]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchSettings();
+    }, [fetchSettings])
+  );
 
   const handleComplete = (outcome: ImportOutcome) => {
     if (!outcome.ok) {
@@ -117,6 +141,7 @@ export default function ImportScreen() {
           token={token}
           onComplete={handleComplete}
           onAttempt={() => setError(null)}
+          initialLanguage={targetLanguage}
         />
       )}
 
@@ -129,6 +154,7 @@ export default function ImportScreen() {
           token={token}
           onComplete={handleComplete}
           onAttempt={() => setError(null)}
+          initialLanguage={targetLanguage}
         />
       )}
     </KeyboardAwareScrollView>

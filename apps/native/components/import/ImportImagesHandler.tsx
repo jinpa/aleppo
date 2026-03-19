@@ -1,21 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "@/constants/api";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { sharedStyles } from "./importStyles";
 import { CookingSpinner } from "@/components/CookingSpinner";
+import { TranslationToggle, getClientLanguage } from "./TranslationToggle";
 import type { ImportOutcome } from "./types";
 
 type ImportImagesHandlerProps = {
   token: string | null;
   onComplete: (outcome: ImportOutcome) => void;
   onAttempt?: () => void;
+  initialLanguage?: string;
 };
 
-export function ImportImagesHandler({ token, onComplete, onAttempt }: ImportImagesHandlerProps) {
+export function ImportImagesHandler({ token, onComplete, onAttempt, initialLanguage }: ImportImagesHandlerProps) {
   const [photos, setPhotos] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
+  const [language, setLanguage] = useState<string | undefined>(initialLanguage);
+
+  useEffect(() => {
+    setLanguage(initialLanguage);
+  }, [initialLanguage]);
 
   const handleImagesImport = async () => {
     if (photos.length === 0) return;
@@ -23,6 +30,9 @@ export function ImportImagesHandler({ token, onComplete, onAttempt }: ImportImag
     setImporting(true);
     try {
       const body = new FormData();
+      if (language) {
+        body.append("language", language);
+      }
       await Promise.all(
         photos.map(async (uri, i) => {
           const blob = await fetch(uri).then((r) => r.blob());
@@ -79,6 +89,9 @@ export function ImportImagesHandler({ token, onComplete, onAttempt }: ImportImag
           </View>
         )}
       </PhotoPicker>
+
+      <TranslationToggle language={language} onLanguageChange={setLanguage} token={token} />
+
       <TouchableOpacity
         style={[sharedStyles.importButton, photos.length === 0 && sharedStyles.fetchButtonDisabled]}
         onPress={handleImagesImport}

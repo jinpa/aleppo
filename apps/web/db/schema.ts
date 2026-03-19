@@ -31,6 +31,7 @@ export const users = pgTable("users", {
   // Import/creation defaults
   defaultTagsEnabled: boolean("defaultTagsEnabled").default(true).notNull(),
   defaultRecipeIsPublic: boolean("defaultRecipeIsPublic").default(false).notNull(),
+  translateAI: boolean("translateAI").default(true).notNull(),
   isAdmin: boolean("isAdmin").default(false).notNull(),
   isSuspended: boolean("isSuspended").default(false).notNull(),
   notifyOnNewFollower: boolean("notifyOnNewFollower").default(true).notNull(),

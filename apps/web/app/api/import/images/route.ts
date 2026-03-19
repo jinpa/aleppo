@@ -11,7 +11,7 @@ import { parseFractionString } from "@/lib/scale-ingredient";
 
 const PROMPTS_DIR = path.join(process.cwd(), "lib/prompts");
 
-function buildPrompt(inputText?: string): string {
+function buildPrompt(inputText?: string, language?: string): string {
   const prefix = fs.readFileSync(path.join(PROMPTS_DIR, "prefix.txt"), "utf-8");
 
   const shotFiles = fs
@@ -31,8 +31,10 @@ function buildPrompt(inputText?: string): string {
     "utf-8"
   );
 
-  // const translate = "0- Keep the recipe in its original language.\n";
-  const translate = "0- Translate the recipe to English.\n";
+  const translate = language
+    ? `0- Translate the recipe (title, description, ingredients, instructions) to ${language}.\n`
+    : "0- Keep the recipe in its original language.\n";
+
   const base = `${prefix}\n${shots}\n---\nRULES:\n${translate}\n${instructions}\n---\n`;
 
   if (inputText) {
@@ -59,6 +61,7 @@ export async function POST(req: Request) {
   const formData = await req.formData();
   const imageEntries = formData.getAll("images");
   const inputText = formData.get("text");
+  const language = formData.get("language");
 
   if (imageEntries.length === 0 && !inputText) {
     return NextResponse.json(
@@ -68,7 +71,8 @@ export async function POST(req: Request) {
   }
 
   const textInput = typeof inputText === "string" ? inputText : undefined;
-  const prompt = buildPrompt(textInput);
+  const targetLanguage = typeof language === "string" ? language : undefined;
+  const prompt = buildPrompt(textInput, targetLanguage);
   const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [
     { text: prompt },
   ];

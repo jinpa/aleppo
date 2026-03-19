@@ -1,19 +1,26 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from "react-native";
 import { API_URL } from "@/constants/api";
 import { sharedStyles } from "./importStyles";
 import { CookingSpinner } from "@/components/CookingSpinner";
+import { TranslationToggle, getClientLanguage } from "./TranslationToggle";
 import type { ImportOutcome } from "./types";
 
 type ImportTextHandlerProps = {
   token: string | null;
   onComplete: (outcome: ImportOutcome) => void;
   onAttempt?: () => void;
+  initialLanguage?: string;
 };
 
-export function ImportTextHandler({ token, onComplete, onAttempt }: ImportTextHandlerProps) {
+export function ImportTextHandler({ token, onComplete, onAttempt, initialLanguage }: ImportTextHandlerProps) {
   const [textInput, setTextInput] = useState("");
   const [importing, setImporting] = useState(false);
+  const [language, setLanguage] = useState<string | undefined>(initialLanguage);
+
+  useEffect(() => {
+    setLanguage(initialLanguage);
+  }, [initialLanguage]);
 
   const handleTextImport = async () => {
     if (!textInput.trim()) return;
@@ -22,6 +29,9 @@ export function ImportTextHandler({ token, onComplete, onAttempt }: ImportTextHa
     try {
       const body = new FormData();
       body.append("text", textInput.trim());
+      if (language) {
+        body.append("language", language);
+      }
       const res = await fetch(`${API_URL}/api/import/images`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
@@ -60,6 +70,9 @@ export function ImportTextHandler({ token, onComplete, onAttempt }: ImportTextHa
         textAlignVertical="top"
         autoCorrect={false}
       />
+
+      <TranslationToggle language={language} onLanguageChange={setLanguage} token={token} />
+
       <TouchableOpacity
         style={[sharedStyles.importButton, !textInput.trim() && sharedStyles.fetchButtonDisabled]}
         onPress={handleTextImport}

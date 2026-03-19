@@ -34,6 +34,7 @@ export default function SettingsScreen() {
   const [isPublic, setIsPublic] = useState(true);
   const [defaultTagsEnabled, setDefaultTagsEnabled] = useState(true);
   const [defaultRecipeIsPublic, setDefaultRecipeIsPublic] = useState(false);
+  const [translateAI, setTranslateAI] = useState(true);
   const [notifyOnNewFollower, setNotifyOnNewFollower] = useState(true);
 
   // Export state
@@ -109,6 +110,7 @@ export default function SettingsScreen() {
       setIsPublic(data.isPublic);
       setDefaultTagsEnabled(data.defaultTagsEnabled);
       setDefaultRecipeIsPublic(data.defaultRecipeIsPublic);
+      setTranslateAI(data.translateAI ?? true);
       setNotifyOnNewFollower(data.notifyOnNewFollower ?? true);
     } catch {
       setError("Could not load settings");
@@ -141,6 +143,7 @@ export default function SettingsScreen() {
           isPublic,
           defaultTagsEnabled,
           defaultRecipeIsPublic,
+          translateAI,
           notifyOnNewFollower,
         }),
       });
@@ -298,6 +301,24 @@ export default function SettingsScreen() {
             <Switch
               value={defaultRecipeIsPublic}
               onValueChange={setDefaultRecipeIsPublic}
+              trackColor={{ false: "#e7e5e4", true: "#1c1917" }}
+              thumbColor="#fff"
+            />
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              <Ionicons name="language-outline" size={20} color="#57534e" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.toggleLabel}>Translate AI imports</Text>
+                <Text style={styles.toggleSub}>
+                  Always translate recipe details to your language
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={translateAI}
+              onValueChange={setTranslateAI}
               trackColor={{ false: "#e7e5e4", true: "#1c1917" }}
               thumbColor="#fff"
             />
