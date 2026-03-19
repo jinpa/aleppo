@@ -43,6 +43,7 @@ const createSchema = z.object({
   prepTime: z.number().int().positive().optional().nullable(),
   cookTime: z.number().int().positive().optional().nullable(),
   servings: z.number().int().positive().optional().nullable(),
+  servingName: z.string().max(100).optional().nullable(),
   commentsUrl: z.string().url().optional().nullable(),
   isAdapted: z.boolean().default(false),
   forkedFromRecipeId: z.string().optional(),
