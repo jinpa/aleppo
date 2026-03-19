@@ -21,12 +21,13 @@ type ImportReviewProps = {
   recipe: ScrapedRecipe;
   parseError?: string;
   aiGenerated?: boolean;
+  commentsUrl?: string;
   token: string | null;
   onBack: () => void;
   router: { replace: (href: any) => void };
 };
 
-export function ImportReview({ recipe, parseError, aiGenerated, token, onBack, router }: ImportReviewProps) {
+export function ImportReview({ recipe, parseError, aiGenerated, commentsUrl: initialCommentsUrl, token, onBack, router }: ImportReviewProps) {
   const [title, setTitle] = useState(recipe.title ?? "");
   const [description, setDescription] = useState(recipe.description ?? "");
   const [ingredients, setIngredients] = useState<RawIngredient[]>(
@@ -46,6 +47,7 @@ export function ImportReview({ recipe, parseError, aiGenerated, token, onBack, r
   const [imageUrl] = useState<string | undefined>(recipe.imageUrl ?? undefined);
   const [recipeSourceUrl, setRecipeSourceUrl] = useState(recipe.sourceUrl ?? "");
   const [sourceName, setSourceName] = useState(recipe.sourceName ?? "");
+  const [recipeCommentsUrl, setRecipeCommentsUrl] = useState(initialCommentsUrl ?? "");
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -99,6 +101,7 @@ export function ImportReview({ recipe, parseError, aiGenerated, token, onBack, r
         imageUrl: imageUrl || undefined,
         sourceUrl: recipeSourceUrl.trim() || undefined,
         sourceName: sourceName.trim() || undefined,
+        commentsUrl: recipeCommentsUrl.trim() || undefined,
       };
       const res = await fetch(`${API_URL}/api/recipes`, {
         method: "POST",
@@ -319,11 +322,25 @@ export function ImportReview({ recipe, parseError, aiGenerated, token, onBack, r
           keyboardType="url"
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { marginBottom: 8 }]}
           value={sourceName}
           onChangeText={setSourceName}
           placeholder="Source name (optional)"
           placeholderTextColor="#a8a29e"
+        />
+      </View>
+
+      {/* Comments link */}
+      <View style={styles.field}>
+        <Text style={styles.label}>Comments link</Text>
+        <TextInput
+          style={styles.input}
+          value={recipeCommentsUrl}
+          onChangeText={setRecipeCommentsUrl}
+          placeholder="URL to comments thread (optional)"
+          placeholderTextColor="#a8a29e"
+          autoCapitalize="none"
+          keyboardType="url"
         />
       </View>
 

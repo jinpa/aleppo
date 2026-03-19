@@ -36,6 +36,7 @@ type SourceRecipe = {
   notes: string | null;
   sourceUrl: string | null;
   sourceName: string | null;
+  commentsUrl: string | null;
   imageUrl: string | null;
   author: { id: string; name: string | null; image: string | null };
 };
@@ -60,6 +61,7 @@ export default function SaveRecipeScreen() {
   const [notes, setNotes] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [sourceName, setSourceName] = useState("");
+  const [commentsUrl, setCommentsUrl] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   const [saving, setSaving] = useState(false);
@@ -94,6 +96,7 @@ export default function SaveRecipeScreen() {
         setSourceUrl("");
         setSourceName(r.author.name ?? "");
       }
+      setCommentsUrl(r.commentsUrl ?? "");
     } catch {
       setErrors({ _load: "Could not load recipe." });
     } finally {
@@ -174,6 +177,7 @@ export default function SaveRecipeScreen() {
         notes: notes.trim() || null,
         sourceUrl: sourceUrl.trim() || null,
         sourceName: sourceName.trim() || null,
+        commentsUrl: commentsUrl.trim() || null,
         imageUrl: imageUrl ?? undefined,
         isAdapted,
         forkedFromRecipeId: id,
@@ -395,7 +399,13 @@ export default function SaveRecipeScreen() {
         <View style={styles.field}>
           <Text style={styles.label}>Source</Text>
           <TextInput style={[styles.input, { marginBottom: 8 }]} value={sourceUrl} onChangeText={setSourceUrl} placeholder="Source URL (optional)" placeholderTextColor="#a8a29e" autoCapitalize="none" keyboardType="url" />
-          <TextInput style={styles.input} value={sourceName} onChangeText={setSourceName} placeholder="Source name (optional)" placeholderTextColor="#a8a29e" />
+          <TextInput style={[styles.input, { marginBottom: 8 }]} value={sourceName} onChangeText={setSourceName} placeholder="Source name (optional)" placeholderTextColor="#a8a29e" />
+        </View>
+
+        {/* Comments link */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Comments link</Text>
+          <TextInput style={styles.input} value={commentsUrl} onChangeText={setCommentsUrl} placeholder="URL to comments thread (optional)" placeholderTextColor="#a8a29e" autoCapitalize="none" keyboardType="url" />
         </View>
 
         {/* Notes */}

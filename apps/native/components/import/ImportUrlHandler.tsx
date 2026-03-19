@@ -131,6 +131,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAtt
           ok: true,
           recipe: { ...(data.recipe ?? {}), sourceUrl },
           parseError: data.recipe ? undefined : "No recipe structured data found on that page. Please fill in the details manually.",
+          commentsUrl: payload.commentsUrl ?? undefined,
         });
       }
     } catch {
@@ -168,6 +169,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAtt
         ok: true,
         recipe: { ...(data.recipe ?? {}), sourceUrl: currentUrl },
         parseError: data.parseError ?? undefined,
+        commentsUrl: data.commentsUrl ?? undefined,
       });
     } catch {
       onComplete({ ok: false, error: "Could not connect to server." });

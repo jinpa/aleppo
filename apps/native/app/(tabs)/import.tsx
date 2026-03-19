@@ -21,6 +21,7 @@ type ReviewData = {
   recipe: ScrapedRecipe;
   parseError?: string;
   aiGenerated?: boolean;
+  commentsUrl?: string;
 };
 
 const segments: { key: Mode; label: string; icon: string }[] = [
@@ -66,7 +67,7 @@ export default function ImportScreen() {
       setError(outcome.error);
     } else {
       setError(null);
-      setReviewData({ recipe: outcome.recipe, parseError: outcome.parseError, aiGenerated: outcome.aiGenerated });
+      setReviewData({ recipe: outcome.recipe, parseError: outcome.parseError, aiGenerated: outcome.aiGenerated, commentsUrl: outcome.commentsUrl });
     }
   };
 
@@ -81,6 +82,7 @@ export default function ImportScreen() {
         recipe={reviewData.recipe}
         parseError={reviewData.parseError}
         aiGenerated={reviewData.aiGenerated}
+        commentsUrl={reviewData.commentsUrl}
         token={token}
         onBack={() => setReviewData(null)}
         router={router}

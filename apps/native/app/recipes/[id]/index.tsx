@@ -23,6 +23,8 @@ import { API_URL } from "@/constants/api";
 import { scaleIngredient } from "@/lib/scale-ingredient";
 import ImageViewerModal from "@/components/ImageViewerModal";
 import { NavShell } from "@/components/NavShell";
+import { AI_MODIFY_PRESETS } from "@/constants/ai-presets";
+import { setPendingModification } from "@/stores/ai-modify";
 import type { RecipeDetailResponse, CookLog } from "@aleppo/shared";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -98,6 +100,11 @@ export default function RecipeDetailScreen() {
   const [logNotes, setLogNotes] = useState("");
   const [logSubmitting, setLogSubmitting] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
+
+  const [showModifyModal, setShowModifyModal] = useState(false);
+  const [modifyPrompt, setModifyPrompt] = useState("");
+  const [modifyLoading, setModifyLoading] = useState(false);
+  const [modifyError, setModifyError] = useState<string | null>(null);
 
   const fetchDetail = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -193,6 +200,39 @@ export default function RecipeDetailScreen() {
       setLogError("Failed to log cook. Please try again.");
     } finally {
       setLogSubmitting(false);
+    }
+  };
+
+  const submitModify = async () => {
+    if (!detail || !modifyPrompt.trim()) return;
+    setModifyError(null);
+    setModifyLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/recipes/${id}/modify`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt: modifyPrompt.trim() }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => null);
+        throw new Error(data?.error || "Failed to modify recipe");
+      }
+      const data = await res.json();
+      setPendingModification({
+        original: detail.recipe,
+        modified: data.recipe,
+        isOwner,
+      });
+      setShowModifyModal(false);
+      setModifyPrompt("");
+      router.push(`/recipes/${id}/modify`);
+    } catch (err) {
+      setModifyError(err instanceof Error ? err.message : "Failed to modify recipe. Please try again.");
+    } finally {
+      setModifyLoading(false);
     }
   };
 
@@ -418,6 +458,15 @@ export default function RecipeDetailScreen() {
           </View>
         ) : null}
 
+        {/* Comments link */}
+        {recipe.commentsUrl ? (
+          <TouchableOpacity onPress={() => Linking.openURL(recipe.commentsUrl!)} style={styles.sourceLink}>
+            <Ionicons name="chatbubble-outline" size={13} color="#78716c" />
+            <Text style={styles.sourceLinkText} numberOfLines={1}>Comments</Text>
+            <Ionicons name="open-outline" size={12} color="#a8a29e" />
+          </TouchableOpacity>
+        ) : null}
+
         {/* Tags */}
         {recipe.tags.length > 0 ? (
           <View style={styles.tagRow}>
@@ -464,6 +513,18 @@ export default function RecipeDetailScreen() {
               <Text style={styles.actionButtonText}>Save to mine</Text>
             </TouchableOpacity>
           )}
+
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              setModifyPrompt("");
+              setModifyError(null);
+              setShowModifyModal(true);
+            }}
+          >
+            <Ionicons name="color-wand-outline" size={16} color="#1c1917" />
+            <Text style={styles.actionButtonText}>Modify with AI</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Description */}
@@ -678,6 +739,65 @@ export default function RecipeDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* AI Modify Modal */}
+      <Modal visible={showModifyModal} transparent animationType="slide" onRequestClose={() => !modifyLoading && setShowModifyModal(false)}>
+        <Pressable style={styles.modalBackdrop} onPress={() => !modifyLoading && setShowModifyModal(false)} />
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalWrapper}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Modify with AI</Text>
+
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.presetStrip} contentContainerStyle={styles.presetStripContent}>
+              {AI_MODIFY_PRESETS.map((preset) => (
+                <TouchableOpacity
+                  key={preset.label}
+                  style={[styles.presetChip, modifyPrompt === preset.prompt && styles.presetChipActive]}
+                  onPress={() => setModifyPrompt(preset.prompt)}
+                  disabled={modifyLoading}
+                >
+                  <Text style={[styles.presetChipText, modifyPrompt === preset.prompt && styles.presetChipTextActive]}>
+                    {preset.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <TextInput
+              style={[styles.modalInput, styles.modalTextarea]}
+              value={modifyPrompt}
+              onChangeText={setModifyPrompt}
+              placeholder="Or describe how to modify this recipe..."
+              placeholderTextColor="#a8a29e"
+              multiline
+              maxLength={500}
+              textAlignVertical="top"
+              editable={!modifyLoading}
+            />
+
+            {modifyError ? <Text style={styles.logErrorText}>{modifyError}</Text> : null}
+
+            <TouchableOpacity
+              style={[styles.modalSubmit, (!modifyPrompt.trim() || modifyLoading) && styles.modalSubmitDisabled]}
+              onPress={submitModify}
+              disabled={!modifyPrompt.trim() || modifyLoading}
+            >
+              {modifyLoading ? (
+                <View style={styles.modifyLoadingRow}>
+                  <ActivityIndicator size="small" color="#fff" />
+                  <Text style={styles.modalSubmitText}>Modifying recipe...</Text>
+                </View>
+              ) : (
+                <Text style={styles.modalSubmitText}>Modify</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.modalCancel} onPress={() => !modifyLoading && setShowModifyModal(false)}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </>
   );
 }
@@ -734,7 +854,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#f5f5f4", borderWidth: 1, borderColor: "#e7e5e4",
   },
   tagText: { fontSize: 13, color: "#57534e", fontWeight: "500" },
-  actionRow: { flexDirection: "row", gap: 10, marginBottom: 20 },
+  actionRow: { flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 20 },
   actionButton: {
     flexDirection: "row", alignItems: "center", gap: 6,
     paddingHorizontal: 14, paddingVertical: 9,
@@ -852,4 +972,14 @@ const styles = StyleSheet.create({
     backgroundColor: "#b91c1c", minWidth: 70, alignItems: "center",
   },
   centeredModalDestructiveText: { fontSize: 14, fontWeight: "600", color: "#fff" },
+  presetStrip: { marginBottom: 12 },
+  presetStripContent: { gap: 8 },
+  presetChip: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+    borderWidth: 1, borderColor: "#e7e5e4", backgroundColor: "#fff",
+  },
+  presetChipActive: { backgroundColor: "#1c1917", borderColor: "#1c1917" },
+  presetChipText: { fontSize: 14, fontWeight: "500", color: "#57534e" },
+  presetChipTextActive: { color: "#fff" },
+  modifyLoadingRow: { flexDirection: "row", alignItems: "center", gap: 8, justifyContent: "center" },
 });
