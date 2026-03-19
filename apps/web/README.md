@@ -16,43 +16,52 @@ Your cooking diary — save recipes, log every cook, and follow friends to see w
 ### 1. Prerequisites
 
 - Node.js 20+
-- PostgreSQL 15+ running locally (e.g. via Homebrew: `brew install postgresql@15`)
+- pnpm 10+ (`npm install -g pnpm`)
+- PostgreSQL 15+ running locally (e.g. via Homebrew: `brew install postgresql@16 && brew services start postgresql@16`)
 
 ### 2. Install dependencies
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### 3. Set up local environment
 
 ```bash
-cp .env.example .env.local
+cp apps/web/.env.example apps/web/.env.local
 ```
 
-Edit `.env.local` — the defaults work for a Homebrew PostgreSQL install. At minimum you need:
+Edit `apps/web/.env.local` — the defaults work for a Homebrew PostgreSQL install. At minimum you need:
 
 | Variable | Local value |
 |---|---|
 | `DATABASE_URL` | `postgresql://localhost/aleppo` |
-| `AUTH_SECRET` | any string (run `openssl rand -base64 32` for a good one) |
+| `AUTH_SECRET` | run `openssl rand -base64 32` and paste the result |
 
 Google OAuth and Cloudflare R2 are **optional** in local dev — the app works without them (image uploads fall back to a placeholder URL).
 
 ### 4. Create and migrate the local database
 
 ```bash
-# Create the database
+# Create the database (only needed once)
 createdb aleppo
 
 # Push the schema (fast, no migration files — good for local dev)
-npm run db:push
+pnpm --filter web db:push
 ```
 
-### 5. Run the dev server
+### 5. Build the SPA
+
+The UI is an Expo app exported as a static SPA. Build it once before starting the server (and rebuild after frontend changes):
 
 ```bash
-npm run dev
+sh scripts/build-spa.sh
+```
+
+### 6. Run the dev server
+
+```bash
+pnpm dev:web
 ```
 
 Open [http://localhost:3000](http://localhost:3000).
@@ -73,10 +82,10 @@ Open [http://localhost:3000](http://localhost:3000).
 ## Database Migrations
 
 ```bash
-npm run db:generate    # Generate new migrations from schema changes
-npm run db:migrate     # Apply pending migrations
-npm run db:push        # Push schema directly (dev only)
-npm run db:studio      # Open Drizzle Studio
+pnpm --filter web db:generate    # Generate new migrations from schema changes
+pnpm --filter web db:migrate     # Apply pending migrations
+pnpm --filter web db:push        # Push schema directly (dev only)
+pnpm --filter web db:studio      # Open Drizzle Studio
 ```
 
 ## Railway Deployment
@@ -107,11 +116,11 @@ npm run db:studio      # Open Drizzle Studio
 
 ```
 # Make changes locally
-npm run dev
+pnpm dev:web
 
 # When schema changes:
-npm run db:generate    # generates a new SQL migration file
-npm run db:push        # applies it to local database
+pnpm --filter web db:generate    # generates a new SQL migration file
+pnpm --filter web db:push        # applies it to local database
 
 # Commit everything (including drizzle/ migration files)
 git add .
@@ -124,8 +133,8 @@ Railway's build command (`build:railway`) runs `drizzle-kit migrate` before `nex
 ## Database Commands
 
 ```bash
-npm run db:generate    # Generate new migrations from schema changes
-npm run db:migrate     # Apply pending migrations (used in Railway deploy)
-npm run db:push        # Push schema directly — local dev only, skips migration files
-npm run db:studio      # Open Drizzle Studio (local GUI)
+pnpm --filter web db:generate    # Generate new migrations from schema changes
+pnpm --filter web db:migrate     # Apply pending migrations (used in Railway deploy)
+pnpm --filter web db:push        # Push schema directly — local dev only, skips migration files
+pnpm --filter web db:studio      # Open Drizzle Studio (local GUI)
 ```
