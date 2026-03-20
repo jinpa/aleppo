@@ -23,43 +23,50 @@ export async function POST(req: Request) {
     );
   }
 
-  const formData = await req.formData();
-  const imageEntries = formData.getAll("images");
-  const inputText = formData.get("text");
-  const language = formData.get("language");
-
-  if (imageEntries.length === 0 && !inputText) {
-    return NextResponse.json(
-      { error: "Provide at least one image or a text field" },
-      { status: 400 }
-    );
+  let body: { url?: string; language?: string };
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const textInput = typeof inputText === "string" ? inputText : undefined;
-  const targetLanguage = typeof language === "string" ? language : undefined;
-  const prompt = buildPrompt({ inputText: textInput, language: targetLanguage });
-  const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [
-    { text: prompt },
-  ];
+  const { url, language } = body;
+  if (!url || typeof url !== "string") {
+    return NextResponse.json({ error: "url is required" }, { status: 400 });
+  }
 
-  let firstImageBuffer: Buffer | null = null;
-  let firstImageMime = "image/jpeg";
-
-  for (const entry of imageEntries) {
-    if (!(entry instanceof File)) {
+  // Download the image
+  let imageBuffer: Buffer;
+  let mimeType: string;
+  try {
+    const res = await fetch(url, {
+      headers: { "User-Agent": "Aleppo/1.0" },
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!res.ok) {
       return NextResponse.json(
-        { error: "Invalid image entry" },
+        { error: `Failed to fetch image: ${res.status} ${res.statusText}` },
+        { status: 502 }
+      );
+    }
+    mimeType = res.headers.get("content-type") ?? "image/jpeg";
+    if (!mimeType.startsWith("image/")) {
+      return NextResponse.json(
+        { error: "URL does not point to an image" },
         { status: 400 }
       );
     }
-    const buffer = Buffer.from(await entry.arrayBuffer());
-    const mimeType = entry.type || "image/jpeg";
-    if (!firstImageBuffer) {
-      firstImageBuffer = buffer;
-      firstImageMime = mimeType;
-    }
-    parts.push({ inlineData: { mimeType, data: buffer.toString("base64") } });
+    imageBuffer = Buffer.from(await res.arrayBuffer());
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: `Failed to download image: ${msg}` }, { status: 502 });
   }
+
+  const prompt = buildPrompt({ language });
+  const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [
+    { text: prompt },
+    { inlineData: { mimeType, data: imageBuffer.toString("base64") } },
+  ];
 
   const client = new GoogleGenAI({ apiKey });
   const modelId = "gemini-3.1-flash-lite-preview";
@@ -78,7 +85,7 @@ export async function POST(req: Request) {
       const reason = chunk.candidates?.[0]?.finishReason;
       if (reason) finishReason = reason;
     }
-    console.log("[import/images] Gemini finish reason:", finishReason, "chars:", text.length);
+    console.log("[import/image-url] Gemini finish reason:", finishReason, "chars:", text.length);
     if (finishReason === "RECITATION") {
       throw new Error("RECITATION");
     }
@@ -86,9 +93,8 @@ export async function POST(req: Request) {
   })();
 
   const imageUrlPromise = (async (): Promise<string | null> => {
-    if (!firstImageBuffer) return null;
     try {
-      const processed = await sharp(firstImageBuffer)
+      const processed = await sharp(imageBuffer)
         .resize(1200, 900, { fit: "inside", withoutEnlargement: true })
         .webp({ quality: 85 })
         .toBuffer();
@@ -98,7 +104,7 @@ export async function POST(req: Request) {
       const key = `recipes/${userId}/${Date.now()}.webp`;
       return await uploadImageToR2(processed, key, "image/webp");
     } catch (err) {
-      console.error("[import/images] R2 upload failed:", err);
+      console.error("[import/image-url] R2 upload failed:", err);
       return null;
     }
   })();
@@ -117,39 +123,37 @@ export async function POST(req: Request) {
     throw err;
   }
 
-  console.log("[import/images] Gemini raw response:\n", responseText);
+  console.log("[import/image-url] Gemini raw response:\n", responseText);
 
-  // Strip optional markdown code fences (```json ... ```)
   const cleaned = responseText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
 
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(cleaned);
   } catch (e) {
-    return NextResponse.json({ error: `AI returned invalid JSON: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 });
+    return NextResponse.json(
+      { error: `AI returned invalid JSON: ${e instanceof Error ? e.message : String(e)}` },
+      { status: 502 }
+    );
   }
 
   if (typeof parsed.error === "string") {
     return NextResponse.json({ error: parsed.error }, { status: 422 });
   }
 
-  // Pick only the fields that belong to ScrapedRecipe
   const ingredients = Array.isArray(parsed.ingredients)
-    ? parsed.ingredients.map((ing: any) => {
+    ? parsed.ingredients.map((ing: Record<string, unknown>) => {
         const name = typeof ing.name === "string" ? ing.name : "";
         const unit = typeof ing.units === "string" ? ing.units : (typeof ing.unit === "string" ? ing.unit : undefined);
         const notes = typeof ing.notes === "string" ? ing.notes : undefined;
-        
-        // Prioritize quantity as a number if provided by the AI
+
         let quantity = typeof ing.quantity === "number" ? ing.quantity : undefined;
         const amountStr = typeof ing.amount === "string" ? ing.amount : undefined;
-        
-        // Fallback to parsing amount string if quantity is missing
+
         if (quantity === undefined && amountStr) {
           quantity = parseFractionString(amountStr)?.valueOf();
         }
 
-        // Use the new formatter to fill-in the raw attribute
         let raw = formatIngredientDisplay({ name, unit, quantity });
         if (notes) raw += ` (${notes})`;
 
@@ -174,7 +178,7 @@ export async function POST(req: Request) {
     ...(parsed.cookTime != null && { cookTime: Number(parsed.cookTime) }),
     ...(parsed.servings != null && { servings: Number(parsed.servings) }),
     ...(parsed.servingName != null && { servingName: parsed.servingName }),
-    ...(typeof parsed.sourceUrl === "string" && { sourceUrl: parsed.sourceUrl }),
+    ...(typeof parsed.sourceUrl === "string" ? { sourceUrl: parsed.sourceUrl } : { sourceUrl: url }),
     ...(typeof parsed.sourceName === "string" && { sourceName: parsed.sourceName }),
     ...(uploadedImageUrl
       ? { imageUrl: uploadedImageUrl }
