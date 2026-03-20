@@ -1,0 +1,86 @@
+{
+  "title": "Airy, Chewy Italian Almond Paste Cookies",
+  "description": "Italian Almond Paste Cookies, also known as almon macaroons, are a\nsoft chewey, and absolutely irresistible delight perfect for Christmas\nor passover. Only four ingredients are required to make flourless\ncookie recipe.\n",
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Preheat the oven to 350°F. Grease a baking sheet, line with parchment paper, or a silicone baking mat.",
+      "ingredients": []
+    },
+    {
+      "step": 1,
+      "text": "IMPORTANT NOTE: Use a hand mixer instead of stand mixer. Using a stand mixer makes the batter too runny.",
+      "ingredients": []
+    },
+    {
+      "step": 2,
+      "text": "In a medium bowl beat the egg whites until frothy and opaque white.",
+      "ingredients": [
+        {
+          "name": "egg whites",
+          "unit": "count",
+          "quantity": 2.0
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "text": "Break up almond paste in smaller chunks and add to the beaten egg whites with sugar, salt, and vanilla extract. Beat until well combined. Mix in the almond flour.",
+      "ingredients": [
+        {
+          "name": "almond paste (NOT almond filling)",
+          "unit": "ounces",
+          "quantity": 8.0
+        },
+        {
+          "name": "granulated sugar",
+          "unit": "cups",
+          "quantity": 0.6666666666666666
+        },
+        {
+          "name": "salt",
+          "unit": "teaspoons",
+          "quantity": 0.5
+        },
+        {
+          "name": "vanilla extract",
+          "unit": "teaspoons",
+          "quantity": 0.5
+        },
+        {
+          "name": "almond flour",
+          "unit": "cups",
+          "quantity": 0.5
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "text": "For best results, cover the dough and refrigerate for 1-2 hours or freeze for 30 minutes.",
+      "ingredients": []
+    },
+    {
+      "step": 5,
+      "text": "Use a small cookie scoop to portion out 1 inch balls, placing on prepared baking sheets about 1-2 inches apart. Dust balls with powdered sugar. If desired, gently press almonds into the tops of the cookies.",
+      "ingredients": [
+        {
+          "name": "powdered sugar",
+          "unit": "count",
+          "quantity": 1.0
+        },
+        {
+          "name": "sliced almonds",
+          "unit": "count",
+          "quantity": 1.0
+        }
+      ]
+    },
+    {
+      "step": 6,
+      "text": "Bake for 16-18 minutes, or until edges and bottoms start to brown. Cool on cookie sheets for 10 minutes before transporting to a wire rack to cool completely.",
+      "ingredients": []
+    }
+  ],
+  "servings": 36,
+  "servingName": "cookies"
+}

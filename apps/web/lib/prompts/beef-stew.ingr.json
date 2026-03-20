@@ -1,0 +1,140 @@
+{
+  "title": "Beef Stew",
+  "description": "This easy beef stew recipe is a family favorite. Tender veggies and\nbeef in a rich brown broth.\n",
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Combine flour, garlic powder, salt, and pepper. Toss beef in flour mixture.",
+      "ingredients": [
+        {
+          "name": "stewing beef",
+          "unit": "pounds",
+          "quantity": 2.0
+        },
+        {
+          "name": "all-purpose flour",
+          "unit": "tablespoons",
+          "quantity": 3.0
+        },
+        {
+          "name": "garlic powder",
+          "unit": "teaspoons",
+          "quantity": 0.5
+        },
+        {
+          "name": "salt",
+          "unit": "teaspoons",
+          "quantity": 0.5
+        },
+        {
+          "name": "black pepper",
+          "unit": "teaspoons",
+          "quantity": 0.5
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "text": "Heat olive oil in a large Dutch oven or pot over medium-high heat. Shake off any excess flour from the beef and brown in small batches. Remove and set aside in a bowl.",
+      "ingredients": [
+        {
+          "name": "olive oil",
+          "unit": "tablespoons",
+          "quantity": 3.0
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "text": "Add the onions to the pot, adding more oil as needed, and cook until they begin to soften, about 3 minutes.",
+      "ingredients": [
+        {
+          "name": "onion",
+          "unit": "count",
+          "quantity": 1.0
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "text": "Add beef broth and red wine while scraping up any brown bits in the pan.",
+      "ingredients": [
+        {
+          "name": "beef broth",
+          "unit": "cups",
+          "quantity": 6.0
+        },
+        {
+          "name": "red wine",
+          "unit": "cups",
+          "quantity": 0.5
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "text": "Stir in browned beef, potatoes, carrots, celery, tomato paste, and rosemary. Reduce heat to medium-low, cover, and simmer 1 hour or until beef is tender (up to 90 minutes).",
+      "ingredients": [
+        {
+          "name": "potatoes",
+          "unit": "pounds",
+          "quantity": 1.0
+        },
+        {
+          "name": "carrots",
+          "unit": "count",
+          "quantity": 4.0
+        },
+        {
+          "name": "celery",
+          "unit": "count",
+          "quantity": 4.0
+        },
+        {
+          "name": "tomato paste",
+          "unit": "tablespoons",
+          "quantity": 3.0
+        },
+        {
+          "name": "dried rosemary",
+          "unit": "teaspoons",
+          "quantity": 1.0
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "text": "Mix equal parts cornstarch and water to create a slurry. Slowly add the slurry to the boiling stew to reach desired consistency (you may not need all of the slurry, if you'd like a thicker stew, you can add extra).",
+      "ingredients": [
+        {
+          "name": "cornstarch",
+          "unit": "tablespoons",
+          "quantity": 2.0
+        },
+        {
+          "name": "water",
+          "unit": "tablespoons",
+          "quantity": 2.0
+        }
+      ]
+    },
+    {
+      "step": 6,
+      "text": "Stir in peas and simmer 5-10 minutes before serving. Season with salt & pepper to taste.",
+      "ingredients": [
+        {
+          "name": "peas",
+          "unit": "cups",
+          "quantity": 0.75
+        },
+        {
+          "name": "salt & pepper",
+          "unit": "some",
+          "quantity": 0.0
+        }
+      ]
+    }
+  ],
+  "servings": 8,
+  "servingName": "persons"
+}

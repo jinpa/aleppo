@@ -1,0 +1,108 @@
+{
+  "title": "Madeleines",
+  "description": "These delicate cookies are shockingly easy to make considering how hard this recipe was for me to crack! Also known as French butter cakes, madeleines are well-known, easily-recognizable, sophisticated little cakes. They have a reputation for being fussy, and what they’re really known for is their scalloped shell-shape and their characteristic bump. It took weeks upon weeks to finally get this recipe perfected, but it was definitely worth it. ",
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Preheat oven to 375F (190C) and whisk together melted butter and flour. Use a pastry brush to lightly but thoroughly grease every cavity of your madeleine pan. Set aside.",
+      "ingredients": [
+        {
+          "name": "unsalted butter",
+          "unit": "tablespoons",
+          "quantity": 1.0
+        },
+        {
+          "name": "all-purpose flour",
+          "unit": "teaspoons",
+          "quantity": 1.5
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "text": "In a small heatproof bowl, melt butter. Set aside to cool.",
+      "ingredients": [
+        {
+          "name": "unsalted butter",
+          "unit": "cups",
+          "quantity": 0.625
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "text": "In a large bowl, combine eggs, sugars, vanilla extract, and salt. Whisk vigorously until thoroughly combined (about 30 seconds).",
+      "ingredients": [
+        {
+          "name": "large eggs",
+          "unit": "count",
+          "quantity": 2.0
+        },
+        {
+          "name": "granulated sugar",
+          "unit": "cups",
+          "quantity": 0.5
+        },
+        {
+          "name": "light brown sugar",
+          "unit": "tablespoons",
+          "quantity": 3.0
+        },
+        {
+          "name": "vanilla extract",
+          "unit": "teaspoons",
+          "quantity": 2.0
+        },
+        {
+          "name": "salt",
+          "unit": "teaspoons",
+          "quantity": 0.125
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "text": "Sift flour into the egg mixture, about ⅓ of the flour at a time, gently stirring into egg mixture after each addition.",
+      "ingredients": [
+        {
+          "name": "all-purpose flour",
+          "unit": "cups",
+          "quantity": 1.25
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "text": "Drizzle cooled melted butter around the edge of the batter and add zest, if using. Gently fold into batter using a spatula until ingredients are       thoroughly combined (but do not over-mix).",
+      "ingredients": [
+        {
+          "name": "lemon or orange zest",
+          "unit": "teaspoons",
+          "quantity": 2.0
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "text": "Drop batter by heaping 1 Tablespoon per madeleine into prepared pan.",
+      "ingredients": []
+    },
+    {
+      "step": 6,
+      "text": "Transfer to center rack of 375F (190C) preheated oven and bake for 9 minutes or until madeleines are light golden brown and spring back when lightly touched. Remove to a cooling rack to cool immediately.",
+      "ingredients": []
+    },
+    {
+      "step": 7,
+      "text": "If your madeleine pan did not hold all of the batter, allow the pan to cool before re-brushing with butter/flour mixture and refilling with batter and baking your next batch.",
+      "ingredients": []
+    },
+    {
+      "step": 8,
+      "text": "If desired, sprinkle madeleines with additional powdered sugar or dip in melted chocolate before serving.",
+      "ingredients": []
+    }
+  ],
+  "servings": 12,
+  "servingName": "madeleines"
+}

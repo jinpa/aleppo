@@ -4,15 +4,22 @@ import path from "path";
 const PROMPTS_DIR = path.join(process.cwd(), "lib/prompts");
 
 export function buildPrompt(
-  options: { inputText?: string; language?: string; mode?: "image" | "video" } = {}
+  options: {
+    inputText?: string;
+    language?: string;
+    mode?: "image" | "video";
+    ingredientInstructions?: boolean;
+  } = {}
 ): string {
-  const { inputText, language, mode = "image" } = options;
+  const { inputText, language, mode = "image", ingredientInstructions = false } = options;
 
   const prefix = fs.readFileSync(path.join(PROMPTS_DIR, "prefix.txt"), "utf-8");
 
   const shotFiles = fs
     .readdirSync(PROMPTS_DIR)
-    .filter((f) => f.endsWith(".json"))
+    .filter((f) =>
+      ingredientInstructions ? f.endsWith(".ingr.json") : f.endsWith(".json") && !f.includes(".ingr.")
+    )
     .sort();
 
   const shots = shotFiles
@@ -22,10 +29,8 @@ export function buildPrompt(
     })
     .join("\n");
 
-  const instructions = fs.readFileSync(
-    path.join(PROMPTS_DIR, "instructions.txt"),
-    "utf-8"
-  );
+  const instructionsFile = ingredientInstructions ? "instructions.ingr.txt" : "instructions.txt";
+  const instructions = fs.readFileSync(path.join(PROMPTS_DIR, instructionsFile), "utf-8");
 
   const translate = language
     ? `0- Translate the recipe (title, description, ingredients, instructions) to ${language}.\n`

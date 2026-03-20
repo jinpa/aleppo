@@ -17,6 +17,7 @@ export async function POST(req: Request) {
   const imageEntries = formData.getAll("images");
   const inputText = formData.get("text");
   const language = formData.get("language");
+  const ingredientInstructions = formData.get("ingredientInstructions") === "true";
 
   if (imageEntries.length === 0 && !inputText) {
     return NextResponse.json(
@@ -27,7 +28,7 @@ export async function POST(req: Request) {
 
   const textInput = typeof inputText === "string" ? inputText : undefined;
   const targetLanguage = typeof language === "string" ? language : undefined;
-  const prompt = buildPrompt({ inputText: textInput, language: targetLanguage });
+  const prompt = buildPrompt({ inputText: textInput, language: targetLanguage, ingredientInstructions });
   const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [
     { text: prompt },
   ];

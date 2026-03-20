@@ -1,0 +1,122 @@
+{
+  "title": "Cranberry-Wine Swirl Cookies",
+  "description": "These pinwheel-style cookies use a classic sugar dough, rolled around\na layer of quick cranberry jam made with red wine. The cranberries’\nacidity plays so well with the tannins in the wine, and their pectin\nfirms up the jam so that it doesn’t seep out when baked. While I’d\nnever recommend baking (or cooking) with your best bottle, you can\ncertainly serve these cookies alongside glasses of the good\nstuff. They’re not too sweet and just as at home on a cheese plate as\nthey are after dinner.\n",
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Whisk baking powder, all-purpose flour, and kosher salt in a small bowl; set aside.",
+      "ingredients": [
+        {
+          "name": "baking powder",
+          "unit": "teaspoons",
+          "quantity": 0.5
+        },
+        {
+          "name": "all-purpose flour",
+          "unit": "cups",
+          "quantity": 1.75
+        },
+        {
+          "name": "kosher salt",
+          "unit": "teaspoons",
+          "quantity": 0.5
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "text": "Place granulated sugar in a large bowl. Finely grate zest from orange into bowl and massage into sugar. Add unsalted butter and beat until smooth and creamy. Add egg yolks and vanilla extract and beat to combine. Add reserved dry ingredients and mix just until a crumbly dough forms.",
+      "ingredients": [
+        {
+          "name": "granulated sugar",
+          "unit": "cups",
+          "quantity": 0.6666666666666666
+        },
+        {
+          "name": "orange",
+          "unit": "count",
+          "quantity": 1.0
+        },
+        {
+          "name": "unsalted butter",
+          "unit": "cups",
+          "quantity": 0.625
+        },
+        {
+          "name": "egg yolk",
+          "unit": "count",
+          "quantity": 1.0
+        },
+        {
+          "name": "vanilla extract",
+          "unit": "teaspoons",
+          "quantity": 1.5
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "text": "Place a large sheet of plastic wrap on a surface. Turn out dough onto plastic and pat into a rectangle. Wrap dough up to enclose and chill 30 minutes.",
+      "ingredients": []
+    },
+    {
+      "step": 3,
+      "text": "Halve and juice reserved orange; pour into a medium saucepan. Add cranberries, red wine, remaining granulated sugar, and kosher salt. Cook, stirring and smashing cranberries, until mixture thickens; let jam cool.",
+      "ingredients": [
+        {
+          "name": "cranberries",
+          "unit": "cups",
+          "quantity": 1.25
+        },
+        {
+          "name": "red wine",
+          "unit": "cups",
+          "quantity": 1.0
+        },
+        {
+          "name": "granulated sugar",
+          "unit": "cups",
+          "quantity": 0.25
+        },
+        {
+          "name": "kosher salt",
+          "unit": "pinch",
+          "quantity": 1
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "text": "Unwrap dough. Place dough on a lightly floured sheet of parchment paper and dust lightly with flour. Let sit 5 minutes, then roll out to a 14x10\" rectangle. Trim sides to straighten.",
+      "ingredients": []
+    },
+    {
+      "step": 5,
+      "text": "Spread a thin layer of jam over dough, leaving a 1\" border on top. Roll up dough to form a log. Wrap in parchment and plastic and freeze 1 hour.",
+      "ingredients": []
+    },
+    {
+      "step": 6,
+      "text": "Place racks in upper and lower thirds of oven; preheat to 375°. Whisk egg white in a small bowl. Spread out sanding sugar on parchment. Unwrap dough and lightly brush egg white all over outside of log; roll in sanding sugar to coat. Slice into rounds.",
+      "ingredients": [
+        {
+          "name": "egg white",
+          "unit": "count",
+          "quantity": 1.0
+        },
+        {
+          "name": "sanding sugar",
+          "unit": "count",
+          "quantity": 1.0
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "text": "Bake cookies, rotating baking sheets halfway through, until golden brown, 18–20 minutes. Let cool on baking sheets 5 minutes, then transfer to a wire rack; let cool completely.",
+      "ingredients": []
+    }
+  ],
+  "servings": 18,
+  "servingName": "cookies"
+}

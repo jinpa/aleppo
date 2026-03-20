@@ -1,0 +1,76 @@
+{
+  "title": "Crêpes ou Galettes de Blé Noir",
+  "description": "La complète est une incontournable des crêpes salées. Il en existe\nplusieurs variantes, mais commencons par la plus classique\nd'entre-elles : la galette complète à base de jambon, oeuf et fromage\nrâpé.\n",
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Verser dans un saladier la farine de sarrasin, le sel et une partie de l’eau. Le pâton est réalisé uniquement avec la moitié de l’eau nécessaire à la recette.",
+      "ingredients": [
+        {
+          "name": "farine de sarrasin",
+          "unit": "grams",
+          "quantity": 500.0
+        },
+        {
+          "name": "gros sel",
+          "unit": "grams",
+          "quantity": 15.0
+        },
+        {
+          "name": "eau",
+          "unit": "deciliters",
+          "quantity": 5.0
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "text": "Mélanger le tout avec un fouet ou à la main et rajouter à la préparation un peu d’eau et une cuillère à café de miel. Cette étape va donner plus de coloration aux crêpes. Le pâton doit être lisse, mais pas trop liquide.",
+      "ingredients": [
+        {
+          "name": "miel",
+          "unit": "teaspoons",
+          "quantity": 1.0
+        },
+        {
+          "name": "eau",
+          "unit": "some",
+          "quantity": 0.0
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "text": "Laisser reposer au frais pendant 24, 48 ou 72 heures.",
+      "ingredients": []
+    },
+    {
+      "step": 3,
+      "text": "Sortir le pâton du frigo 30 minutes avant de faire les crêpes. Rallonger la pâte en ajoutant progressivement le reste de l’eau. Battre énergiquement la préparation à la main pour obtenir un résultat bien aéré. Une fois que des bulles apparaissent en surface, la pâte est prête à être utilisée.",
+      "ingredients": [
+        {
+          "name": "eau",
+          "unit": "deciliters",
+          "quantity": 5.0
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "text": "Cuire les crêpes de blé noir sur une crêpière électrique ou gaz préchauffée à 220 ou 240 °C pour les plus expérimentés. Graisser la plaque entre chaque crêpe à l’aide d’un tampon pour retourner plus facilement les crêpes.",
+      "ingredients": []
+    },
+    {
+      "step": 5,
+      "text": "Retourner la crêpe à l’aide d’une spatule à crêpes lorsque les bords commencent à se décoller, finir la cuisson quelques secondes sur la deuxième face.",
+      "ingredients": []
+    },
+    {
+      "step": 6,
+      "text": "Accompagnez vos crêpes de garnitures salées ou sucrées selon vos envies.",
+      "ingredients": []
+    }
+  ],
+  "servings": 12,
+  "servingName": "crêpes"
+}

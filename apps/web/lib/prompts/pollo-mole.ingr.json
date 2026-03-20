@@ -1,0 +1,185 @@
+{
+  "title": "Pollo al Mole",
+  "description": "El mole se considera muy preciado y se prepara sobre todo en ocasiones especiales y festividades, como el Día de Muertos o para celebrar la Independencia de México. Es un plato muy singular y complejo, y se pueden encontrar muchas recetas de mole, no sólo de mole con pollo, en todo el país. Se cree que hoy en día en México se pueden encontrar unos 50 tipos diferentes de mole, pero quizá algunos de los más conocidos sean: mole poblano, mole negro, mole verde, mole manchamanteles, mole amarillo y mole coloradito.",
+  "instructions": [
+    {
+      "step": 0,
+      "text": "Empieza escalfando el pollo. En una cacerola grande coloca las pechugas de pollo crudas, la cebolla blanca, el diente de ajo, hoja de laurel, sal y cúbrelo con el agua. Déjalo cocer a fuego medio entre 30 y 40 minutos.",
+      "ingredients": [
+        {
+          "name": "pechugas de pollo",
+          "unit": "count",
+          "quantity": 5.0
+        },
+        {
+          "name": "cebolla blanca",
+          "unit": "count",
+          "quantity": 0.5
+        },
+        {
+          "name": "diente de ajo",
+          "unit": "count",
+          "quantity": 1.0
+        },
+        {
+          "name": "hoja de laurel",
+          "unit": "count",
+          "quantity": 1.0
+        },
+        {
+          "name": "sal",
+          "unit": "tablespoons",
+          "quantity": 1.0
+        },
+        {
+          "name": "pimienta negra en grano",
+          "unit": "teaspoons",
+          "quantity": 1.0
+        },
+        {
+          "name": "agua",
+          "unit": "liters",
+          "quantity": 1.2
+        }
+      ]
+    },
+    {
+      "step": 1,
+      "text": "Cuando el pollo esté cocido y el caldo concentrado, retira el pollo cocido de la cazuela y desmenuza la carne con la ayuda de dos tenedores. Cuela el caldo restante y resérvalo. Debes tener aproximadamente caldo para el mole.",
+      "ingredients": []
+    },
+    {
+      "step": 2,
+      "text": "Empieza a preparar los ingredientes del mole en una sartén. Añade aceite de oliva y, cuando esté bien caliente, añade los tomates, la cebolla y los dientes de ajo. Deja que las verduras tomen un poco de color y revuélvelas de vez en cuando. Cuando los tomates y la cebolla estén blandos, saca las verduras de la sartén, colócalas en un tazón grande y resérvalas.",
+      "ingredients": [
+        {
+          "name": "Aceite de oliva",
+          "unit": "some",
+          "quantity": 0.0
+        },
+        {
+          "name": "tomates",
+          "unit": "count",
+          "quantity": 5.0
+        },
+        {
+          "name": "cebolla blanca (picada)",
+          "unit": "count",
+          "quantity": 1.0
+        },
+        {
+          "name": "dientes de ajo (pelados)",
+          "unit": "count",
+          "quantity": 2.0
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "text": "En la misma sartén, añadir un poco más de aceite y tostar suavemente los cacahuates, las semillas de ajonjolí, el pan duro, la canela en rama, los granos de pimienta, el clavo y las semillas de cilantro. Se revuelven y se cocinan durante uno o dos minutos, luego se retiran de la sartén y se colocan en el tazón con el resto de los ingredientes cocidos.",
+      "ingredients": [
+        {
+          "name": "cacahuates",
+          "unit": "grams",
+          "quantity": 150.0
+        },
+        {
+          "name": "semillas de ajonjolí",
+          "unit": "cups",
+          "quantity": 0.3333333333333333
+        },
+        {
+          "name": "trozo pequeño de pan blanco duro",
+          "unit": "count",
+          "quantity": 1.0
+        },
+        {
+          "name": "rama de canela",
+          "unit": "count",
+          "quantity": 1.0
+        },
+        {
+          "name": "pimienta negra en grano",
+          "unit": "teaspoons",
+          "quantity": 1.0
+        },
+        {
+          "name": "clavo molido",
+          "unit": "teaspoons",
+          "quantity": 0.25
+        },
+        {
+          "name": "semillas de cilantro",
+          "unit": "tablespoons",
+          "quantity": 1.0
+        }
+      ]
+    },
+    {
+      "step": 4,
+      "text": "Por último, añade un poco más de aceite en la misma sartén y, una vez bien caliente, añade el plátano y las pasas. Deja que el plátano se caramelice y una vez listo retíralo de la sartén, colócalo con el resto de los ingredientes cocidos del mole.",
+      "ingredients": [
+        {
+          "name": "plátano verde",
+          "unit": "count",
+          "quantity": 1.0
+        },
+        {
+          "name": "pasas",
+          "unit": "grams",
+          "quantity": 150.0
+        }
+      ]
+    },
+    {
+      "step": 5,
+      "text": "Ahora en una licuadora coloca los ingredientes del mole frito, la pasta de chipotle (un poco del caldo para ayudar a licuar) y licua suavemente, si tu licuadora no es lo suficientemente grande puedes hacerlo en dos partes. Una vez que tu mezcla de mole esté lista, pon el mole en una cacerola grande a fuego medio con un poco de aceite de oliva y revuelve de 2 a 3 minutos.",
+      "ingredients": [
+        {
+          "name": "pasta de chipotle Gran Luchito",
+          "unit": "tablespoons",
+          "quantity": 2.0
+        }
+      ]
+    },
+    {
+      "step": 6,
+      "text": "Agrega el caldo de pollo e integra a la salsa. Una vez que el mole comience a hervir a fuego lento, agrega el chocolate oscuro partido en trozos más pequeños y revuelve hasta que se integre por completo. Sazona con sal y pimienta recién molida y cuece a fuego lento durante 40 minutos cubierto con una tapa.",
+      "ingredients": [
+        {
+          "name": "caldo de pollo",
+          "unit": "liters",
+          "quantity": 1.0
+        },
+        {
+          "name": "chocolate negro",
+          "unit": "grams",
+          "quantity": 120.0
+        },
+        {
+          "name": "Sal y pimienta negra recién molida",
+          "unit": "some",
+          "quantity": 0.0
+        }
+      ]
+    },
+    {
+      "step": 7,
+      "text": "Puedes añadir el pollo desmenuzado en el mole y mezclar. Sirve con una guarnición de arroz mexicano y adorna con una pizca de ajonjolí tostado por encima. ¡Buen provecho!",
+      "ingredients": [
+        {
+          "name": "ajonjolí tostado",
+          "unit": "some",
+          "quantity": 0.0
+        },
+        {
+          "name": "Arroz mexicano",
+          "unit": "count",
+          "quantity": 1.0
+        }
+      ]
+    }
+  ],
+  "servings": 5,
+  "servingName": "persons"
+}
