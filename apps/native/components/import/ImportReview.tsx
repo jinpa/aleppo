@@ -45,7 +45,7 @@ export function ImportReview({ recipe, parseError, aiGenerated, commentsUrl: ini
   const [servings, setServings] = useState(recipe.servings ? String(recipe.servings) : "");
   const [servingName, setServingName] = useState(recipe.servingName ?? "");
   const [isPublic, setIsPublic] = useState(false);
-  const [imageUrl] = useState<string | undefined>(recipe.imageUrl ?? undefined);
+  const [imageUrl, setImageUrl] = useState<string | undefined>(recipe.imageUrl ?? undefined);
   const [recipeSourceUrl, setRecipeSourceUrl] = useState(recipe.sourceUrl ?? "");
   const [sourceName, setSourceName] = useState(recipe.sourceName ?? "");
   const [recipeCommentsUrl, setRecipeCommentsUrl] = useState(initialCommentsUrl ?? "");
@@ -173,7 +173,16 @@ export function ImportReview({ recipe, parseError, aiGenerated, commentsUrl: ini
 
       {/* Scraped image preview */}
       {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={styles.imagePreview} resizeMode="cover" />
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: imageUrl }} style={styles.imagePreview} resizeMode="cover" />
+          <TouchableOpacity
+            style={styles.imageRemoveButton}
+            onPress={() => setImageUrl(undefined)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Ionicons name="close-circle" size={26} color="rgba(0,0,0,0.6)" />
+          </TouchableOpacity>
+        </View>
       ) : null}
 
       {/* Title */}
@@ -376,7 +385,7 @@ export function ImportReview({ recipe, parseError, aiGenerated, commentsUrl: ini
         </View>
       </View>
 
-      {/* Bottom save */}
+      {/* Bottom actions */}
       <View style={styles.bottomSaveRow}>
         <TouchableOpacity
           style={[styles.saveButtonFull, saving && styles.saveButtonDisabled]}
@@ -387,6 +396,13 @@ export function ImportReview({ recipe, parseError, aiGenerated, commentsUrl: ini
             ? <ActivityIndicator size="small" color="#fff" />
             : <Text style={styles.saveButtonText}>Save recipe</Text>
           }
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.discardButton}
+          onPress={onBack}
+          disabled={saving}
+        >
+          <Text style={styles.discardButtonText}>Discard</Text>
         </TouchableOpacity>
       </View>
 
@@ -427,7 +443,15 @@ const styles = StyleSheet.create({
   },
   saveButtonDisabled: { opacity: 0.6 },
   saveButtonText: { fontSize: 14, fontWeight: "600", color: "#fff" },
-  imagePreview: { width: "100%", height: 200, marginBottom: 16 },
+  imageContainer: { position: "relative" as const, marginBottom: 16 },
+  imagePreview: { width: "100%", height: 200 },
+  imageRemoveButton: {
+    position: "absolute" as const,
+    top: 8,
+    right: 8,
+    backgroundColor: "rgba(255,255,255,0.8)",
+    borderRadius: 13,
+  },
   bannerOk: {
     flexDirection: "row",
     gap: 8,
@@ -513,5 +537,13 @@ const styles = StyleSheet.create({
   toggleLeft: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
   toggleLabel: { fontSize: 15, fontWeight: "500", color: "#1c1917" },
   toggleSub: { fontSize: 12, color: "#78716c", marginTop: 1 },
-  bottomSaveRow: { paddingHorizontal: 16, marginTop: 24 },
+  bottomSaveRow: { paddingHorizontal: 16, marginTop: 24, gap: 12 },
+  discardButton: {
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#e7e5e4",
+  },
+  discardButtonText: { fontSize: 14, fontWeight: "600", color: "#78716c" },
 });

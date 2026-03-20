@@ -25,7 +25,7 @@ type ReviewData = {
 };
 
 const segments: { key: Mode; label: string; icon: string }[] = [
-  { key: "url",    label: "URL",    icon: "link-outline" },
+  { key: "url",    label: "Link",   icon: "link-outline" },
   { key: "images", label: "Images", icon: "images-outline" },
   { key: "file",   label: "File",   icon: "archive-outline" },
   { key: "text",   label: "Text",   icon: "document-text-outline" },
@@ -59,6 +59,9 @@ export default function ImportScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchSettings();
+      // Reset state when tab regains focus (e.g. after saving a recipe)
+      setReviewData(null);
+      setError(null);
     }, [fetchSettings])
   );
 
@@ -135,6 +138,7 @@ export default function ImportScreen() {
           shareUrl={shareUrl}
           onComplete={handleComplete}
           onAttempt={() => setError(null)}
+          initialLanguage={targetLanguage}
         />
       )}
 
