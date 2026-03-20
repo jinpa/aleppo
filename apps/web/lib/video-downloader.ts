@@ -20,9 +20,74 @@ export type DownloadResult = {
 /** Check that a binary exists on the system. */
 async function checkBinary(name: string): Promise<void> {
   try {
-    await execFileAsync("which", [name]);
-  } catch {
-    throw new Error(`${name} is not installed. Install it with: brew install ${name}`);
+    await execFileAsync(name, ["--version"]);
+  } catch (err: any) {
+    if (err?.code === "ENOENT") {
+      throw new Error(`${name} is not installed`);
+    }
+  }
+}
+
+const YT_DLP_PATH = path.join(tmpdir(), "yt-dlp");
+let ytDlpReady = false;
+
+/**
+ * Ensure a recent yt-dlp binary is available.
+ * The apt/brew version is often too old for TikTok, so we download
+ * the latest standalone binary from GitHub if the system one fails.
+ */
+/**
+ * Ensure a recent yt-dlp binary is available.
+ * The apt version is often too old for TikTok, so we download
+ * the latest standalone binary from GitHub if needed.
+ * The binary persists in /tmp for the lifetime of the container.
+ */
+let resolvedYtDlp: string | null = null;
+
+async function ensureYtDlp(): Promise<string> {
+  // Already resolved this container lifetime
+  if (resolvedYtDlp) {
+    // Verify it still exists (shouldn't disappear, but just in case)
+    try {
+      await fs.access(resolvedYtDlp);
+      return resolvedYtDlp;
+    } catch {
+      resolvedYtDlp = null;
+    }
+  }
+
+  // 1. Check for previously downloaded binary in /tmp
+  try {
+    await fs.access(YT_DLP_PATH);
+    await execFileAsync(YT_DLP_PATH, ["--version"]);
+    resolvedYtDlp = YT_DLP_PATH;
+    return YT_DLP_PATH;
+  } catch {}
+
+  // 2. Try system yt-dlp
+  try {
+    await execFileAsync("yt-dlp", ["--version"]);
+    resolvedYtDlp = "yt-dlp";
+    return "yt-dlp";
+  } catch {}
+
+  // 3. Download latest standalone binary from GitHub
+  console.log("[video-downloader] Downloading latest yt-dlp binary...");
+  try {
+    const res = await fetch(
+      "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp",
+      { signal: AbortSignal.timeout(30_000) }
+    );
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buffer = Buffer.from(await res.arrayBuffer());
+    await fs.writeFile(YT_DLP_PATH, buffer, { mode: 0o755 });
+    resolvedYtDlp = YT_DLP_PATH;
+    console.log("[video-downloader] yt-dlp downloaded to", YT_DLP_PATH);
+    return YT_DLP_PATH;
+  } catch (err) {
+    throw new Error(
+      `yt-dlp is not installed and failed to download: ${err instanceof Error ? err.message : err}`
+    );
   }
 }
 
@@ -32,14 +97,14 @@ async function checkBinary(name: string): Promise<void> {
  * Caller is responsible for cleaning up the temp files.
  */
 export async function downloadVideo(url: string): Promise<DownloadResult> {
-  await checkBinary("yt-dlp");
+  const ytdlp = await ensureYtDlp();
 
   const id = randomUUID();
   const videoPath = path.join(tmpdir(), `${id}.mp4`);
 
   // Download video and extract uploader metadata in parallel
   const downloadPromise = execFileAsync(
-    "yt-dlp",
+    ytdlp,
     [
       "-f", `best[vcodec^=h264][filesize<${MAX_SIZE_MB}M][ext=mp4]/best[vcodec^=h264][ext=mp4]/best[ext=mp4]/best`,
       "--merge-output-format", "mp4",
@@ -52,7 +117,7 @@ export async function downloadVideo(url: string): Promise<DownloadResult> {
   );
 
   const uploaderPromise = execFileAsync(
-    "yt-dlp",
+    ytdlp,
     ["--print", "%(uploader)s", "--no-download", "--no-warnings", url],
     { timeout: 15_000 }
   ).then(({ stdout }) => stdout.trim() || null)
