@@ -1,4 +1,4 @@
 # @tailwindcss/oxide v4 requires Node >= 20 — its native binary is compiled
 # against Node 20's V8 ABI and will not load on Node 18.
 [phases.setup]
-nixPkgs = ["nodejs_20", "yt-dlp", "ffmpeg"]
+nixPkgs = ["nodejs_20"]
