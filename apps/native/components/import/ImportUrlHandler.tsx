@@ -5,7 +5,38 @@ import { API_URL } from "@/constants/api";
 import { sharedStyles } from "./importStyles";
 import { RecipeWebExtractor } from "@/components/RecipeWebExtractor";
 import { CookingSpinner } from "@/components/CookingSpinner";
+import { TranslationToggle, getClientLanguage } from "./TranslationToggle";
 import type { ImportOutcome } from "./types";
+
+const VIDEO_PATTERNS = [
+  /tiktok\.com/i,
+  /instagram\.com\/(?:reel|reels)\//i,
+  /youtube\.com\/shorts\//i,
+  /youtube\.com\/watch/i,
+  /youtu\.be\//i,
+];
+
+function isVideoUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return VIDEO_PATTERNS.some((p) => p.test(parsed.hostname + parsed.pathname));
+  } catch {
+    return false;
+  }
+}
+
+const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|gif|bmp|heic|heif|avif)(\?.*)?$/i;
+const IMAGE_HOSTS = [/\.cdninstagram\.com/i, /\.pinimg\.com/i, /\.imgur\.com/i, /i\.redd\.it/i];
+
+function isImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (IMAGE_EXTENSIONS.test(parsed.pathname)) return true;
+    return IMAGE_HOSTS.some((p) => p.test(parsed.hostname));
+  } catch {
+    return false;
+  }
+}
 
 type ImportUrlHandlerProps = {
   token: string | null;
@@ -13,17 +44,37 @@ type ImportUrlHandlerProps = {
   shareUrl?: string;
   onComplete: (outcome: ImportOutcome) => void;
   onAttempt?: () => void;
+  initialLanguage?: string;
 };
 
-export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAttempt }: ImportUrlHandlerProps) {
-  const [url, setUrl] = useState("");
+export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAttempt, initialLanguage }: ImportUrlHandlerProps) {
+  const shareIsVideo = !!shareUrl && isVideoUrl(shareUrl);
+  const shareIsImage = !!shareUrl && !shareIsVideo && isImageUrl(shareUrl);
+  const shareIsDirect = shareIsVideo || shareIsImage;
+  const [url, setUrl] = useState(shareIsDirect ? shareUrl : "");
   const [fetching, setFetching] = useState(false);
-  const [extracting, setExtracting] = useState(!!shareUrl);
-  const [extractionUrl, setExtractionUrl] = useState(shareUrl ?? "");
+  const [extracting, setExtracting] = useState(!!shareUrl && !shareIsDirect);
+  const [extractionUrl, setExtractionUrl] = useState(shareUrl && !shareIsDirect ? shareUrl : "");
   const extractionDone = useRef(false);
   const [waitingForBookmarklet, setWaitingForBookmarklet] = useState(modeParam === "bookmarklet");
   const bookmarkletReadySent = useRef(false);
   const bookmarkletDataReceived = useRef(false);
+  const shareDirectHandled = useRef(false);
+  const [language, setLanguage] = useState<string | undefined>(initialLanguage);
+
+  useEffect(() => {
+    setLanguage(initialLanguage);
+  }, [initialLanguage]);
+
+  // Auto-import video/image URLs received via share sheet
+  useEffect(() => {
+    if (shareIsDirect && !shareDirectHandled.current) {
+      shareDirectHandled.current = true;
+      if (shareIsVideo) handleVideoImport(shareUrl!);
+      else if (shareIsImage) handleImageUrlImport(shareUrl!);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [shareIsDirect]);
 
   // ── Bookmarklet postMessage handshake ─────────────────────────────────────
   useEffect(() => {
@@ -178,19 +229,104 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAtt
     }
   };
 
+  const handleImageUrlImport = async (imageUrl: string) => {
+    setFetching(true);
+    const currentToken = Platform.OS === "web" ? localStorage.getItem("auth_token") : token;
+    try {
+      const res = await fetch(`${API_URL}/api/import/image-url`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: imageUrl, language }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        onComplete({
+          ok: false,
+          error: res.status === 401
+            ? "Authentication error — please try again."
+            : data.error ?? "Image import failed.",
+        });
+      } else {
+        onComplete({
+          ok: true,
+          recipe: { ...(data.recipe ?? {}), sourceUrl: imageUrl },
+          aiGenerated: data.generated,
+        });
+      }
+    } catch {
+      onComplete({ ok: false, error: "Could not connect to server." });
+    } finally {
+      setFetching(false);
+    }
+  };
+
+  const handleVideoImport = async (videoUrl: string) => {
+    setFetching(true);
+    const currentToken = Platform.OS === "web" ? localStorage.getItem("auth_token") : token;
+    try {
+      const res = await fetch(`${API_URL}/api/import/video`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: videoUrl, language }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        onComplete({
+          ok: false,
+          error: res.status === 401
+            ? "Authentication error — please try again."
+            : data.error ?? "Video import failed.",
+        });
+      } else {
+        onComplete({
+          ok: true,
+          recipe: { ...(data.recipe ?? {}), sourceUrl: videoUrl },
+          aiGenerated: data.generated,
+        });
+      }
+    } catch {
+      onComplete({ ok: false, error: "Could not connect to server." });
+    } finally {
+      setFetching(false);
+    }
+  };
+
   const handleFetch = () => {
     if (!url.trim()) return;
     onAttempt?.();
-    // Always use client-side WebView extraction first; handleExtractError
-    // falls back to server-side scraping if the WebView fails.
+
+    const trimmed = url.trim();
+
+    // Route video URLs to the dedicated video import endpoint
+    if (isVideoUrl(trimmed)) {
+      handleVideoImport(trimmed);
+      return;
+    }
+
+    // Route image URLs to the image-url endpoint
+    if (isImageUrl(trimmed)) {
+      handleImageUrlImport(trimmed);
+      return;
+    }
+
+    // For regular URLs, use client-side WebView extraction first;
+    // handleExtractError falls back to server-side scraping if the WebView fails.
     extractionDone.current = false;
-    setExtractionUrl(url.trim());
+    setExtractionUrl(trimmed);
     setExtracting(true);
   };
 
   const busy = fetching || extracting || waitingForBookmarklet;
   let spinnerLabel = "Fetching recipe…";
   if (waitingForBookmarklet) spinnerLabel = "Receiving recipe from your browser…";
+  else if (fetching && url.trim() && isVideoUrl(url.trim())) spinnerLabel = "Downloading and analyzing video…";
+  else if (fetching && url.trim() && isImageUrl(url.trim())) spinnerLabel = "Analyzing image…";
   else if (extracting && extractionUrl) {
     let hostname = "";
     try { hostname = new URL(extractionUrl).hostname; } catch {}
@@ -199,9 +335,9 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAtt
 
   return (
     <>
-      <Text style={sharedStyles.heading}>Import from URL</Text>
+      <Text style={sharedStyles.heading}>Import from Link</Text>
       <Text style={sharedStyles.subheading}>
-        Paste a link to any recipe. We'll parse it — you review and edit before saving.
+        Paste a link to a recipe blog, TikTok, Instagram Reel, YouTube Short, or even a photo of a dish or a recipe. We'll extract the recipe — you review and edit before saving.
       </Text>
 
       <View style={styles.urlRow}>
@@ -226,6 +362,8 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAtt
         </TouchableOpacity>
       </View>
 
+      <TranslationToggle language={language} onLanguageChange={setLanguage} token={token} />
+
       {/* WebView extractor runs hidden — no overlay needed */}
       {extracting && extractionUrl && (
         <View style={styles.hidden}>
@@ -246,6 +384,8 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAtt
             <Text style={styles.hintItem}>· AllRecipes, Simply Recipes, NYT Cooking</Text>
             <Text style={styles.hintItem}>· Food Network, Epicurious, King Arthur</Text>
             <Text style={styles.hintItem}>· Most sites using Schema.org recipe markup</Text>
+            <Text style={styles.hintItem}>· TikTok, Instagram Reels, YouTube videos</Text>
+            <Text style={styles.hintItem}>· Direct image links (jpg, png, webp)</Text>
           </View>
 
           <BookmarkletSection />
@@ -281,7 +421,7 @@ function BookmarkletSection() {
     <View style={bkStyles.container}>
       <TouchableOpacity style={bkStyles.toggle} onPress={() => setOpen((v) => !v)}>
         <Ionicons name="bookmark-outline" size={16} color="#d97706" />
-        <Text style={bkStyles.toggleText}>Use the Aleppo bookmarklet (works on any site)</Text>
+        <Text style={bkStyles.toggleText}>Use the Aleppo bookmarklet (works on any site with recipe text)</Text>
         <Text style={bkStyles.toggleChevron}>{open ? "▲" : "▼"}</Text>
       </TouchableOpacity>
 

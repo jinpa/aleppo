@@ -2,60 +2,15 @@ import { NextResponse } from "next/server";
 
 import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { uploadImageToR2 } from "@/lib/r2";
-import { GoogleGenAI } from "@google/genai";
 import sharp from "sharp";
-import fs from "fs";
-import path from "path";
-import { formatIngredientDisplay } from "@aleppo/shared";
-import { parseFractionString } from "@/lib/scale-ingredient";
-
-const PROMPTS_DIR = path.join(process.cwd(), "lib/prompts");
-
-function buildPrompt(inputText?: string, language?: string): string {
-  const prefix = fs.readFileSync(path.join(PROMPTS_DIR, "prefix.txt"), "utf-8");
-
-  const shotFiles = fs
-    .readdirSync(PROMPTS_DIR)
-    .filter((f) => f.endsWith(".json"))
-    .sort();
-
-  const shots = shotFiles
-    .map((f) => {
-      const content = fs.readFileSync(path.join(PROMPTS_DIR, f), "utf-8");
-      return `---\nEXAMPLE:\n${content}`;
-    })
-    .join("\n");
-
-  const instructions = fs.readFileSync(
-    path.join(PROMPTS_DIR, "instructions.txt"),
-    "utf-8"
-  );
-
-  const translate = language
-    ? `0- Translate the recipe (title, description, ingredients, instructions) to ${language}.\n`
-    : "0- Keep the recipe in its original language.\n";
-
-  const base = `${prefix}\n${shots}\n---\nRULES:\n${translate}\n${instructions}\n---\n`;
-
-  if (inputText) {
-    return `${base}Process the following text and output the recipe JSON.\nTEXT: ${inputText}\nJSON:`;
-  }
-  return `${base}Process the provided images and output the recipe JSON.\nJSON:`;
-}
+import { buildPrompt } from "@/lib/build-recipe-prompt";
+import { callGemini, buildGeminiRecipe } from "@/lib/gemini-recipe";
 
 export async function POST(req: Request) {
   const session = await safeAuth();
   const userId = session?.user?.id ?? (await getUserFromBearerToken(req))?.id;
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "GEMINI_API_KEY not configured" },
-      { status: 500 }
-    );
   }
 
   const formData = await req.formData();
@@ -72,53 +27,25 @@ export async function POST(req: Request) {
 
   const textInput = typeof inputText === "string" ? inputText : undefined;
   const targetLanguage = typeof language === "string" ? language : undefined;
-  const prompt = buildPrompt(textInput, targetLanguage);
+  const prompt = buildPrompt({ inputText: textInput, language: targetLanguage });
   const parts: { text?: string; inlineData?: { mimeType: string; data: string } }[] = [
     { text: prompt },
   ];
 
   let firstImageBuffer: Buffer | null = null;
-  let firstImageMime = "image/jpeg";
 
   for (const entry of imageEntries) {
     if (!(entry instanceof File)) {
-      return NextResponse.json(
-        { error: "Invalid image entry" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid image entry" }, { status: 400 });
     }
     const buffer = Buffer.from(await entry.arrayBuffer());
     const mimeType = entry.type || "image/jpeg";
-    if (!firstImageBuffer) {
-      firstImageBuffer = buffer;
-      firstImageMime = mimeType;
-    }
+    if (!firstImageBuffer) firstImageBuffer = buffer;
     parts.push({ inlineData: { mimeType, data: buffer.toString("base64") } });
   }
 
-  const client = new GoogleGenAI({ apiKey });
-  const modelId = "gemini-3.1-flash-lite-preview";
-
   // Run Gemini and R2 upload in parallel
-  const geminiPromise = (async () => {
-    const stream = await client.models.generateContentStream({
-      model: modelId,
-      contents: [{ role: "user", parts }],
-      config: { thinkingConfig: { thinkingBudget: 0 }, maxOutputTokens: 8192 },
-    });
-    let text = "";
-    let finishReason: string | undefined;
-    for await (const chunk of stream) {
-      if (chunk.text) text += chunk.text;
-      const reason = chunk.candidates?.[0]?.finishReason;
-      if (reason) finishReason = reason;
-    }
-    console.log("[import/images] Gemini finish reason:", finishReason, "chars:", text.length);
-    if (finishReason === "RECITATION") {
-      throw new Error("RECITATION");
-    }
-    return text;
-  })();
+  const geminiPromise = callGemini(parts as any, "[import/images]");
 
   const imageUrlPromise = (async (): Promise<string | null> => {
     if (!firstImageBuffer) return null;
@@ -138,83 +65,15 @@ export async function POST(req: Request) {
     }
   })();
 
-  let responseText: string;
-  let uploadedImageUrl: string | null;
-  try {
-    [responseText, uploadedImageUrl] = await Promise.all([geminiPromise, imageUrlPromise]);
-  } catch (err) {
-    if (err instanceof Error && err.message === "RECITATION") {
-      return NextResponse.json(
-        { error: "The AI stopped because this recipe may be from a copyrighted source. Try importing it by URL instead, or enter it manually." },
-        { status: 422 }
-      );
-    }
-    throw err;
+  const [result, uploadedImageUrl] = await Promise.all([geminiPromise, imageUrlPromise]);
+
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
-  console.log("[import/images] Gemini raw response:\n", responseText);
+  const { recipe, generated } = buildGeminiRecipe(result.parsed, {
+    imageUrl: uploadedImageUrl,
+  });
 
-  // Strip optional markdown code fences (```json ... ```)
-  const cleaned = responseText.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "").trim();
-
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(cleaned);
-  } catch (e) {
-    return NextResponse.json({ error: `AI returned invalid JSON: ${e instanceof Error ? e.message : String(e)}` }, { status: 502 });
-  }
-
-  if (typeof parsed.error === "string") {
-    return NextResponse.json({ error: parsed.error }, { status: 422 });
-  }
-
-  // Pick only the fields that belong to ScrapedRecipe
-  const ingredients = Array.isArray(parsed.ingredients)
-    ? parsed.ingredients.map((ing: any) => {
-        const name = typeof ing.name === "string" ? ing.name : "";
-        const unit = typeof ing.units === "string" ? ing.units : (typeof ing.unit === "string" ? ing.unit : undefined);
-        const notes = typeof ing.notes === "string" ? ing.notes : undefined;
-        
-        // Prioritize quantity as a number if provided by the AI
-        let quantity = typeof ing.quantity === "number" ? ing.quantity : undefined;
-        const amountStr = typeof ing.amount === "string" ? ing.amount : undefined;
-        
-        // Fallback to parsing amount string if quantity is missing
-        if (quantity === undefined && amountStr) {
-          quantity = parseFractionString(amountStr)?.valueOf();
-        }
-
-        // Use the new formatter to fill-in the raw attribute
-        let raw = formatIngredientDisplay({ name, unit, quantity });
-        if (notes) raw += ` (${notes})`;
-
-        return {
-          raw: raw || (typeof ing.raw === "string" ? ing.raw : ""),
-          name,
-          unit,
-          amount: amountStr,
-          quantity,
-          notes,
-        };
-      })
-    : undefined;
-
-  const recipe = {
-    ...(typeof parsed.title === "string" && { title: parsed.title }),
-    ...(typeof parsed.description === "string" && { description: parsed.description }),
-    ...(ingredients && { ingredients }),
-    ...(Array.isArray(parsed.instructions) && { instructions: parsed.instructions }),
-    ...(Array.isArray(parsed.tags) && { tags: parsed.tags }),
-    ...(parsed.prepTime != null && { prepTime: Number(parsed.prepTime) }),
-    ...(parsed.cookTime != null && { cookTime: Number(parsed.cookTime) }),
-    ...(parsed.servings != null && { servings: Number(parsed.servings) }),
-    ...(parsed.servingName != null && { servingName: parsed.servingName }),
-    ...(typeof parsed.sourceUrl === "string" && { sourceUrl: parsed.sourceUrl }),
-    ...(typeof parsed.sourceName === "string" && { sourceName: parsed.sourceName }),
-    ...(uploadedImageUrl
-      ? { imageUrl: uploadedImageUrl }
-      : typeof parsed.imageUrl === "string" && { imageUrl: parsed.imageUrl }),
-  };
-
-  return NextResponse.json({ recipe, generated: parsed.ai_generated === true });
+  return NextResponse.json({ recipe, generated });
 }
