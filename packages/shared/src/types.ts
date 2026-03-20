@@ -12,6 +12,7 @@ export type Ingredient = {
 export type InstructionStep = {
   step: number;
   text: string;
+  ingredients?: Ingredient[];
 };
 
 export type NutritionalInfo = {
