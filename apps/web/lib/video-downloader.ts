@@ -142,23 +142,26 @@ export async function extractFrame(
     return null;
   }
 
+  // Get video duration so we can clamp the timestamp
+  let duration = 30;
+  try {
+    const { stdout } = await execFileAsync(
+      "ffprobe",
+      ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", videoPath],
+      { timeout: 10_000 }
+    );
+    duration = parseFloat(stdout.trim()) || 30;
+  } catch {}
+
   let seekTo: number;
   if (timestampSeconds != null && timestampSeconds >= 0) {
-    seekTo = timestampSeconds;
+    // Clamp to video duration (with small margin to avoid seeking past end)
+    seekTo = Math.min(timestampSeconds, Math.max(0, duration - 0.5));
   } else {
     // Default to 80% through the video
-    try {
-      const { stdout } = await execFileAsync(
-        "ffprobe",
-        ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", videoPath],
-        { timeout: 10_000 }
-      );
-      const duration = parseFloat(stdout.trim()) || 30;
-      seekTo = Math.max(0.5, Math.floor(duration * 0.8));
-    } catch {
-      seekTo = 20; // reasonable fallback for short-form video
-    }
+    seekTo = Math.max(0.5, Math.floor(duration * 0.8));
   }
+  console.log(`[video-downloader] extractFrame: requested=${timestampSeconds}s, duration=${duration}s, seekTo=${seekTo}s`);
 
   const framePath = path.join(tmpdir(), `${randomUUID()}-frame.jpg`);
   try {

@@ -37,7 +37,7 @@ export function buildPrompt(
     return `${base}Process the following text and output the recipe JSON.\nTEXT: ${inputText}\nJSON:`;
   }
   if (mode === "video") {
-    return `${base}Process the provided video and output the recipe JSON.\nAlso include "bestFrameTimestamp": <number> in the JSON — the timestamp in seconds of the frame that best shows the finished dish or food. Pick the most appetizing, well-lit shot.\nJSON:`;
+    return `${base}Process the provided video and output the recipe JSON.\nAlso include "bestFrameTimestamp": <number> in the JSON — the number of seconds from the START of the video to the frame that best shows the finished dish or food. This must be less than the video's total duration. Pick the most appetizing, well-lit shot.\nJSON:`;
   }
   return `${base}Process the provided images and output the recipe JSON.\nJSON:`;
 }
