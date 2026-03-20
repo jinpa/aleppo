@@ -30,10 +30,6 @@ async function checkBinary(name: string): Promise<void> {
 
 const YT_DLP_PATH = path.join(tmpdir(), "yt-dlp");
 /**
- * The apt/brew version is often too old for TikTok, so we download
- * the latest standalone binary from GitHub if the system one fails.
- */
-/**
  * Ensure a recent yt-dlp binary is available.
  * The apt version is often too old for TikTok, so we download
  * the latest standalone binary from GitHub if needed.
@@ -90,7 +86,6 @@ async function ensureYtDlp(): Promise<string> {
 
 /**
  * Download a video from a supported platform using yt-dlp.
- * Returns paths to the downloaded video and an extracted thumbnail.
  * Caller is responsible for cleaning up the temp files.
  */
 export async function downloadVideo(url: string): Promise<DownloadResult> {
@@ -129,70 +124,55 @@ export async function downloadVideo(url: string): Promise<DownloadResult> {
     throw new Error(`Video exceeds ${MAX_SIZE_MB}MB limit`);
   }
 
-  // Extract the best thumbnail by sampling multiple frames and picking
-  // the one with the most visual detail (largest file = more color/detail,
-  // less likely to be a black screen or text overlay).
-  let thumbnailPath: string | null = null;
+  return { videoPath, thumbnailPath: null, mimeType: "video/mp4", uploader };
+}
+
+/**
+ * Extract a single frame from a video at a given timestamp.
+ * If no timestamp is provided, defaults to 80% through the video.
+ * Returns the path to the extracted JPEG, or null on failure.
+ */
+export async function extractFrame(
+  videoPath: string,
+  timestampSeconds?: number
+): Promise<string | null> {
   try {
     await checkBinary("ffmpeg");
+  } catch {
+    return null;
+  }
 
-    // Get video duration via ffprobe
-    let duration = 0;
+  let seekTo: number;
+  if (timestampSeconds != null && timestampSeconds >= 0) {
+    seekTo = timestampSeconds;
+  } else {
+    // Default to 80% through the video
     try {
-      const { stdout: probeOut } = await execFileAsync(
+      const { stdout } = await execFileAsync(
         "ffprobe",
         ["-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", videoPath],
         { timeout: 10_000 }
       );
-      duration = parseFloat(probeOut.trim()) || 0;
+      const duration = parseFloat(stdout.trim()) || 30;
+      seekTo = Math.max(0.5, Math.floor(duration * 0.8));
     } catch {
-      // Fall back to a reasonable default
-      duration = 30;
+      seekTo = 20; // reasonable fallback for short-form video
     }
-
-    // Sample at 20%, 40%, 60%, 80% through the video
-    const samplePoints = [0.2, 0.4, 0.6, 0.8]
-      .map((pct) => Math.max(0.5, Math.floor(duration * pct)));
-    const candidatePaths: string[] = [];
-
-    await Promise.all(
-      samplePoints.map(async (sec, i) => {
-        const p = path.join(tmpdir(), `${id}-thumb-${i}.jpg`);
-        candidatePaths.push(p);
-        try {
-          await execFileAsync(
-            "ffmpeg",
-            ["-i", videoPath, "-ss", String(sec), "-vframes", "1", "-q:v", "2", p],
-            { timeout: 10_000 }
-          );
-        } catch {}
-      })
-    );
-
-    // Pick the largest file (most visual detail)
-    let bestPath: string | null = null;
-    let bestSize = 0;
-    for (const p of candidatePaths) {
-      try {
-        const s = await fs.stat(p);
-        if (s.size > bestSize) {
-          bestSize = s.size;
-          bestPath = p;
-        }
-      } catch {}
-    }
-
-    thumbnailPath = bestPath;
-
-    // Clean up non-selected candidates
-    for (const p of candidatePaths) {
-      if (p !== bestPath) await fs.unlink(p).catch(() => {});
-    }
-  } catch {
-    thumbnailPath = null;
   }
 
-  return { videoPath, thumbnailPath, mimeType: "video/mp4", uploader };
+  const framePath = path.join(tmpdir(), `${randomUUID()}-frame.jpg`);
+  try {
+    await execFileAsync(
+      "ffmpeg",
+      ["-i", videoPath, "-ss", String(seekTo), "-vframes", "1", "-q:v", "2", framePath],
+      { timeout: 10_000 }
+    );
+    await fs.stat(framePath); // verify it was created
+    return framePath;
+  } catch {
+    await fs.unlink(framePath).catch(() => {});
+    return null;
+  }
 }
 
 /** Remove temp files created by downloadVideo. */

@@ -9,7 +9,7 @@ import { formatIngredientDisplay } from "@aleppo/shared";
 import { parseFractionString } from "@/lib/scale-ingredient";
 import { buildPrompt } from "@/lib/build-recipe-prompt";
 import { isVideoUrl, videoSourceName } from "@/lib/video-url";
-import { downloadVideo, cleanupDownload, type DownloadResult } from "@/lib/video-downloader";
+import { downloadVideo, cleanupDownload, extractFrame, type DownloadResult } from "@/lib/video-downloader";
 
 export async function POST(req: Request) {
   const session = await safeAuth();
@@ -67,8 +67,9 @@ export async function POST(req: Request) {
     const client = new GoogleGenAI({ apiKey });
     const modelId = "gemini-3.1-flash-lite-preview";
 
-    // Run Gemini and thumbnail upload in parallel
-    const geminiPromise = (async () => {
+    // Step 1: Run Gemini to get recipe + bestFrameTimestamp
+    let responseText: string;
+    try {
       const stream = await client.models.generateContentStream({
         model: modelId,
         contents: [{ role: "user", parts }],
@@ -83,41 +84,14 @@ export async function POST(req: Request) {
       }
       console.log("[import/video] Gemini finish reason:", finishReason, "chars:", text.length);
       if (finishReason === "RECITATION") {
-        throw new Error("RECITATION");
-      }
-      return text;
-    })();
-
-    const imageUrlPromise = (async (): Promise<string | null> => {
-      if (!download.thumbnailPath) return null;
-      try {
-        const thumbBuffer = await fs.readFile(download.thumbnailPath);
-        const processed = await sharp(thumbBuffer)
-          .resize(1200, 900, { fit: "inside", withoutEnlargement: true })
-          .webp({ quality: 85 })
-          .toBuffer();
-        if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID) {
-          return `data:image/webp;base64,${processed.toString("base64")}`;
-        }
-        const key = `recipes/${userId}/${Date.now()}.webp`;
-        return await uploadImageToR2(processed, key, "image/webp");
-      } catch (err) {
-        console.error("[import/video] Thumbnail upload failed:", err);
-        return null;
-      }
-    })();
-
-    let responseText: string;
-    let uploadedImageUrl: string | null;
-    try {
-      [responseText, uploadedImageUrl] = await Promise.all([geminiPromise, imageUrlPromise]);
-    } catch (err) {
-      if (err instanceof Error && err.message === "RECITATION") {
         return NextResponse.json(
           { error: "The AI stopped because this recipe may be from a copyrighted source. Try entering it manually." },
           { status: 422 }
         );
       }
+      responseText = text;
+    } catch (err) {
+      console.error("[import/video] Gemini error:", err);
       throw err;
     }
 
@@ -138,6 +112,33 @@ export async function POST(req: Request) {
 
     if (typeof parsed.error === "string") {
       return NextResponse.json({ error: parsed.error }, { status: 422 });
+    }
+
+    // Step 2: Extract frame at the AI-chosen timestamp and upload to R2
+    const bestTimestamp = typeof parsed.bestFrameTimestamp === "number"
+      ? parsed.bestFrameTimestamp
+      : undefined;
+    console.log("[import/video] bestFrameTimestamp:", bestTimestamp);
+
+    let uploadedImageUrl: string | null = null;
+    try {
+      const framePath = await extractFrame(download.videoPath, bestTimestamp);
+      if (framePath) {
+        const thumbBuffer = await fs.readFile(framePath);
+        const processed = await sharp(thumbBuffer)
+          .resize(1200, 900, { fit: "inside", withoutEnlargement: true })
+          .webp({ quality: 85 })
+          .toBuffer();
+        await fs.unlink(framePath).catch(() => {});
+        if (!process.env.R2_ACCOUNT_ID || !process.env.R2_ACCESS_KEY_ID) {
+          uploadedImageUrl = `data:image/webp;base64,${processed.toString("base64")}`;
+        } else {
+          const key = `recipes/${userId}/${Date.now()}.webp`;
+          uploadedImageUrl = await uploadImageToR2(processed, key, "image/webp");
+        }
+      }
+    } catch (err) {
+      console.error("[import/video] Thumbnail extraction/upload failed:", err);
     }
 
     const ingredients = Array.isArray(parsed.ingredients)
