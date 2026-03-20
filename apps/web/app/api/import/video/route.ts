@@ -9,8 +9,11 @@ import { formatIngredientDisplay } from "@aleppo/shared";
 import { parseFractionString } from "@/lib/scale-ingredient";
 import { buildPrompt } from "@/lib/build-recipe-prompt";
 import { isVideoUrl, videoSourceName } from "@/lib/video-url";
-import { downloadVideo, cleanupDownload, extractFrame, extractDescriptionUrls, type DownloadResult } from "@/lib/video-downloader";
+import { downloadVideo, cleanupDownload, extractFrame, getVideoMeta, extractUrlsFromDescription, type DownloadResult } from "@/lib/video-downloader";
 import { scrapeRecipeFromUrl } from "@/lib/recipe-scraper";
+
+const MAX_DURATION_SECONDS = 300; // 5 minutes
+const MAX_SIZE_MB = 50;
 
 export async function POST(req: Request) {
   const session = await safeAuth();
@@ -41,40 +44,52 @@ export async function POST(req: Request) {
 
   if (!isVideoUrl(url)) {
     return NextResponse.json(
-      { error: "URL is not a supported video platform (TikTok, Instagram Reels, YouTube Shorts)" },
+      { error: "URL is not a supported video platform (TikTok, Instagram Reels, YouTube)" },
       { status: 400 }
     );
   }
 
-  // Check the video description for recipe URLs first (much faster than processing the video)
-  try {
-    const descriptionUrls = await extractDescriptionUrls(url);
-    console.log("[import/video] Description URLs:", descriptionUrls);
-    if (descriptionUrls.length > 0) {
-      for (const recipeUrl of descriptionUrls) {
-        try {
-          const result = await scrapeRecipeFromUrl(recipeUrl);
-          if (result.recipe && result.recipe.title) {
-            console.log("[import/video] Found recipe in description URL:", recipeUrl);
-            return NextResponse.json({
-              recipe: {
-                ...result.recipe,
-                sourceUrl: recipeUrl,
-                sourceName: result.recipe.sourceName ?? videoSourceName(url) ?? "Source",
-              },
-              generated: false,
-            });
-          }
-        } catch {
-          // This URL didn't work, try the next one
-        }
+  // Step 1: Fetch metadata (lightweight, no download)
+  const meta = await getVideoMeta(url);
+  console.log("[import/video] Meta:", { duration: meta.duration, filesize: meta.filesize, uploader: meta.uploader });
+
+  // Step 2: Check the description for recipe URLs (much faster than processing the video)
+  const descriptionUrls = extractUrlsFromDescription(meta.description);
+  console.log("[import/video] Description URLs:", descriptionUrls);
+  for (const recipeUrl of descriptionUrls) {
+    try {
+      const result = await scrapeRecipeFromUrl(recipeUrl);
+      if (result.recipe && result.recipe.title) {
+        console.log("[import/video] Found recipe in description URL:", recipeUrl);
+        return NextResponse.json({
+          recipe: {
+            ...result.recipe,
+            sourceUrl: recipeUrl,
+            sourceName: result.recipe.sourceName ?? ([meta.uploader, videoSourceName(url)].filter(Boolean).join(" on ") || "Source"),
+          },
+          generated: false,
+        });
       }
+    } catch {
+      // This URL didn't work, try the next one
     }
-  } catch (err) {
-    console.error("[import/video] Description extraction failed:", err);
   }
 
-  // No recipe found in description — download and process the video
+  // Step 3: Check duration/size limits before downloading
+  if (meta.duration && meta.duration > MAX_DURATION_SECONDS) {
+    return NextResponse.json(
+      { error: `Video is too long (${Math.round(meta.duration / 60)} minutes). Maximum is ${MAX_DURATION_SECONDS / 60} minutes. If the video description has a recipe link, try importing that URL directly.` },
+      { status: 400 }
+    );
+  }
+  if (meta.filesize && meta.filesize > MAX_SIZE_MB * 1024 * 1024) {
+    return NextResponse.json(
+      { error: `Video is too large (${Math.round(meta.filesize / 1024 / 1024)}MB). Maximum is ${MAX_SIZE_MB}MB.` },
+      { status: 400 }
+    );
+  }
+
+  // Step 4: Download and process the video
   let download: DownloadResult;
   try {
     download = await downloadVideo(url);
@@ -210,7 +225,7 @@ export async function POST(req: Request) {
       ...(typeof parsed.sourceUrl === "string" ? { sourceUrl: parsed.sourceUrl } : { sourceUrl: url }),
       sourceName: typeof parsed.sourceName === "string"
         ? parsed.sourceName
-        : [download.uploader, videoSourceName(url)].filter(Boolean).join(" on ") || "Source",
+        : [meta.uploader, videoSourceName(url)].filter(Boolean).join(" on ") || "Source",
       ...(uploadedImageUrl
         ? { imageUrl: uploadedImageUrl }
         : typeof parsed.imageUrl === "string" && { imageUrl: parsed.imageUrl }),

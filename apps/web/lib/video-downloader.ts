@@ -84,33 +84,66 @@ async function ensureYtDlp(): Promise<string> {
   }
 }
 
+export type VideoMeta = {
+  duration: number | null;    // seconds
+  filesize: number | null;    // bytes (estimate)
+  description: string;
+  uploader: string | null;
+};
+
+const MAX_DURATION_SECONDS = 300; // 5 minutes
+
 /**
- * Extract the video description without downloading the video.
- * Returns URLs found in the description, if any.
+ * Fetch video metadata without downloading.
+ * Returns duration, estimated filesize, description, and uploader.
  */
-export async function extractDescriptionUrls(url: string): Promise<string[]> {
+export async function getVideoMeta(url: string): Promise<VideoMeta> {
   const ytdlp = await ensureYtDlp();
   try {
     const { stdout } = await execFileAsync(
       ytdlp,
+      [
+        "--print", "%(duration)s\t%(filesize_approx)s\t%(uploader)s",
+        "--no-download", "--no-warnings", url,
+      ],
+      { timeout: 15_000 }
+    );
+    const [durStr, sizeStr, uploader] = stdout.trim().split("\t");
+    const duration = parseFloat(durStr) || null;
+    const filesize = parseFloat(sizeStr) || null;
+
+    // Get description separately (can contain tabs/newlines)
+    const { stdout: desc } = await execFileAsync(
+      ytdlp,
       ["--print", "%(description)s", "--no-download", "--no-warnings", url],
       { timeout: 15_000 }
     );
-    // Extract all URLs from the description
-    const urlPattern = /https?:\/\/[^\s<>"')\]]+/gi;
-    return (stdout.match(urlPattern) ?? []).filter((u) => {
-      // Filter out social media profile links, channel links, etc.
-      try {
-        const host = new URL(u).hostname;
-        const skip = /youtube\.com|youtu\.be|tiktok\.com|instagram\.com|twitter\.com|x\.com|facebook\.com|linktr\.ee/i;
-        return !skip.test(host);
-      } catch {
-        return false;
-      }
-    });
+
+    return {
+      duration,
+      filesize,
+      description: desc.trim(),
+      uploader: uploader && uploader !== "NA" ? uploader : null,
+    };
   } catch {
-    return [];
+    return { duration: null, filesize: null, description: "", uploader: null };
   }
+}
+
+/**
+ * Extract recipe URLs from a video description.
+ */
+export function extractUrlsFromDescription(description: string): string[] {
+  const urlPattern = /https?:\/\/[^\s<>"')\]]+/gi;
+  return (description.match(urlPattern) ?? []).filter((u) => {
+    try {
+      const host = new URL(u).hostname;
+      const skip = /youtube\.com|youtu\.be|tiktok\.com|instagram\.com|twitter\.com|x\.com|facebook\.com|linktr\.ee/i;
+      return !skip.test(host);
+    } catch {
+      return false;
+    }
+  });
 }
 
 /**
@@ -123,8 +156,7 @@ export async function downloadVideo(url: string): Promise<DownloadResult> {
   const id = randomUUID();
   const videoPath = path.join(tmpdir(), `${id}.mp4`);
 
-  // Download video and extract uploader metadata in parallel
-  const downloadPromise = execFileAsync(
+  await execFileAsync(
     ytdlp,
     [
       "-f", `best[vcodec^=h264][filesize<${MAX_SIZE_MB}M][ext=mp4]/best[vcodec^=h264][ext=mp4]/best[ext=mp4]/best`,
@@ -137,15 +169,6 @@ export async function downloadVideo(url: string): Promise<DownloadResult> {
     { timeout: TIMEOUT_MS }
   );
 
-  const uploaderPromise = execFileAsync(
-    ytdlp,
-    ["--print", "%(uploader)s", "--no-download", "--no-warnings", url],
-    { timeout: 15_000 }
-  ).then(({ stdout }) => stdout.trim() || null)
-   .catch(() => null);
-
-  const [, uploader] = await Promise.all([downloadPromise, uploaderPromise]);
-
   // Verify the file exists and isn't too large
   const stat = await fs.stat(videoPath);
   if (stat.size > MAX_SIZE_MB * 1024 * 1024) {
@@ -153,7 +176,7 @@ export async function downloadVideo(url: string): Promise<DownloadResult> {
     throw new Error(`Video exceeds ${MAX_SIZE_MB}MB limit`);
   }
 
-  return { videoPath, thumbnailPath: null, mimeType: "video/mp4", uploader };
+  return { videoPath, thumbnailPath: null, mimeType: "video/mp4", uploader: null };
 }
 
 /**
