@@ -12,6 +12,8 @@ const VIDEO_PATTERNS = [
   /tiktok\.com/i,
   /instagram\.com\/(?:reel|reels)\//i,
   /youtube\.com\/shorts\//i,
+  /youtube\.com\/watch/i,
+  /youtu\.be\//i,
 ];
 
 function isVideoUrl(url: string): boolean {
@@ -382,7 +384,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAtt
             <Text style={styles.hintItem}>· AllRecipes, Simply Recipes, NYT Cooking</Text>
             <Text style={styles.hintItem}>· Food Network, Epicurious, King Arthur</Text>
             <Text style={styles.hintItem}>· Most sites using Schema.org recipe markup</Text>
-            <Text style={styles.hintItem}>· TikTok, Instagram Reels, YouTube Shorts</Text>
+            <Text style={styles.hintItem}>· TikTok, Instagram Reels, YouTube videos</Text>
             <Text style={styles.hintItem}>· Direct image links (jpg, png, webp)</Text>
           </View>
 
