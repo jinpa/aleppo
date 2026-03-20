@@ -9,7 +9,8 @@ import { formatIngredientDisplay } from "@aleppo/shared";
 import { parseFractionString } from "@/lib/scale-ingredient";
 import { buildPrompt } from "@/lib/build-recipe-prompt";
 import { isVideoUrl, videoSourceName } from "@/lib/video-url";
-import { downloadVideo, cleanupDownload, extractFrame, type DownloadResult } from "@/lib/video-downloader";
+import { downloadVideo, cleanupDownload, extractFrame, extractDescriptionUrls, type DownloadResult } from "@/lib/video-downloader";
+import { scrapeRecipeFromUrl } from "@/lib/recipe-scraper";
 
 export async function POST(req: Request) {
   const session = await safeAuth();
@@ -45,7 +46,35 @@ export async function POST(req: Request) {
     );
   }
 
-  // Download the video
+  // Check the video description for recipe URLs first (much faster than processing the video)
+  try {
+    const descriptionUrls = await extractDescriptionUrls(url);
+    console.log("[import/video] Description URLs:", descriptionUrls);
+    if (descriptionUrls.length > 0) {
+      for (const recipeUrl of descriptionUrls) {
+        try {
+          const result = await scrapeRecipeFromUrl(recipeUrl);
+          if (result.recipe && result.recipe.title) {
+            console.log("[import/video] Found recipe in description URL:", recipeUrl);
+            return NextResponse.json({
+              recipe: {
+                ...result.recipe,
+                sourceUrl: recipeUrl,
+                sourceName: result.recipe.sourceName ?? videoSourceName(url) ?? "Source",
+              },
+              generated: false,
+            });
+          }
+        } catch {
+          // This URL didn't work, try the next one
+        }
+      }
+    }
+  } catch (err) {
+    console.error("[import/video] Description extraction failed:", err);
+  }
+
+  // No recipe found in description — download and process the video
   let download: DownloadResult;
   try {
     download = await downloadVideo(url);

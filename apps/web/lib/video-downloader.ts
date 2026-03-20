@@ -85,6 +85,35 @@ async function ensureYtDlp(): Promise<string> {
 }
 
 /**
+ * Extract the video description without downloading the video.
+ * Returns URLs found in the description, if any.
+ */
+export async function extractDescriptionUrls(url: string): Promise<string[]> {
+  const ytdlp = await ensureYtDlp();
+  try {
+    const { stdout } = await execFileAsync(
+      ytdlp,
+      ["--print", "%(description)s", "--no-download", "--no-warnings", url],
+      { timeout: 15_000 }
+    );
+    // Extract all URLs from the description
+    const urlPattern = /https?:\/\/[^\s<>"')\]]+/gi;
+    return (stdout.match(urlPattern) ?? []).filter((u) => {
+      // Filter out social media profile links, channel links, etc.
+      try {
+        const host = new URL(u).hostname;
+        const skip = /youtube\.com|youtu\.be|tiktok\.com|instagram\.com|twitter\.com|x\.com|facebook\.com|linktr\.ee/i;
+        return !skip.test(host);
+      } catch {
+        return false;
+      }
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Download a video from a supported platform using yt-dlp.
  * Caller is responsible for cleaning up the temp files.
  */

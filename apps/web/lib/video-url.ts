@@ -2,7 +2,8 @@ const VIDEO_PATTERNS = [
   /tiktok\.com/i,
   /instagram\.com\/(?:reel|reels)\//i,
   /youtube\.com\/shorts\//i,
-  /youtu\.be\//i, // short YouTube links can be shorts too
+  /youtube\.com\/watch/i,
+  /youtu\.be\//i,
 ];
 
 export function isVideoUrl(url: string): boolean {
