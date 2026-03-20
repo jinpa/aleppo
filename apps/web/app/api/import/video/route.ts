@@ -141,7 +141,7 @@ export async function POST(req: Request) {
     }
 
     const ingredients = Array.isArray(parsed.ingredients)
-      ? parsed.ingredients.map((ing: any) => {
+      ? parsed.ingredients.map((ing: Record<string, unknown>) => {
           const name = typeof ing.name === "string" ? ing.name : "";
           const unit = typeof ing.units === "string" ? ing.units : (typeof ing.unit === "string" ? ing.unit : undefined);
           const notes = typeof ing.notes === "string" ? ing.notes : undefined;

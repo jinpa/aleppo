@@ -21,18 +21,15 @@ export type DownloadResult = {
 async function checkBinary(name: string): Promise<void> {
   try {
     await execFileAsync(name, ["--version"]);
-  } catch (err: any) {
-    if (err?.code === "ENOENT") {
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException)?.code === "ENOENT") {
       throw new Error(`${name} is not installed`);
     }
   }
 }
 
 const YT_DLP_PATH = path.join(tmpdir(), "yt-dlp");
-let ytDlpReady = false;
-
 /**
- * Ensure a recent yt-dlp binary is available.
  * The apt/brew version is often too old for TikTok, so we download
  * the latest standalone binary from GitHub if the system one fails.
  */
@@ -139,14 +136,7 @@ export async function downloadVideo(url: string): Promise<DownloadResult> {
   try {
     await checkBinary("ffmpeg");
 
-    // Get video duration
-    const { stdout: durationOut } = await execFileAsync(
-      "ffmpeg",
-      ["-i", videoPath, "-f", "null", "-"],
-      { timeout: 10_000 }
-    ).catch(() => ({ stdout: "" }));
-
-    // Try ffprobe for duration
+    // Get video duration via ffprobe
     let duration = 0;
     try {
       const { stdout: probeOut } = await execFileAsync(
