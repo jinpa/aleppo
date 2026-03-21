@@ -2,7 +2,7 @@
  * POST /api/import/file
  *
  * Unified file import preview endpoint. Accepts .paprikarecipes, .melarecipes,
- * or .aleppo.json files. Auto-detects format, parses, runs duplicate detection,
+ * or .apinch.json/.aleppo.json files. Auto-detects format, parses, runs duplicate detection,
  * and returns preview items.
  */
 

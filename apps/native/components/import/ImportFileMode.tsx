@@ -41,7 +41,7 @@ type ImportFileModeProps = {
   initialLanguage?: string;
 };
 
-const SUPPORTED_EXTENSIONS = [".paprikarecipes", ".melarecipes", ".aleppo.json", ".pdf"];
+const SUPPORTED_EXTENSIONS = [".paprikarecipes", ".melarecipes", ".apinch.json", ".pdf"];
 
 export function ImportFileMode({ token, router, onComplete, onBatchComplete, onAttempt, initialLanguage }: ImportFileModeProps) {
   const [fileStep, setFileStep] = useState<FileImportStep>("upload");
@@ -86,7 +86,7 @@ export function ImportFileMode({ token, router, onComplete, onBatchComplete, onA
     if (result.canceled) return;
     const asset = result.assets[0];
     if (!SUPPORTED_EXTENSIONS.some((ext) => asset.name.toLowerCase().endsWith(ext))) {
-      setFileError("Unsupported file. Please select a .paprikarecipes, .melarecipes, .aleppo.json, or .pdf file.");
+      setFileError("Unsupported file. Please select a .paprikarecipes, .melarecipes, .apinch.json, or .pdf file.");
       return;
     }
     // Route PDF files to the dedicated PDF import handler
@@ -165,7 +165,7 @@ export function ImportFileMode({ token, router, onComplete, onBatchComplete, onA
         <>
           <Text style={sharedStyles.heading}>Import from file</Text>
           <Text style={sharedStyles.subheading}>
-            Select a PDF recipe, or an export file from Paprika (.paprikarecipes), Mela (.melarecipes), or a previous Aleppo backup (.aleppo.json).
+            Select a PDF recipe, or an export file from Paprika (.paprikarecipes), Mela (.melarecipes), or a previous apinch backup (.apinch.json).
           </Text>
           {fileError ? (
             <View style={styles.fileError}>
@@ -194,7 +194,7 @@ export function ImportFileMode({ token, router, onComplete, onBatchComplete, onA
               <Text style={sharedStyles.heading}>{fileItems.length} recipes found</Text>
               {detectedFormat && (
                 <Text style={sharedStyles.subheading}>
-                  Format: {detectedFormat.charAt(0).toUpperCase() + detectedFormat.slice(1)}
+                  Format: {detectedFormat === "aleppo" ? "apinch" : detectedFormat.charAt(0).toUpperCase() + detectedFormat.slice(1)}
                   {fileItems.filter((r) => r.isDuplicate).length > 0
                     ? ` · ${fileItems.filter((r) => r.isDuplicate).length} possible duplicate${fileItems.filter((r) => r.isDuplicate).length !== 1 ? "s" : ""}`
                     : ""}

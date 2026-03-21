@@ -1,17 +1,17 @@
 import { Resend } from "resend";
 
 const FROM_EMAIL =
-  process.env.EMAIL_FROM ?? "Aleppo <noreply@resend.dev>";
+  process.env.EMAIL_FROM ?? "apinch <noreply@resend.dev>";
 
 export async function sendPasswordResetEmail(
   to: string,
   resetUrl: string
 ): Promise<void> {
   const resend = new Resend(process.env.RESEND_API_KEY);
-  await resend.emails.send({
+  const result = await resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: "Reset your Aleppo password",
+    subject: "Reset your apinch password",
     html: `
       <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px 24px; color: #1c1917;">
         <div style="margin-bottom: 24px;">
@@ -21,7 +21,7 @@ export async function sendPasswordResetEmail(
         </div>
         <h1 style="font-size: 22px; font-weight: 700; margin: 0 0 8px;">Reset your password</h1>
         <p style="color: #57534e; margin: 0 0 24px; line-height: 1.5;">
-          Someone requested a password reset for your Aleppo account. If that was you, click the button below. The link expires in 1 hour.
+          Someone requested a password reset for your apinch account. If that was you, click the button below. The link expires in 1 hour.
         </p>
         <a
           href="${resetUrl}"
@@ -35,4 +35,8 @@ export async function sendPasswordResetEmail(
       </div>
     `,
   });
+  if (result.error) {
+    console.error("[email] Resend error:", result.error);
+    throw new Error(`Resend error: ${result.error.message}`);
+  }
 }

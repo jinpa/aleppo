@@ -453,7 +453,7 @@ function BookmarkletSection() {
     <View style={bkStyles.container}>
       <TouchableOpacity style={bkStyles.toggle} onPress={() => setOpen((v) => !v)}>
         <Ionicons name="bookmark-outline" size={16} color="#d97706" />
-        <Text style={bkStyles.toggleText}>Use the Aleppo bookmarklet (works on any site with recipe text)</Text>
+        <Text style={bkStyles.toggleText}>Use the apinch bookmarklet (works on any site with recipe text)</Text>
         <Text style={bkStyles.toggleChevron}>{open ? "▲" : "▼"}</Text>
       </TouchableOpacity>
 
@@ -493,14 +493,14 @@ function BookmarkletSection() {
                 textDecoration: "none",
               }}
             >
-              🔖 + Aleppo
+              🔖 + apinch
             </A>
             <Text style={bkStyles.dragHint}>← drag me to your bookmarks bar</Text>
           </View>
 
           <Text style={bkStyles.stepLabel}>Step 2 — Use it:</Text>
           <Text style={bkStyles.stepItem}>1. Go to any recipe page (e.g. Serious Eats)</Text>
-          <Text style={bkStyles.stepItem}>2. Click <Text style={{ fontWeight: "700" }}>+ Aleppo</Text> in your bookmarks bar</Text>
+          <Text style={bkStyles.stepItem}>2. Click <Text style={{ fontWeight: "700" }}>+ apinch</Text> in your bookmarks bar</Text>
           <Text style={bkStyles.stepItem}>3. You'll be brought here to review and save the recipe</Text>
 
           <Text style={bkStyles.fine}>

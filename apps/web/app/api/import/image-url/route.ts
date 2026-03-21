@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   let mimeType: string;
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Aleppo/1.0" },
+      headers: { "User-Agent": "apinch/1.0" },
       signal: AbortSignal.timeout(15_000),
     });
     if (!res.ok) {

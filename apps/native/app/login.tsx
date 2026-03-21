@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
+  Linking,
+  Platform,
 } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -107,6 +109,16 @@ export default function LoginScreen() {
               />
             </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              const base = Platform.OS === "web" ? "" : API_URL;
+              Linking.openURL(`${base}/auth/forgot-password`);
+            }}
+            style={styles.forgotLink}
+          >
+            <Text style={styles.forgotLinkText}>Forgot password?</Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -234,6 +246,14 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "600",
     fontSize: 15,
+  },
+  forgotLink: {
+    alignSelf: "flex-end",
+    marginTop: 4,
+  },
+  forgotLinkText: {
+    color: "#78716c",
+    fontSize: 13,
   },
   registerLink: {
     marginTop: 24,

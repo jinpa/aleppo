@@ -67,7 +67,7 @@ export default function SettingsScreen() {
         : `${Math.round(sizeBytes / 1024)} KB`;
 
       const today = new Date().toISOString().slice(0, 10);
-      const filename = `aleppo-export-${today}.aleppo.json`;
+      const filename = `apinch-export-${today}.apinch.json`;
 
       if (Platform.OS === "web") {
         const url = URL.createObjectURL(blob);
