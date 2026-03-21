@@ -4,7 +4,7 @@ import path from "path";
 const PROMPTS_DIR = path.join(process.cwd(), "lib/prompts");
 
 export function buildPrompt(
-  options: { inputText?: string; language?: string; mode?: "image" | "video" } = {}
+  options: { inputText?: string; language?: string; mode?: "image" | "video" | "document" } = {}
 ): string {
   const { inputText, language, mode = "image" } = options;
 
@@ -33,6 +33,9 @@ export function buildPrompt(
 
   const base = `${prefix}\n${shots}\n---\nRULES:\n${translate}\n${instructions}\n---\n`;
 
+  if (mode === "document" && inputText) {
+    return `${base}The following text is from a document that may contain one or more recipes. Extract ALL recipes found.\nIf the document contains MULTIPLE recipes, return a JSON object with a "recipes" key containing an array of recipe objects.\nIf the document contains only ONE recipe, return a single recipe JSON object (no wrapper).\n\nTEXT: ${inputText}\nJSON:`;
+  }
   if (inputText) {
     return `${base}Process the following text and output the recipe JSON.\nTEXT: ${inputText}\nJSON:`;
   }

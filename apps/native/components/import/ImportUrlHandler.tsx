@@ -7,6 +7,7 @@ import { RecipeWebExtractor } from "@/components/RecipeWebExtractor";
 import { CookingSpinner } from "@/components/CookingSpinner";
 import { TranslationToggle, getClientLanguage } from "./TranslationToggle";
 import type { ImportOutcome } from "./types";
+import type { ScrapedRecipe } from "@aleppo/shared";
 
 const VIDEO_PATTERNS = [
   /tiktok\.com/i,
@@ -20,6 +21,15 @@ function isVideoUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     return VIDEO_PATTERNS.some((p) => p.test(parsed.hostname + parsed.pathname));
+  } catch {
+    return false;
+  }
+}
+
+function isGoogleDocUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return /docs\.google\.com\/document\/d\//.test(parsed.hostname + parsed.pathname);
   } catch {
     return false;
   }
@@ -43,11 +53,12 @@ type ImportUrlHandlerProps = {
   modeParam?: string;
   shareUrl?: string;
   onComplete: (outcome: ImportOutcome) => void;
+  onBatchComplete?: (recipes: ScrapedRecipe[]) => void;
   onAttempt?: () => void;
   initialLanguage?: string;
 };
 
-export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAttempt, initialLanguage }: ImportUrlHandlerProps) {
+export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onBatchComplete, onAttempt, initialLanguage }: ImportUrlHandlerProps) {
   const shareIsVideo = !!shareUrl && isVideoUrl(shareUrl);
   const shareIsImage = !!shareUrl && !shareIsVideo && isImageUrl(shareUrl);
   const shareIsDirect = shareIsVideo || shareIsImage;
@@ -297,11 +308,55 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAtt
     }
   };
 
+  const handleGoogleDocImport = async (docUrl: string) => {
+    setFetching(true);
+    const currentToken = Platform.OS === "web" ? localStorage.getItem("auth_token") : token;
+    try {
+      const res = await fetch(`${API_URL}/api/import/google-doc`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${currentToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ url: docUrl, language }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        onComplete({
+          ok: false,
+          error: res.status === 401
+            ? "Authentication error — please try again."
+            : data.error ?? "Google Doc import failed.",
+        });
+      } else if (Array.isArray(data.recipes) && data.recipes.length > 1 && onBatchComplete) {
+        onBatchComplete(data.recipes);
+      } else if (Array.isArray(data.recipes) && data.recipes.length > 0) {
+        onComplete({
+          ok: true,
+          recipe: { ...data.recipes[0], sourceUrl: docUrl },
+          aiGenerated: data.generated,
+        });
+      } else {
+        onComplete({ ok: false, error: "No recipes found in the document." });
+      }
+    } catch {
+      onComplete({ ok: false, error: "Could not connect to server." });
+    } finally {
+      setFetching(false);
+    }
+  };
+
   const handleFetch = () => {
     if (!url.trim()) return;
     onAttempt?.();
 
     const trimmed = url.trim();
+
+    // Route Google Docs URLs to the dedicated endpoint
+    if (isGoogleDocUrl(trimmed)) {
+      handleGoogleDocImport(trimmed);
+      return;
+    }
 
     // Route video URLs to the dedicated video import endpoint
     if (isVideoUrl(trimmed)) {
@@ -325,6 +380,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAtt
   const busy = fetching || extracting || waitingForBookmarklet;
   let spinnerLabel = "Fetching recipe…";
   if (waitingForBookmarklet) spinnerLabel = "Receiving recipe from your browser…";
+  else if (fetching && url.trim() && isGoogleDocUrl(url.trim())) spinnerLabel = "Reading Google Doc…";
   else if (fetching && url.trim() && isVideoUrl(url.trim())) spinnerLabel = "Downloading and analyzing video…";
   else if (fetching && url.trim() && isImageUrl(url.trim())) spinnerLabel = "Analyzing image…";
   else if (extracting && extractionUrl) {
@@ -337,7 +393,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAtt
     <>
       <Text style={sharedStyles.heading}>Import from Link</Text>
       <Text style={sharedStyles.subheading}>
-        Paste a link to a recipe blog, TikTok, Instagram Reel, YouTube Short, or even a photo of a dish or a recipe. We'll extract the recipe — you review and edit before saving.
+        Paste a link to a recipe blog, TikTok, Instagram Reel, YouTube video, Google Doc, or even a photo of a dish. We'll extract the recipe — you review and edit before saving.
       </Text>
 
       <View style={styles.urlRow}>
@@ -385,6 +441,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onAtt
             <Text style={styles.hintItem}>· Food Network, Epicurious, King Arthur</Text>
             <Text style={styles.hintItem}>· Most sites using Schema.org recipe markup</Text>
             <Text style={styles.hintItem}>· TikTok, Instagram Reels, YouTube videos</Text>
+            <Text style={styles.hintItem}>· Google Docs (set to "Anyone with the link")</Text>
             <Text style={styles.hintItem}>· Direct image links (jpg, png, webp)</Text>
           </View>
 
