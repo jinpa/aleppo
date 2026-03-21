@@ -846,8 +846,8 @@ const styles = StyleSheet.create({
   metaChipAmber: { backgroundColor: "#fef3c7", borderColor: "#fde68a" },
   metaChipText: { fontSize: 13, color: "#78716c", fontWeight: "500" },
   metaChipTextAmber: { color: "#92400e" },
-  sourceLink: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12 },
-  sourceLinkText: { fontSize: 13, color: "#78716c", textDecorationLine: "underline", flex: 1 },
+  sourceLink: { flexDirection: "row", alignItems: "center", gap: 4, marginBottom: 12, alignSelf: "flex-start" as const },
+  sourceLinkText: { fontSize: 13, color: "#78716c", textDecorationLine: "underline", flexShrink: 1 },
   tagRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginBottom: 16 },
   tag: {
     paddingHorizontal: 12, paddingVertical: 5, borderRadius: 20,
