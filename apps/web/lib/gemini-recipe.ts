@@ -24,7 +24,7 @@ const RECITATION_ERROR =
 export async function callGemini(
   parts: GeminiPart[],
   logPrefix: string,
-  options?: { recitationError?: string }
+  options?: { recitationError?: string; maxOutputTokens?: number }
 ): Promise<GeminiResult> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -38,7 +38,7 @@ export async function callGemini(
     const stream = await client.models.generateContentStream({
       model: MODEL_ID,
       contents: [{ role: "user", parts }],
-      config: { thinkingConfig: { thinkingBudget: 0 }, maxOutputTokens: 8192 },
+      config: { thinkingConfig: { thinkingBudget: 0 }, maxOutputTokens: options?.maxOutputTokens ?? 8192 },
     });
     let text = "";
     let finishReason: string | undefined;

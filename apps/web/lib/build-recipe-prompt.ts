@@ -4,7 +4,7 @@ import path from "path";
 const PROMPTS_DIR = path.join(process.cwd(), "lib/prompts");
 
 export function buildPrompt(
-  options: { inputText?: string; language?: string; mode?: "image" | "video" } = {}
+  options: { inputText?: string; language?: string; mode?: "image" | "video" | "document" | "pdf" } = {}
 ): string {
   const { inputText, language, mode = "image" } = options;
 
@@ -33,8 +33,14 @@ export function buildPrompt(
 
   const base = `${prefix}\n${shots}\n---\nRULES:\n${translate}\n${instructions}\n---\n`;
 
+  if (mode === "document" && inputText) {
+    return `${base}The following text is from a document that may contain one or more recipes. Extract ALL recipes found.\nIf the document contains MULTIPLE recipes, return a JSON object with a "recipes" key containing an array of recipe objects.\nIf the document contains only ONE recipe, return a single recipe JSON object (no wrapper).\n\nTEXT: ${inputText}\nJSON:`;
+  }
   if (inputText) {
     return `${base}Process the following text and output the recipe JSON.\nTEXT: ${inputText}\nJSON:`;
+  }
+  if (mode === "pdf") {
+    return `${base}Process the provided PDF document and extract the recipe. Output the recipe JSON.\nJSON:`;
   }
   if (mode === "video") {
     return `${base}Process the provided video and output the recipe JSON.\nAlso include "bestFrameTimestamp": <number> in the JSON — the number of seconds from the START of the video to the frame that best shows the finished dish or food. This must be less than the video's total duration. Pick the most appetizing, well-lit shot.\nJSON:`;

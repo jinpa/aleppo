@@ -14,6 +14,10 @@ import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "@/constants/api";
 import { sharedStyles } from "./importStyles";
 import { CookingSpinner } from "@/components/CookingSpinner";
+import { TranslationToggle } from "./TranslationToggle";
+import { importPdfFile } from "./importPdf";
+import type { ImportOutcome } from "./types";
+import type { ScrapedRecipe } from "@aleppo/shared";
 
 type FileImportStep = "upload" | "preview" | "importing" | "done";
 type FileImportItem = {
@@ -31,11 +35,15 @@ type FileImportItem = {
 type ImportFileModeProps = {
   token: string | null;
   router: { replace: (path: any) => void };
+  onComplete?: (outcome: ImportOutcome) => void;
+  onBatchComplete?: (recipes: ScrapedRecipe[]) => void;
+  onAttempt?: () => void;
+  initialLanguage?: string;
 };
 
-const SUPPORTED_EXTENSIONS = [".paprikarecipes", ".melarecipes", ".aleppo.json"];
+const SUPPORTED_EXTENSIONS = [".paprikarecipes", ".melarecipes", ".aleppo.json", ".pdf"];
 
-export function ImportFileMode({ token, router }: ImportFileModeProps) {
+export function ImportFileMode({ token, router, onComplete, onBatchComplete, onAttempt, initialLanguage }: ImportFileModeProps) {
   const [fileStep, setFileStep] = useState<FileImportStep>("upload");
   const [fileImportFile, setFileImportFile] = useState<{ uri: string; name: string; file?: File } | null>(null);
   const [fileItems, setFileItems] = useState<FileImportItem[]>([]);
@@ -46,6 +54,29 @@ export function ImportFileMode({ token, router }: ImportFileModeProps) {
   const [fileSaved, setFileSaved] = useState(0);
   const [fileFailed, setFileFailed] = useState(0);
   const [detectedFormat, setDetectedFormat] = useState<string | null>(null);
+  const [language, setLanguage] = useState<string | undefined>(initialLanguage);
+
+  const handlePdfImport = async (asset: { uri: string; name: string; file?: File }) => {
+    onAttempt?.();
+    setFileParsing(true);
+    setFileError(null);
+    try {
+      await importPdfFile(asset, {
+        token,
+        language,
+        onComplete: (outcome) => {
+          if (!outcome.ok) {
+            setFileError(outcome.error);
+          } else if (onComplete) {
+            onComplete(outcome);
+          }
+        },
+        onBatchComplete,
+      });
+    } finally {
+      setFileParsing(false);
+    }
+  };
 
   const pickImportFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
@@ -55,7 +86,12 @@ export function ImportFileMode({ token, router }: ImportFileModeProps) {
     if (result.canceled) return;
     const asset = result.assets[0];
     if (!SUPPORTED_EXTENSIONS.some((ext) => asset.name.toLowerCase().endsWith(ext))) {
-      setFileError("Unsupported file. Please select a .paprikarecipes, .melarecipes, or .aleppo.json file.");
+      setFileError("Unsupported file. Please select a .paprikarecipes, .melarecipes, .aleppo.json, or .pdf file.");
+      return;
+    }
+    // Route PDF files to the dedicated PDF import handler
+    if (asset.name.toLowerCase().endsWith(".pdf")) {
+      handlePdfImport({ uri: asset.uri, name: asset.name, file: asset.file });
       return;
     }
     setFileError(null);
@@ -129,7 +165,7 @@ export function ImportFileMode({ token, router }: ImportFileModeProps) {
         <>
           <Text style={sharedStyles.heading}>Import from file</Text>
           <Text style={sharedStyles.subheading}>
-            Select an export file from Paprika (.paprikarecipes), Mela (.melarecipes), or a previous Aleppo backup (.aleppo.json).
+            Select a PDF recipe, or an export file from Paprika (.paprikarecipes), Mela (.melarecipes), or a previous Aleppo backup (.aleppo.json).
           </Text>
           {fileError ? (
             <View style={styles.fileError}>
@@ -137,6 +173,7 @@ export function ImportFileMode({ token, router }: ImportFileModeProps) {
               <Text style={styles.fileErrorText}>{fileError}</Text>
             </View>
           ) : null}
+          <TranslationToggle language={language} onLanguageChange={setLanguage} token={token} />
           <TouchableOpacity
             style={[sharedStyles.importButton, fileParsing && sharedStyles.fetchButtonDisabled]}
             onPress={pickImportFile}
