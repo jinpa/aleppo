@@ -78,13 +78,15 @@ export default function SettingsScreen() {
         URL.revokeObjectURL(url);
       } else {
         // Native: dynamically import expo modules
-        const [FileSystem, Sharing] = await Promise.all([
-          import("expo-file-system"),
+        const [FileSystemModule, SharingModule] = await Promise.all([
+          import("expo-file-system/legacy"),
           import("expo-sharing"),
         ]);
-        const path = `${FileSystem.cacheDirectory}${filename}`;
-        await FileSystem.writeAsStringAsync(path, text, { encoding: FileSystem.EncodingType.UTF8 });
-        await Sharing.shareAsync(path, { mimeType: "application/json", UTI: "public.json" });
+        const FS = FileSystemModule.default ?? FileSystemModule;
+        const Share = SharingModule.default ?? SharingModule;
+        const path = `${FS.cacheDirectory}${filename}`;
+        await FS.writeAsStringAsync(path, text, { encoding: FS.EncodingType.UTF8 });
+        await Share.shareAsync(path, { mimeType: "application/json", UTI: "public.json" });
       }
 
       setExportDone({ recipeCount, fileSize });
