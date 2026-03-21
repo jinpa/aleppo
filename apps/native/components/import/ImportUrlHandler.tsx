@@ -14,6 +14,9 @@ import type { ScrapedRecipe } from "@aleppo/shared";
 const VIDEO_PATTERNS = [
   /tiktok\.com/i,
   /instagram\.com\/(?:reel|reels)\//i,
+  /youtube\.com\/shorts\//i,
+  /youtube\.com\/watch/i,
+  /youtu\.be\//i,
 ];
 
 function isVideoUrl(url: string): boolean {
@@ -365,7 +368,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onBat
     <>
       <Text style={sharedStyles.heading}>Import from Link</Text>
       <Text style={sharedStyles.subheading}>
-        Paste a link to a recipe blog, TikTok, Instagram Reel, Google Doc, Google Drive PDF, or even a photo of a dish. We'll extract the recipe — you review and edit before saving.
+        Paste a link to a recipe blog, TikTok, Instagram Reel, YouTube video, Google Doc, Google Drive PDF, or even a photo of a dish. We'll extract the recipe — you review and edit before saving.
       </Text>
 
       <View style={styles.urlRow}>
@@ -412,7 +415,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onBat
             <Text style={styles.hintItem}>· AllRecipes, Simply Recipes, NYT Cooking</Text>
             <Text style={styles.hintItem}>· Food Network, Epicurious, King Arthur</Text>
             <Text style={styles.hintItem}>· Most sites using Schema.org recipe markup</Text>
-            <Text style={styles.hintItem}>· TikTok, Instagram Reels</Text>
+            <Text style={styles.hintItem}>· TikTok, Instagram Reels, YouTube</Text>
             <Text style={styles.hintItem}>· Google Docs & Drive PDFs (set to "Anyone with the link")</Text>
             <Text style={styles.hintItem}>· Direct image links (jpg, png, webp)</Text>
           </View>

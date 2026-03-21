@@ -6,7 +6,8 @@ import sharp from "sharp";
 import fs from "fs/promises";
 import { buildPrompt } from "@/lib/build-recipe-prompt";
 import { isVideoUrl, videoSourceName } from "@/lib/video-url";
-import { downloadVideo, cleanupDownload, extractFrame, getVideoMeta, extractUrlsFromDescription, type DownloadResult } from "@/lib/video-downloader";
+import { downloadVideo, cleanupDownload, extractFrame, getVideoMeta, extractUrlsFromDescription, fetchYouTubeDescription, type DownloadResult } from "@/lib/video-downloader";
+import { isYouTubeUrl } from "@/lib/video-url";
 import { callGemini, buildGeminiRecipe } from "@/lib/gemini-recipe";
 import { scrapeRecipeFromUrl } from "@/lib/recipe-scraper";
 
@@ -36,6 +37,38 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { error: "URL is not a supported video platform (TikTok, Instagram Reels, YouTube)" },
       { status: 400 }
+    );
+  }
+
+  // YouTube: can't download video from server, but try to find recipe URLs in the description
+  if (isYouTubeUrl(url)) {
+    console.log("[import/video] YouTube URL detected, trying HTML scrape for description");
+    const yt = await fetchYouTubeDescription(url);
+    if (yt?.description) {
+      const descriptionUrls = extractUrlsFromDescription(yt.description);
+      console.log("[import/video] YouTube description URLs:", descriptionUrls);
+      for (const recipeUrl of descriptionUrls) {
+        try {
+          const result = await scrapeRecipeFromUrl(recipeUrl);
+          if (result.recipe && result.recipe.title) {
+            console.log("[import/video] Found recipe in YouTube description URL:", recipeUrl);
+            return NextResponse.json({
+              recipe: {
+                ...result.recipe,
+                sourceUrl: recipeUrl,
+                sourceName: result.recipe.sourceName ?? ([yt.uploader, "YouTube"].filter(Boolean).join(" on ") || "Source"),
+              },
+              generated: false,
+            });
+          }
+        } catch {
+          // This URL didn't work, try the next one
+        }
+      }
+    }
+    return NextResponse.json(
+      { error: "We couldn't find a recipe link in this YouTube video's description. Try copying the recipe URL from the video description and importing it directly." },
+      { status: 404 }
     );
   }
 

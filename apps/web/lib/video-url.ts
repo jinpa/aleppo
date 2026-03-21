@@ -15,6 +15,15 @@ export function isVideoUrl(url: string): boolean {
   }
 }
 
+export function isYouTubeUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return /youtube\.com|youtu\.be/i.test(host);
+  } catch {
+    return false;
+  }
+}
+
 export function videoSourceName(url: string): string | undefined {
   try {
     const host = new URL(url).hostname;

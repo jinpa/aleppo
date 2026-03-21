@@ -10,6 +10,92 @@ const execFileAsync = promisify(execFile);
 const TIMEOUT_MS = 60_000;
 const MAX_SIZE_MB = 50;
 
+/**
+ * Fetch a YouTube video's description by scraping ytInitialData from the page HTML.
+ * This avoids yt-dlp (which is blocked on datacenter IPs) and uses a plain HTTP GET.
+ * Returns the description and uploader, or null if scraping fails.
+ */
+export async function fetchYouTubeDescription(url: string): Promise<{
+  description: string;
+  uploader: string | null;
+} | null> {
+  try {
+    const res = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        "Accept-Language": "en-US,en;q=0.9",
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) {
+      console.warn(`[video-downloader] YouTube page fetch failed: HTTP ${res.status}`);
+      return null;
+    }
+    const html = await res.text();
+
+    // Extract ytInitialData JSON from the page
+    const match = html.match(/var ytInitialData\s*=\s*(\{[\s\S]+?\});\s*<\/script>/);
+    if (!match) {
+      console.warn("[video-downloader] Could not find ytInitialData in YouTube page");
+      return null;
+    }
+
+    const data = JSON.parse(match[1]);
+
+    // Navigate the ytInitialData structure to find the description
+    const videoInfo =
+      data?.engagementPanels
+        ?.find((p: any) => p?.engagementPanelSectionListRenderer?.panelIdentifier === "engagement-panel-structured-description")
+        ?.engagementPanelSectionListRenderer?.content?.structuredDescriptionContentRenderer?.items;
+
+    let description = "";
+    if (videoInfo) {
+      // Look for expandableVideoDescriptionBodyRenderer or videoDescriptionHeaderRenderer
+      for (const item of videoInfo) {
+        const body = item?.expandableVideoDescriptionBodyRenderer?.descriptionBodyText;
+        if (body?.runs) {
+          description = body.runs.map((r: any) => r.text ?? r.url ?? "").join("");
+          break;
+        }
+      }
+    }
+
+    // Fallback: try the videoPrimaryInfoRenderer path
+    if (!description) {
+      const contents =
+        data?.contents?.twoColumnWatchNextResults?.results?.results?.contents;
+      if (contents) {
+        for (const c of contents) {
+          const desc = c?.videoSecondaryInfoRenderer?.attributedDescription;
+          if (desc?.content) {
+            description = desc.content;
+            break;
+          }
+        }
+      }
+    }
+
+    // Extract uploader
+    let uploader: string | null = null;
+    const contents = data?.contents?.twoColumnWatchNextResults?.results?.results?.contents;
+    if (contents) {
+      for (const c of contents) {
+        const owner = c?.videoSecondaryInfoRenderer?.owner?.videoOwnerRenderer?.title;
+        if (owner?.runs?.[0]?.text) {
+          uploader = owner.runs[0].text;
+          break;
+        }
+      }
+    }
+
+    console.log(`[video-downloader] YouTube HTML scrape: description=${description.length} chars, uploader=${uploader}`);
+    return { description, uploader };
+  } catch (err) {
+    console.warn("[video-downloader] YouTube HTML scrape failed:", err instanceof Error ? err.message : err);
+    return null;
+  }
+}
+
 export type DownloadResult = {
   videoPath: string;
   thumbnailPath: string | null;
