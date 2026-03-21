@@ -4,31 +4,11 @@ import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import path from "path";
 import fs from "fs/promises";
-import { getYouTubePoToken } from "./youtube-po-token";
 
 const execFileAsync = promisify(execFile);
 
 const TIMEOUT_MS = 60_000;
 const MAX_SIZE_MB = 50;
-
-/**
- * Build env with node's directory explicitly in PATH.
- * yt-dlp's standalone binary uses shutil.which() to find JS runtimes
- * for solving YouTube's n-parameter challenge. On Railway/Nixpacks,
- * node may be in a non-standard location that the binary can't find.
- */
-function ytDlpEnv(): NodeJS.ProcessEnv {
-  const nodeDir = path.dirname(process.execPath);
-  const tmp = tmpdir();
-  const currentPath = process.env.PATH ?? "";
-  // Add both node's real directory AND /tmp (where the symlink lives)
-  const dirs = [nodeDir, tmp];
-  const parts = currentPath.split(":");
-  const missing = dirs.filter((d) => !parts.includes(d));
-  const newPath = missing.length ? `${missing.join(":")}:${currentPath}` : currentPath;
-  console.log(`[video-downloader] node at: ${process.execPath}, PATH: ${newPath.slice(0, 200)}`);
-  return { ...process.env, PATH: newPath };
-}
 
 function isYouTubeUrl(url: string): boolean {
   try {
@@ -40,16 +20,14 @@ function isYouTubeUrl(url: string): boolean {
 }
 
 /**
- * If the URL is YouTube, try to get PO token args for yt-dlp.
- * Returns extra args to prepend, or an empty array.
+ * If the URL is YouTube, return extra yt-dlp args to try alternative
+ * player clients that face less bot detection from datacenter IPs.
  */
-async function getYouTubeArgs(url: string): Promise<string[]> {
+function getYouTubeArgs(url: string): string[] {
   if (!isYouTubeUrl(url)) return [];
-  const token = await getYouTubePoToken();
-  if (!token) return [];
   return [
     "--extractor-args",
-    `youtube:player-client=web;po_token=web.player+${token.poToken};visitor_data=${token.visitorData};player_skip=webpage,configs`,
+    "youtube:player-client=mediaconnect,android_vr",
   ];
 }
 
@@ -72,27 +50,6 @@ async function checkBinary(name: string): Promise<void> {
 }
 
 const YT_DLP_PATH = path.join(tmpdir(), "yt-dlp");
-const NODE_SYMLINK_PATH = path.join(tmpdir(), "node");
-
-/**
- * Ensure a `node` symlink exists in /tmp so yt-dlp can find it.
- * yt-dlp's standalone binary searches for JS runtimes (node, deno, etc.)
- * to solve YouTube's n-parameter challenge. On Railway/Nixpacks, node
- * is in a non-standard location the binary can't discover.
- */
-async function ensureNodeSymlink(): Promise<void> {
-  try {
-    const target = await fs.readlink(NODE_SYMLINK_PATH);
-    if (target === process.execPath) return; // already correct
-  } catch {}
-  try {
-    await fs.unlink(NODE_SYMLINK_PATH).catch(() => {});
-    await fs.symlink(process.execPath, NODE_SYMLINK_PATH);
-    console.log(`[video-downloader] Created node symlink: ${NODE_SYMLINK_PATH} -> ${process.execPath}`);
-  } catch (err) {
-    console.warn(`[video-downloader] Failed to create node symlink:`, err instanceof Error ? err.message : err);
-  }
-}
 
 /**
  * Ensure a recent yt-dlp binary is available.
@@ -165,9 +122,9 @@ const MAX_DURATION_SECONDS = 300; // 5 minutes
  * Returns duration, estimated filesize, description, and uploader.
  */
 export async function getVideoMeta(url: string): Promise<VideoMeta> {
-  const [ytdlp] = await Promise.all([ensureYtDlp(), ensureNodeSymlink()]);
+  const ytdlp = await ensureYtDlp();
   try {
-    const ytArgs = await getYouTubeArgs(url);
+    const ytArgs = getYouTubeArgs(url);
     const { stdout } = await execFileAsync(
       ytdlp,
       [
@@ -175,7 +132,7 @@ export async function getVideoMeta(url: string): Promise<VideoMeta> {
         "--print", "%(duration)s\t%(filesize_approx)s\t%(uploader)s",
         "--no-download", "--no-warnings", url,
       ],
-      { timeout: 15_000, env: ytDlpEnv() }
+      { timeout: 15_000 }
     );
     const [durStr, sizeStr, uploader] = stdout.trim().split("\t");
     const duration = parseFloat(durStr) || null;
@@ -185,7 +142,7 @@ export async function getVideoMeta(url: string): Promise<VideoMeta> {
     const { stdout: desc } = await execFileAsync(
       ytdlp,
       [...ytArgs, "--print", "%(description)s", "--no-download", "--no-warnings", url],
-      { timeout: 15_000, env: ytDlpEnv() }
+      { timeout: 15_000 }
     );
 
     return {
@@ -220,9 +177,8 @@ export function extractUrlsFromDescription(description: string): string[] {
  * Caller is responsible for cleaning up the temp files.
  */
 export async function downloadVideo(url: string): Promise<DownloadResult> {
-  const [ytdlp, , ytArgs] = await Promise.all([
-    ensureYtDlp(), ensureNodeSymlink(), getYouTubeArgs(url),
-  ]);
+  const ytdlp = await ensureYtDlp();
+  const ytArgs = getYouTubeArgs(url);
 
   const id = randomUUID();
   const videoPath = path.join(tmpdir(), `${id}.mp4`);
@@ -239,7 +195,7 @@ export async function downloadVideo(url: string): Promise<DownloadResult> {
         "--verbose",
         url,
       ],
-      { timeout: TIMEOUT_MS, env: ytDlpEnv() }
+      { timeout: TIMEOUT_MS }
     );
     if (stderr) console.log("[video-downloader] yt-dlp stderr:", stderr.slice(0, 2000));
   } catch (err: any) {
