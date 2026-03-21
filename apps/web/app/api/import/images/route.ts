@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { db } from "@/db";
+import { recipeImports } from "@/db/schema";
 import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { uploadImageToR2 } from "@/lib/r2";
 import sharp from "sharp";
@@ -67,7 +69,13 @@ export async function POST(req: Request) {
 
   const [result, uploadedImageUrl] = await Promise.all([geminiPromise, imageUrlPromise]);
 
+  const logImport = (status: string, errorMessage?: string) =>
+    db.insert(recipeImports).values({
+      userId, importType: "image", status, errorMessage,
+    }).catch((err) => console.error("[import/images] Failed to log import:", err));
+
   if (!result.ok) {
+    await logImport("failed", result.error);
     return NextResponse.json({ error: result.error }, { status: result.status });
   }
 
@@ -75,5 +83,6 @@ export async function POST(req: Request) {
     imageUrl: uploadedImageUrl,
   });
 
+  await logImport("parsed");
   return NextResponse.json({ recipe, generated });
 }
