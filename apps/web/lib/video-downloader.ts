@@ -11,87 +11,68 @@ const TIMEOUT_MS = 60_000;
 const MAX_SIZE_MB = 50;
 
 /**
- * Fetch a YouTube video's description by scraping ytInitialData from the page HTML.
- * This avoids yt-dlp (which is blocked on datacenter IPs) and uses a plain HTTP GET.
- * Returns the description and uploader, or null if scraping fails.
+ * Extract a YouTube video ID from various URL formats:
+ *   youtube.com/watch?v=ID, youtube.com/shorts/ID, youtu.be/ID
+ */
+export function extractYouTubeVideoId(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    if (parsed.hostname === "youtu.be") {
+      return parsed.pathname.slice(1).split("/")[0] || null;
+    }
+    if (/youtube\.com/i.test(parsed.hostname)) {
+      // /watch?v=ID
+      const v = parsed.searchParams.get("v");
+      if (v) return v;
+      // /shorts/ID or /embed/ID
+      const seg = parsed.pathname.split("/").filter(Boolean);
+      if ((seg[0] === "shorts" || seg[0] === "embed") && seg[1]) return seg[1];
+    }
+  } catch {}
+  return null;
+}
+
+/**
+ * Fetch a YouTube video's description via the YouTube Data API v3.
+ * Requires YOUTUBE_API_KEY env var. Returns null if the key is missing or the call fails.
  */
 export async function fetchYouTubeDescription(url: string): Promise<{
   description: string;
   uploader: string | null;
 } | null> {
+  const apiKey = process.env.YOUTUBE_API_KEY;
+  if (!apiKey) {
+    console.warn("[video-downloader] YOUTUBE_API_KEY not set, skipping YouTube description fetch");
+    return null;
+  }
+
+  const videoId = extractYouTubeVideoId(url);
+  if (!videoId) {
+    console.warn("[video-downloader] Could not extract video ID from YouTube URL:", url);
+    return null;
+  }
+
   try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-      signal: AbortSignal.timeout(10_000),
-    });
+    const apiUrl = `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${encodeURIComponent(videoId)}&key=${encodeURIComponent(apiKey)}`;
+    const res = await fetch(apiUrl, { signal: AbortSignal.timeout(10_000) });
     if (!res.ok) {
-      console.warn(`[video-downloader] YouTube page fetch failed: HTTP ${res.status}`);
-      return null;
-    }
-    const html = await res.text();
-
-    // Extract ytInitialData JSON from the page
-    const match = html.match(/var ytInitialData\s*=\s*(\{[\s\S]+?\});\s*<\/script>/);
-    if (!match) {
-      console.warn("[video-downloader] Could not find ytInitialData in YouTube page");
+      console.warn(`[video-downloader] YouTube Data API failed: HTTP ${res.status}`);
       return null;
     }
 
-    const data = JSON.parse(match[1]);
-
-    // Navigate the ytInitialData structure to find the description
-    const videoInfo =
-      data?.engagementPanels
-        ?.find((p: any) => p?.engagementPanelSectionListRenderer?.panelIdentifier === "engagement-panel-structured-description")
-        ?.engagementPanelSectionListRenderer?.content?.structuredDescriptionContentRenderer?.items;
-
-    let description = "";
-    if (videoInfo) {
-      // Look for expandableVideoDescriptionBodyRenderer or videoDescriptionHeaderRenderer
-      for (const item of videoInfo) {
-        const body = item?.expandableVideoDescriptionBodyRenderer?.descriptionBodyText;
-        if (body?.runs) {
-          description = body.runs.map((r: any) => r.text ?? r.url ?? "").join("");
-          break;
-        }
-      }
+    const data = await res.json();
+    const snippet = data?.items?.[0]?.snippet;
+    if (!snippet) {
+      console.warn("[video-downloader] No snippet found for video:", videoId);
+      return null;
     }
 
-    // Fallback: try the videoPrimaryInfoRenderer path
-    if (!description) {
-      const contents =
-        data?.contents?.twoColumnWatchNextResults?.results?.results?.contents;
-      if (contents) {
-        for (const c of contents) {
-          const desc = c?.videoSecondaryInfoRenderer?.attributedDescription;
-          if (desc?.content) {
-            description = desc.content;
-            break;
-          }
-        }
-      }
-    }
-
-    // Extract uploader
-    let uploader: string | null = null;
-    const contents = data?.contents?.twoColumnWatchNextResults?.results?.results?.contents;
-    if (contents) {
-      for (const c of contents) {
-        const owner = c?.videoSecondaryInfoRenderer?.owner?.videoOwnerRenderer?.title;
-        if (owner?.runs?.[0]?.text) {
-          uploader = owner.runs[0].text;
-          break;
-        }
-      }
-    }
-
-    console.log(`[video-downloader] YouTube HTML scrape: description=${description.length} chars, uploader=${uploader}`);
+    const description = snippet.description ?? "";
+    const uploader = snippet.channelTitle ?? null;
+    console.log(`[video-downloader] YouTube API: description=${description.length} chars, uploader=${uploader}`);
     return { description, uploader };
   } catch (err) {
-    console.warn("[video-downloader] YouTube HTML scrape failed:", err instanceof Error ? err.message : err);
+    console.warn("[video-downloader] YouTube Data API call failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }
