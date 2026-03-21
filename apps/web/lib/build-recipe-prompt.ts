@@ -45,5 +45,5 @@ export function buildPrompt(
   if (mode === "video") {
     return `${base}Process the provided video and output the recipe JSON.\nAlso include "bestFrameTimestamp": <number> in the JSON — the number of seconds from the START of the video to the frame that best shows the finished dish or food. This must be less than the video's total duration. Pick the most appetizing, well-lit shot.\nJSON:`;
   }
-  return `${base}Process the provided images and output the recipe JSON.\nJSON:`;
+  return `${base}Process the provided images and output the recipe JSON.\nAlso include "imageSourceType": "dish_photo" if the image shows a photo of food/dish, or "recipe_text" if the image shows written/printed recipe text (cookbook page, screenshot, handwritten recipe, etc.).\nJSON:`;
 }

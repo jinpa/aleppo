@@ -10,7 +10,7 @@ import { NextResponse } from "next/server";
 
 import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
-import { recipes, recipeImports, cookLogs } from "@/db/schema";
+import { recipes, cookLogs } from "@/db/schema";
 import { parseImportFile } from "@/lib/import-parser";
 import { mapConcurrent, uploadImportPhoto } from "@/lib/import-utils";
 import { buildRecipeValues as buildPaprikaValues, uploadPaprikaPhoto } from "@/lib/paprika-parser";
@@ -119,17 +119,6 @@ export async function POST(req: Request) {
       .insert(recipes)
       .values(batch.map((p) => p.values as any))
       .returning({ id: recipes.id });
-
-    await db.insert(recipeImports).values(
-      inserted.map((row, idx) => ({
-        userId,
-        recipeId: row.id,
-        importType: parsed.format,
-        sourceUrl: (batch[idx].values as any).sourceUrl ?? null,
-        rawPayload: { uid: batch[idx].uid },
-        status: "saved",
-      }))
-    );
 
     // Track ID mapping for cook log insertion
     inserted.forEach((row, idx) => {

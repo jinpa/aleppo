@@ -321,6 +321,16 @@ export default function AdminScreen() {
         ))}
       </View>
 
+      {/* Analytics link */}
+      <TouchableOpacity
+        style={styles.analyticsLink}
+        onPress={() => router.push("/admin/analytics")}
+      >
+        <Ionicons name="analytics-outline" size={18} color="#1d4ed8" />
+        <Text style={styles.analyticsLinkText}>View Analytics</Text>
+        <Ionicons name="chevron-forward" size={16} color="#a8a29e" />
+      </TouchableOpacity>
+
       {/* Storage tools */}
       <Text style={styles.sectionTitle}>Storage</Text>
       <View style={styles.gcCard}>
@@ -601,5 +611,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#78716c",
     marginTop: 10,
+  },
+  analyticsLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginHorizontal: 16,
+    marginBottom: 20,
+    backgroundColor: "#eff6ff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#bfdbfe",
+    padding: 14,
+    gap: 8,
+  },
+  analyticsLinkText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#1d4ed8",
   },
 });

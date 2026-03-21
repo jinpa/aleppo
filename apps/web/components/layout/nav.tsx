@@ -50,7 +50,7 @@ export function Nav({ session }: { session: Session | null }) {
             <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-500">
               <ChefHat className="w-4 h-4 text-white" />
             </div>
-            <span className="text-base">Aleppo</span>
+            <span className="text-base">apinch</span>
           </Link>
 
           <nav className="hidden sm:flex items-center gap-1">

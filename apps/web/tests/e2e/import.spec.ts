@@ -53,17 +53,17 @@ test.describe("Import — File tab", () => {
   });
 });
 
-test.describe("Import — Aleppo JSON", () => {
-  test("preview shows recipes from .aleppo.json file", async ({
+test.describe("Import — apinch JSON", () => {
+  test("preview shows recipes from .apinch.json file", async ({
     alicePage: page,
   }) => {
     await navigateToImport(page);
     await selectFileTab(page);
-    await uploadFixture(page, "sample-export.aleppo.json");
+    await uploadFixture(page, "sample-export.apinch.json");
 
     // Should detect format and show preview
     await expect(page.getByText("2 recipes found")).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText("Format: Aleppo")).toBeVisible();
+    await expect(page.getByText("Format: apinch")).toBeVisible();
     await expect(page.getByText("E2E Import Test Pancakes")).toBeVisible();
     await expect(page.getByText("E2E Import Test Salad")).toBeVisible();
   });
@@ -73,7 +73,7 @@ test.describe("Import — Aleppo JSON", () => {
   }) => {
     await navigateToImport(page);
     await selectFileTab(page);
-    await uploadFixture(page, "sample-export.aleppo.json");
+    await uploadFixture(page, "sample-export.apinch.json");
 
     await expect(page.getByText("2 recipes found")).toBeVisible({ timeout: 15_000 });
 
@@ -97,11 +97,11 @@ test.describe("Import — Aleppo JSON", () => {
     await page.goto("/recipes");
     const token = await page.evaluate(() => localStorage.getItem("auth_token"));
     const fs = await import("fs");
-    const fixturePath = path.join(FIXTURES_DIR, "sample-export.aleppo.json");
+    const fixturePath = path.join(FIXTURES_DIR, "sample-export.apinch.json");
     const fileContent = fs.readFileSync(fixturePath);
     const blob = new Blob([fileContent], { type: "application/octet-stream" });
     const form = new FormData();
-    form.append("file", blob, "sample-export.aleppo.json");
+    form.append("file", blob, "sample-export.apinch.json");
     // Preview
     const previewRes = await fetch(`${BASE}/api/import/file`, {
       method: "POST",
@@ -111,7 +111,7 @@ test.describe("Import — Aleppo JSON", () => {
     const previewData = await previewRes.json();
     // Save all
     const form2 = new FormData();
-    form2.append("file", new Blob([fileContent], { type: "application/octet-stream" }), "sample-export.aleppo.json");
+    form2.append("file", new Blob([fileContent], { type: "application/octet-stream" }), "sample-export.apinch.json");
     form2.append("selectedUids", JSON.stringify(previewData.recipes.map((r: any) => r.uid)));
     form2.append("isPublic", "false");
     await fetch(`${BASE}/api/import/file/save`, {
@@ -123,7 +123,7 @@ test.describe("Import — Aleppo JSON", () => {
     // Now upload same file via UI — should detect duplicates
     await navigateToImport(page);
     await selectFileTab(page);
-    await uploadFixture(page, "sample-export.aleppo.json");
+    await uploadFixture(page, "sample-export.apinch.json");
     await expect(page.getByText("2 recipes found")).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(/possible duplicate/i).first()).toBeVisible({ timeout: 5_000 });
   });

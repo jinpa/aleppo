@@ -58,7 +58,7 @@ export default function ProfileScreen() {
         await navigator.clipboard.writeText(url);
         alert("Invite link copied!");
       } else {
-        await Share.share({ message: `Join me on Aleppo! ${url}`, url });
+        await Share.share({ message: `Join me on apinch! ${url}`, url });
       }
     } catch {
       // ignore

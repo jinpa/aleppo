@@ -432,7 +432,7 @@ export function ImportFlow({
                   onClick={() => setShowBookmarkletHelp(true)}
                   className="underline font-medium"
                 >
-                  Aleppo bookmarklet
+                  apinch bookmarklet
                 </button>{" "}
                 instead.
               </span>
@@ -448,7 +448,7 @@ export function ImportFlow({
             className="flex items-center gap-2 text-sm font-medium text-stone-700 hover:text-stone-900"
           >
             <Bookmark className="h-4 w-4 text-amber-500" />
-            Use the Aleppo bookmarklet (works on any site)
+            Use the apinch bookmarklet (works on any site)
             <span className="text-stone-400">{showBookmarkletHelp ? "▲" : "▼"}</span>
           </button>
 
@@ -522,7 +522,7 @@ export function ImportFlow({
             </p>
             <p className="text-sm text-amber-700">
               This site blocks server-side requests (e.g. Serious Eats). Use
-              the <strong>Aleppo bookmarklet</strong> to import from your
+              the <strong>apinch bookmarklet</strong> to import from your
               browser instead — it runs on the page you&apos;re already
               viewing, so there&apos;s nothing to block.
             </p>
@@ -771,7 +771,7 @@ function BookmarkletInstructions() {
             draggable
           >
             <Bookmark className="h-4 w-4" />
-            + Aleppo
+            + apinch
           </a>
           <span className="text-xs text-stone-500">← drag me to your bookmarks bar</span>
         </div>
@@ -783,7 +783,7 @@ function BookmarkletInstructions() {
         </p>
         <ol className="text-sm text-stone-600 space-y-1 list-decimal list-inside">
           <li>Navigate to any recipe page (e.g. Serious Eats)</li>
-          <li>Click <strong>+ Aleppo</strong> in your bookmarks bar</li>
+          <li>Click <strong>+ apinch</strong> in your bookmarks bar</li>
           <li>You&apos;ll be brought here to review and save the recipe</li>
         </ol>
       </div>

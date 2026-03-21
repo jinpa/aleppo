@@ -30,6 +30,12 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // ── Auth pages (Next.js, not SPA) ────────────────────────────────────────
+  // Password reset pages are server-rendered Next.js pages.
+  if (pathname.startsWith("/auth/")) {
+    return NextResponse.next();
+  }
+
   // ── SPA catch-all ─────────────────────────────────────────────────────────
   // All non-API, non-static requests are served by the Expo web SPA.
   // Auth is handled client-side by the SPA (Bearer token in localStorage).

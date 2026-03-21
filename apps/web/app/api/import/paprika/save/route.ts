@@ -11,7 +11,7 @@ import { NextResponse } from "next/server";
 
 import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
-import { recipes, recipeImports } from "@/db/schema";
+import { recipes } from "@/db/schema";
 import {
   parseZipBuffer,
   buildRecipeValues,
@@ -103,18 +103,6 @@ export async function POST(req: Request) {
       .insert(recipes)
       .values(batch.map((p) => p.values))
       .returning({ id: recipes.id });
-
-    // Write import audit rows
-    await db.insert(recipeImports).values(
-      inserted.map((row, idx) => ({
-        userId,
-        recipeId: row.id,
-        importType: "paprika",
-        sourceUrl: batch[idx].values.sourceUrl,
-        rawPayload: { uid: batch[idx].uid },
-        status: "saved",
-      }))
-    );
 
     saved += inserted.length;
   }

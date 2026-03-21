@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   const data = await buildExport(userId, { includeCookLogs, includeImages });
 
   const today = new Date().toISOString().slice(0, 10);
-  const filename = `aleppo-export-${today}.aleppo.json`;
+  const filename = `apinch-export-${today}.apinch.json`;
 
   return new NextResponse(JSON.stringify(data, null, 2), {
     headers: {

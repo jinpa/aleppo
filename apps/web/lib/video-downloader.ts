@@ -202,18 +202,48 @@ export async function getVideoMeta(url: string): Promise<VideoMeta> {
 
 /**
  * Extract recipe URLs from a video description.
+ * Prioritizes URLs that appear near recipe-related text or have recipe-like paths.
  */
 export function extractUrlsFromDescription(description: string): string[] {
   const urlPattern = /https?:\/\/[^\s<>"')\]]+/gi;
-  return (description.match(urlPattern) ?? []).filter((u) => {
+  const skip = /youtube\.com|youtu\.be|tiktok\.com|instagram\.com|facebook\.com|linktr\.ee|t\.co/i;
+
+  const urls = (description.match(urlPattern) ?? []).filter((u) => {
     try {
-      const host = new URL(u).hostname;
-      const skip = /youtube\.com|youtu\.be|tiktok\.com|instagram\.com|twitter\.com|x\.com|facebook\.com|linktr\.ee/i;
-      return !skip.test(host);
+      return !skip.test(new URL(u).hostname);
     } catch {
       return false;
     }
   });
+
+  // Score each URL: higher = more likely to be a recipe link
+  const scored = urls.map((u) => {
+    let score = 0;
+    const lower = u.toLowerCase();
+
+    // URL path contains recipe-related words
+    if (/recipe/.test(lower)) score += 3;
+    if (/cook|food|meal|dish/.test(lower)) score += 1;
+
+    // Check surrounding description text for context clues
+    const idx = description.indexOf(u);
+    if (idx >= 0) {
+      const before = description.slice(Math.max(0, idx - 60), idx).toLowerCase();
+      if (/recipe|full recipe|get the recipe|recipe here/i.test(before)) score += 3;
+      if (/link|check out|blog/i.test(before)) score += 1;
+    }
+
+    // Penalize short/generic URLs (likely redirects or promos)
+    try {
+      const path = new URL(u).pathname;
+      if (path.split("/").filter(Boolean).length <= 1) score -= 1;
+    } catch {}
+
+    return { url: u, score };
+  });
+
+  scored.sort((a, b) => b.score - a.score);
+  return scored.map((s) => s.url);
 }
 
 /**

@@ -20,7 +20,7 @@ export type ParseResult = {
 /** Detect import format from filename extension. */
 export function detectFormat(filename: string): ImportFormat | null {
   const lower = filename.toLowerCase();
-  if (lower.endsWith(".aleppo.json")) return "aleppo";
+  if (lower.endsWith(".apinch.json")) return "aleppo";
   if (lower.endsWith(".paprikarecipes")) return "paprika";
   if (lower.endsWith(".melarecipes")) return "mela";
   return null;
@@ -31,7 +31,7 @@ export function parseImportFile(buffer: Buffer, filename: string): ParseResult {
   const format = detectFormat(filename);
   if (!format) {
     throw new Error(
-      "Unsupported file format. Supported: .paprikarecipes, .melarecipes, .aleppo.json"
+      "Unsupported file format. Supported: .paprikarecipes, .melarecipes, .apinch.json"
     );
   }
 

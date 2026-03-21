@@ -5,8 +5,8 @@ import { SessionProvider } from "next-auth/react";
 
 export const metadata: Metadata = {
   title: {
-    default: "Aleppo — Your Cooking Diary",
-    template: "%s | Aleppo",
+    default: "apinch — Your Cooking Diary",
+    template: "%s | apinch",
   },
   description:
     "Save recipes, log every cook, and follow friends to see what they've been cooking. Your cooking life, organized.",

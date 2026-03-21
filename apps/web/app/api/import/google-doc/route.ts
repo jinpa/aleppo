@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { db } from "@/db";
+import { recipeImports } from "@/db/schema";
 import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { buildPrompt } from "@/lib/build-recipe-prompt";
 import { callGemini, buildGeminiRecipe } from "@/lib/gemini-recipe";
@@ -103,7 +105,13 @@ export async function POST(req: Request) {
     maxOutputTokens: 32768,
   });
 
+  const logImport = (status: string, errorMessage?: string) =>
+    db.insert(recipeImports).values({
+      userId, importType: "google-doc", sourceUrl: url, status, errorMessage,
+    }).catch((err) => console.error("[import/google-doc] Failed to log import:", err));
+
   if (!result.ok) {
+    await logImport("failed", result.error);
     return NextResponse.json(
       { error: result.error },
       { status: result.status }
@@ -122,6 +130,7 @@ export async function POST(req: Request) {
       });
       return recipe;
     });
+    await logImport("parsed");
     return NextResponse.json({ recipes, generated: true });
   }
 
@@ -131,5 +140,6 @@ export async function POST(req: Request) {
     sourceName: "Google Docs",
   });
 
+  await logImport("parsed");
   return NextResponse.json({ recipes: [recipe], generated });
 }

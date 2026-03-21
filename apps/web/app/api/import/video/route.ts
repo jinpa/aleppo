@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 
+import { db } from "@/db";
+import { recipeImports } from "@/db/schema";
 import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { uploadImageToR2 } from "@/lib/r2";
 import sharp from "sharp";
 import fs from "fs/promises";
 import { buildPrompt } from "@/lib/build-recipe-prompt";
-import { isVideoUrl, videoSourceName } from "@/lib/video-url";
+import { isVideoUrl, isYouTubeUrl, videoSourceName } from "@/lib/video-url";
 import { downloadVideo, cleanupDownload, extractFrame, getVideoMeta, extractUrlsFromDescription, fetchYouTubeDescription, type DownloadResult } from "@/lib/video-downloader";
-import { isYouTubeUrl } from "@/lib/video-url";
 import { callGemini, buildGeminiRecipe } from "@/lib/gemini-recipe";
 import { scrapeRecipeFromUrl } from "@/lib/recipe-scraper";
 
@@ -35,10 +36,18 @@ export async function POST(req: Request) {
 
   if (!isVideoUrl(url)) {
     return NextResponse.json(
-      { error: "URL is not a supported video platform (TikTok, Instagram Reels, YouTube)" },
+      { error: "URL is not a supported video platform (TikTok, Instagram Reels, YouTube, X/Twitter)" },
       { status: 400 }
     );
   }
+
+  const source = videoSourceName(url);
+  const importType = source ? `video:${source.toLowerCase()}` : "video";
+
+  const logImport = (status: string, errorMessage?: string) =>
+    db.insert(recipeImports).values({
+      userId, importType, sourceUrl: url, status, errorMessage,
+    }).catch((err) => console.error("[import/video] Failed to log import:", err));
 
   // YouTube: can't download video from server, but try to find recipe URLs in the description
   if (isYouTubeUrl(url)) {
@@ -52,6 +61,7 @@ export async function POST(req: Request) {
           const result = await scrapeRecipeFromUrl(recipeUrl);
           if (result.recipe && result.recipe.title) {
             console.log("[import/video] Found recipe in YouTube description URL:", recipeUrl);
+            await logImport("parsed");
             return NextResponse.json({
               recipe: {
                 ...result.recipe,
@@ -66,6 +76,7 @@ export async function POST(req: Request) {
         }
       }
     }
+    await logImport("failed", "No recipe link found in YouTube description");
     return NextResponse.json(
       { error: "We couldn't find a recipe link in this YouTube video's description. Try copying the recipe URL from the video description and importing it directly." },
       { status: 404 }
@@ -84,6 +95,7 @@ export async function POST(req: Request) {
       const result = await scrapeRecipeFromUrl(recipeUrl);
       if (result.recipe && result.recipe.title) {
         console.log("[import/video] Found recipe in description URL:", recipeUrl);
+        await logImport("parsed");
         return NextResponse.json({
           recipe: {
             ...result.recipe,
@@ -121,11 +133,13 @@ export async function POST(req: Request) {
     console.error("[import/video] Download failed:", msg);
     // YouTube bot detection — show a user-friendly message
     if (/sign in to confirm you.re not a bot/i.test(msg)) {
+      await logImport("failed", "YouTube bot detection");
       return NextResponse.json(
         { error: "YouTube blocks video downloads from our server. Try importing from TikTok or Instagram instead, or paste the recipe URL from the video description." },
         { status: 502 }
       );
     }
+    await logImport("failed", msg.slice(0, 500));
     return NextResponse.json({ error: `Failed to download video: ${msg}` }, { status: 502 });
   }
 
@@ -143,6 +157,7 @@ export async function POST(req: Request) {
     });
 
     if (!result.ok) {
+      await logImport("failed", result.error);
       return NextResponse.json({ error: result.error }, { status: result.status });
     }
 
@@ -185,6 +200,7 @@ export async function POST(req: Request) {
       sourceName,
     });
 
+    await logImport("parsed");
     return NextResponse.json({ recipe, generated });
   } finally {
     await cleanupDownload(download);
