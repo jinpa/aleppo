@@ -4,6 +4,7 @@ const VIDEO_PATTERNS = [
   /youtube\.com\/shorts\//i,
   /youtube\.com\/watch/i,
   /youtu\.be\//i,
+  /(?:x|twitter)\.com\/.*\/status\//i,
 ];
 
 export function isVideoUrl(url: string): boolean {
@@ -30,6 +31,7 @@ export function videoSourceName(url: string): string | undefined {
     if (/tiktok\.com/i.test(host)) return "TikTok";
     if (/instagram\.com/i.test(host)) return "Instagram";
     if (/youtube\.com|youtu\.be/i.test(host)) return "YouTube";
+    if (/x\.com|twitter\.com/i.test(host)) return "X";
   } catch {}
   return undefined;
 }

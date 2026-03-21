@@ -36,7 +36,7 @@ export async function POST(req: Request) {
 
   if (!isVideoUrl(url)) {
     return NextResponse.json(
-      { error: "URL is not a supported video platform (TikTok, Instagram Reels, YouTube)" },
+      { error: "URL is not a supported video platform (TikTok, Instagram Reels, YouTube, X/Twitter)" },
       { status: 400 }
     );
   }

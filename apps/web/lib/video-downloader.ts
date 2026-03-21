@@ -206,7 +206,7 @@ export async function getVideoMeta(url: string): Promise<VideoMeta> {
  */
 export function extractUrlsFromDescription(description: string): string[] {
   const urlPattern = /https?:\/\/[^\s<>"')\]]+/gi;
-  const skip = /youtube\.com|youtu\.be|tiktok\.com|instagram\.com|twitter\.com|x\.com|facebook\.com|linktr\.ee/i;
+  const skip = /youtube\.com|youtu\.be|tiktok\.com|instagram\.com|facebook\.com|linktr\.ee|t\.co/i;
 
   const urls = (description.match(urlPattern) ?? []).filter((u) => {
     try {
