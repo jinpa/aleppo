@@ -19,9 +19,14 @@ const MAX_SIZE_MB = 50;
  */
 function ytDlpEnv(): NodeJS.ProcessEnv {
   const nodeDir = path.dirname(process.execPath);
+  const tmp = tmpdir();
   const currentPath = process.env.PATH ?? "";
-  const newPath = currentPath.includes(nodeDir) ? currentPath : `${nodeDir}:${currentPath}`;
-  console.log(`[video-downloader] node at: ${process.execPath}, PATH includes nodeDir: ${currentPath.includes(nodeDir)}`);
+  // Add both node's real directory AND /tmp (where the symlink lives)
+  const dirs = [nodeDir, tmp];
+  const parts = currentPath.split(":");
+  const missing = dirs.filter((d) => !parts.includes(d));
+  const newPath = missing.length ? `${missing.join(":")}:${currentPath}` : currentPath;
+  console.log(`[video-downloader] node at: ${process.execPath}, PATH: ${newPath.slice(0, 200)}`);
   return { ...process.env, PATH: newPath };
 }
 
@@ -67,6 +72,28 @@ async function checkBinary(name: string): Promise<void> {
 }
 
 const YT_DLP_PATH = path.join(tmpdir(), "yt-dlp");
+const NODE_SYMLINK_PATH = path.join(tmpdir(), "node");
+
+/**
+ * Ensure a `node` symlink exists in /tmp so yt-dlp can find it.
+ * yt-dlp's standalone binary searches for JS runtimes (node, deno, etc.)
+ * to solve YouTube's n-parameter challenge. On Railway/Nixpacks, node
+ * is in a non-standard location the binary can't discover.
+ */
+async function ensureNodeSymlink(): Promise<void> {
+  try {
+    const target = await fs.readlink(NODE_SYMLINK_PATH);
+    if (target === process.execPath) return; // already correct
+  } catch {}
+  try {
+    await fs.unlink(NODE_SYMLINK_PATH).catch(() => {});
+    await fs.symlink(process.execPath, NODE_SYMLINK_PATH);
+    console.log(`[video-downloader] Created node symlink: ${NODE_SYMLINK_PATH} -> ${process.execPath}`);
+  } catch (err) {
+    console.warn(`[video-downloader] Failed to create node symlink:`, err instanceof Error ? err.message : err);
+  }
+}
+
 /**
  * Ensure a recent yt-dlp binary is available.
  * The apt version is often too old for TikTok, so we download
@@ -138,7 +165,7 @@ const MAX_DURATION_SECONDS = 300; // 5 minutes
  * Returns duration, estimated filesize, description, and uploader.
  */
 export async function getVideoMeta(url: string): Promise<VideoMeta> {
-  const ytdlp = await ensureYtDlp();
+  const [ytdlp] = await Promise.all([ensureYtDlp(), ensureNodeSymlink()]);
   try {
     const ytArgs = await getYouTubeArgs(url);
     const { stdout } = await execFileAsync(
@@ -193,8 +220,9 @@ export function extractUrlsFromDescription(description: string): string[] {
  * Caller is responsible for cleaning up the temp files.
  */
 export async function downloadVideo(url: string): Promise<DownloadResult> {
-  const ytdlp = await ensureYtDlp();
-  const ytArgs = await getYouTubeArgs(url);
+  const [ytdlp, , ytArgs] = await Promise.all([
+    ensureYtDlp(), ensureNodeSymlink(), getYouTubeArgs(url),
+  ]);
 
   const id = randomUUID();
   const videoPath = path.join(tmpdir(), `${id}.mp4`);
