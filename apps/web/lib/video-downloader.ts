@@ -30,7 +30,7 @@ async function getYouTubeArgs(url: string): Promise<string[]> {
   if (!token) return [];
   return [
     "--extractor-args",
-    `youtube:po_token=web+${token.poToken};visitor_data=${token.visitorData}`,
+    `youtube:player-client=web;po_token=web.player+${token.poToken};visitor_data=${token.visitorData};player_skip=webpage,configs`,
   ];
 }
 
