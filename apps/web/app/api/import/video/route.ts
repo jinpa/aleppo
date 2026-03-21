@@ -86,6 +86,13 @@ export async function POST(req: Request) {
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[import/video] Download failed:", msg);
+    // YouTube bot detection — show a user-friendly message
+    if (/sign in to confirm you.re not a bot/i.test(msg)) {
+      return NextResponse.json(
+        { error: "YouTube is currently blocking this download from our server. Please try again later, or try a different video." },
+        { status: 502 }
+      );
+    }
     return NextResponse.json({ error: `Failed to download video: ${msg}` }, { status: 502 });
   }
 
