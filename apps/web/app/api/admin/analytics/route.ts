@@ -3,6 +3,9 @@ import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { requireAdmin } from "@/lib/admin-auth";
 
+// E2E tests create users with @test.aleppo emails — exclude from analytics
+const TEST_EMAIL_PATTERN = "%@test.aleppo";
+
 export async function GET(req: Request) {
   const admin = await requireAdmin(req);
   if (!admin) {
@@ -23,52 +26,59 @@ export async function GET(req: Request) {
     cookLogsOverTime,
     recipesOverTime,
     activeUsers,
-    importsVsSaved,
     imageSourceTypes,
   ] = await Promise.all([
     // Import count by type
     db.execute(sql`
-      SELECT "importType" as type, count(*)::int as count
-      FROM "recipeImports"
-      WHERE "createdAt" >= ${cutoff}::timestamp
-      GROUP BY "importType"
+      SELECT ri."importType" as type, count(*)::int as count
+      FROM "recipeImports" ri
+      JOIN users u ON ri."userId" = u.id
+      WHERE ri."createdAt" >= ${cutoff}::timestamp
+        AND u.email NOT LIKE ${TEST_EMAIL_PATTERN}
+      GROUP BY ri."importType"
       ORDER BY count DESC
     `),
 
     // Import success vs failure
     db.execute(sql`
-      SELECT "importType" as type, status, count(*)::int as count
-      FROM "recipeImports"
-      WHERE "createdAt" >= ${cutoff}::timestamp
-      GROUP BY "importType", status
-      ORDER BY "importType", status
+      SELECT ri."importType" as type, ri.status, count(*)::int as count
+      FROM "recipeImports" ri
+      JOIN users u ON ri."userId" = u.id
+      WHERE ri."createdAt" >= ${cutoff}::timestamp
+        AND u.email NOT LIKE ${TEST_EMAIL_PATTERN}
+      GROUP BY ri."importType", ri.status
+      ORDER BY ri."importType", ri.status
     `),
 
     // Top source domains (from sourceUrl)
     db.execute(sql`
       SELECT
         CASE
-          WHEN "sourceUrl" IS NULL THEN '(no url)'
-          ELSE split_part(split_part("sourceUrl", '://', 2), '/', 1)
+          WHEN ri."sourceUrl" IS NULL THEN '(no url)'
+          ELSE split_part(split_part(ri."sourceUrl", '://', 2), '/', 1)
         END as domain,
-        "importType" as type,
+        ri."importType" as type,
         count(*)::int as count
-      FROM "recipeImports"
-      WHERE "createdAt" >= ${cutoff}::timestamp
-        AND "sourceUrl" IS NOT NULL
-      GROUP BY domain, "importType"
+      FROM "recipeImports" ri
+      JOIN users u ON ri."userId" = u.id
+      WHERE ri."createdAt" >= ${cutoff}::timestamp
+        AND ri."sourceUrl" IS NOT NULL
+        AND u.email NOT LIKE ${TEST_EMAIL_PATTERN}
+      GROUP BY domain, ri."importType"
       ORDER BY count DESC
       LIMIT 30
     `),
 
     // Top error messages
     db.execute(sql`
-      SELECT "importType" as type, "errorMessage" as error, count(*)::int as count
-      FROM "recipeImports"
-      WHERE "createdAt" >= ${cutoff}::timestamp
-        AND status = 'failed'
-        AND "errorMessage" IS NOT NULL
-      GROUP BY "importType", "errorMessage"
+      SELECT ri."importType" as type, ri."errorMessage" as error, count(*)::int as count
+      FROM "recipeImports" ri
+      JOIN users u ON ri."userId" = u.id
+      WHERE ri."createdAt" >= ${cutoff}::timestamp
+        AND ri.status = 'failed'
+        AND ri."errorMessage" IS NOT NULL
+        AND u.email NOT LIKE ${TEST_EMAIL_PATTERN}
+      GROUP BY ri."importType", ri."errorMessage"
       ORDER BY count DESC
       LIMIT 20
     `),
@@ -78,24 +88,29 @@ export async function GET(req: Request) {
       SELECT date_trunc('week', "createdAt")::date as week, count(*)::int as count
       FROM users
       WHERE "createdAt" >= ${cutoff}::timestamp
+        AND email NOT LIKE ${TEST_EMAIL_PATTERN}
       GROUP BY week
       ORDER BY week
     `),
 
-    // Cook logs per week
+    // Cook logs per week (by cookedOn date, not createdAt, to avoid bulk-import spikes)
     db.execute(sql`
-      SELECT date_trunc('week', "createdAt")::date as week, count(*)::int as count
-      FROM "cookLogs"
-      WHERE "createdAt" >= ${cutoff}::timestamp
+      SELECT date_trunc('week', cl."cookedOn"::timestamp)::date as week, count(*)::int as count
+      FROM "cookLogs" cl
+      JOIN users u ON cl."userId" = u.id
+      WHERE cl."cookedOn"::timestamp >= ${cutoff}::timestamp
+        AND u.email NOT LIKE ${TEST_EMAIL_PATTERN}
       GROUP BY week
       ORDER BY week
     `),
 
     // Recipes created per week
     db.execute(sql`
-      SELECT date_trunc('week', "createdAt")::date as week, count(*)::int as count
-      FROM recipes
-      WHERE "createdAt" >= ${cutoff}::timestamp
+      SELECT date_trunc('week', r."createdAt")::date as week, count(*)::int as count
+      FROM recipes r
+      JOIN users u ON r."userId" = u.id
+      WHERE r."createdAt" >= ${cutoff}::timestamp
+        AND u.email NOT LIKE ${TEST_EMAIL_PATTERN}
       GROUP BY week
       ORDER BY week
     `),
@@ -103,30 +118,21 @@ export async function GET(req: Request) {
     // Active users (last 7 and 30 days)
     db.execute(sql`
       SELECT
-        (SELECT count(DISTINCT "userId")::int FROM "cookLogs" WHERE "createdAt" >= now() - interval '7 days') as "cookLast7d",
-        (SELECT count(DISTINCT "userId")::int FROM "cookLogs" WHERE "createdAt" >= now() - interval '30 days') as "cookLast30d",
-        (SELECT count(DISTINCT "userId")::int FROM "recipeImports" WHERE "createdAt" >= now() - interval '7 days') as "importLast7d",
-        (SELECT count(DISTINCT "userId")::int FROM "recipeImports" WHERE "createdAt" >= now() - interval '30 days') as "importLast30d"
-    `),
-
-    // Imports vs saved recipes (recipeId non-null = saved)
-    db.execute(sql`
-      SELECT "importType" as type,
-        count(*)::int as imports,
-        count("recipeId")::int as saved
-      FROM "recipeImports"
-      WHERE "createdAt" >= ${cutoff}::timestamp
-      GROUP BY "importType"
-      ORDER BY imports DESC
+        (SELECT count(DISTINCT cl."userId")::int FROM "cookLogs" cl JOIN users u ON cl."userId" = u.id WHERE cl."cookedOn"::timestamp >= now() - interval '7 days' AND u.email NOT LIKE ${TEST_EMAIL_PATTERN}) as "cookLast7d",
+        (SELECT count(DISTINCT cl."userId")::int FROM "cookLogs" cl JOIN users u ON cl."userId" = u.id WHERE cl."cookedOn"::timestamp >= now() - interval '30 days' AND u.email NOT LIKE ${TEST_EMAIL_PATTERN}) as "cookLast30d",
+        (SELECT count(DISTINCT ri."userId")::int FROM "recipeImports" ri JOIN users u ON ri."userId" = u.id WHERE ri."createdAt" >= now() - interval '7 days' AND u.email NOT LIKE ${TEST_EMAIL_PATTERN}) as "importLast7d",
+        (SELECT count(DISTINCT ri."userId")::int FROM "recipeImports" ri JOIN users u ON ri."userId" = u.id WHERE ri."createdAt" >= now() - interval '30 days' AND u.email NOT LIKE ${TEST_EMAIL_PATTERN}) as "importLast30d"
     `),
 
     // Image source type breakdown (dish_photo vs recipe_text)
     db.execute(sql`
-      SELECT "rawPayload"->>'imageSourceType' as "sourceType", count(*)::int as count
-      FROM "recipeImports"
-      WHERE "createdAt" >= ${cutoff}::timestamp
-        AND "importType" = 'image'
-        AND "rawPayload"->>'imageSourceType' IS NOT NULL
+      SELECT ri."rawPayload"->>'imageSourceType' as "sourceType", count(*)::int as count
+      FROM "recipeImports" ri
+      JOIN users u ON ri."userId" = u.id
+      WHERE ri."createdAt" >= ${cutoff}::timestamp
+        AND ri."importType" = 'image'
+        AND ri."rawPayload"->>'imageSourceType' IS NOT NULL
+        AND u.email NOT LIKE ${TEST_EMAIL_PATTERN}
       GROUP BY "sourceType"
       ORDER BY count DESC
     `),
@@ -142,7 +148,6 @@ export async function GET(req: Request) {
     cookLogsOverTime,
     recipesOverTime,
     activeUsers: activeUsers[0] ?? {},
-    importsVsSaved,
     imageSourceTypes,
   });
 }

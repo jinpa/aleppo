@@ -10,7 +10,7 @@ import { NextResponse } from "next/server";
 
 import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
-import { recipes } from "@/db/schema";
+import { recipes, recipeImports } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import {
   parseZipBuffer,
@@ -41,24 +41,32 @@ export async function POST(req: Request) {
     );
   }
 
+  const logImport = (status: string, count?: number, errorMessage?: string) =>
+    db.insert(recipeImports).values({
+      userId, importType: "paprika", status, errorMessage,
+      rawPayload: count != null ? { recipeCount: count } : undefined,
+    }).catch((err) => console.error("[import/paprika] Failed to log import:", err));
+
   // Parse the ZIP archive
   let paprikaRecipes;
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     paprikaRecipes = parseZipBuffer(buffer);
   } catch (err) {
-    return NextResponse.json(
-      { error: `Could not parse file: ${err instanceof Error ? err.message : String(err)}` },
-      { status: 400 }
-    );
+    const msg = `Could not parse file: ${err instanceof Error ? err.message : String(err)}`;
+    await logImport("failed", undefined, msg);
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
   if (paprikaRecipes.length === 0) {
+    await logImport("failed", 0, "No recipes found in the file.");
     return NextResponse.json(
       { error: "No recipes found in the file." },
       { status: 400 }
     );
   }
+
+  await logImport("parsed", paprikaRecipes.length);
 
   // Fetch user's existing recipes for duplicate detection
   const existingRecipes = await db

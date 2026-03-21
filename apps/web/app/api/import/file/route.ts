@@ -10,7 +10,7 @@ import { NextResponse } from "next/server";
 
 import { safeAuth, getUserFromBearerToken } from "@/lib/mobile-auth";
 import { db } from "@/db";
-import { recipes } from "@/db/schema";
+import { recipes, recipeImports } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { parseImportFile } from "@/lib/import-parser";
 import type { ImportPreviewItem } from "@/lib/import-utils";
@@ -34,20 +34,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "File too large (max 100MB)" }, { status: 400 });
   }
 
+  const logImport = (format: string, status: string, count?: number, errorMessage?: string) =>
+    db.insert(recipeImports).values({
+      userId, importType: format, status, errorMessage,
+      rawPayload: count != null ? { recipeCount: count } : undefined,
+    }).catch((err) => console.error("[import/file] Failed to log import:", err));
+
   let result;
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     result = parseImportFile(buffer, file.name);
   } catch (err) {
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Could not parse file." },
-      { status: 400 }
-    );
+    const msg = err instanceof Error ? err.message : "Could not parse file.";
+    await logImport("file", "failed", undefined, msg);
+    return NextResponse.json({ error: msg }, { status: 400 });
   }
 
   if (result.items.length === 0) {
+    await logImport(result.format, "failed", 0, "No recipes found in the file.");
     return NextResponse.json({ error: "No recipes found in the file." }, { status: 400 });
   }
+
+  await logImport(result.format, "parsed", result.items.length);
 
   // Duplicate detection
   const existingRecipes = await db
