@@ -11,6 +11,20 @@ const execFileAsync = promisify(execFile);
 const TIMEOUT_MS = 60_000;
 const MAX_SIZE_MB = 50;
 
+/**
+ * Build env with node's directory explicitly in PATH.
+ * yt-dlp's standalone binary uses shutil.which() to find JS runtimes
+ * for solving YouTube's n-parameter challenge. On Railway/Nixpacks,
+ * node may be in a non-standard location that the binary can't find.
+ */
+function ytDlpEnv(): NodeJS.ProcessEnv {
+  const nodeDir = path.dirname(process.execPath);
+  const currentPath = process.env.PATH ?? "";
+  const newPath = currentPath.includes(nodeDir) ? currentPath : `${nodeDir}:${currentPath}`;
+  console.log(`[video-downloader] node at: ${process.execPath}, PATH includes nodeDir: ${currentPath.includes(nodeDir)}`);
+  return { ...process.env, PATH: newPath };
+}
+
 function isYouTubeUrl(url: string): boolean {
   try {
     const host = new URL(url).hostname;
@@ -134,7 +148,7 @@ export async function getVideoMeta(url: string): Promise<VideoMeta> {
         "--print", "%(duration)s\t%(filesize_approx)s\t%(uploader)s",
         "--no-download", "--no-warnings", url,
       ],
-      { timeout: 15_000 }
+      { timeout: 15_000, env: ytDlpEnv() }
     );
     const [durStr, sizeStr, uploader] = stdout.trim().split("\t");
     const duration = parseFloat(durStr) || null;
@@ -144,7 +158,7 @@ export async function getVideoMeta(url: string): Promise<VideoMeta> {
     const { stdout: desc } = await execFileAsync(
       ytdlp,
       [...ytArgs, "--print", "%(description)s", "--no-download", "--no-warnings", url],
-      { timeout: 15_000 }
+      { timeout: 15_000, env: ytDlpEnv() }
     );
 
     return {
@@ -197,7 +211,7 @@ export async function downloadVideo(url: string): Promise<DownloadResult> {
         "--verbose",
         url,
       ],
-      { timeout: TIMEOUT_MS }
+      { timeout: TIMEOUT_MS, env: ytDlpEnv() }
     );
     if (stderr) console.log("[video-downloader] yt-dlp stderr:", stderr.slice(0, 2000));
   } catch (err: any) {
