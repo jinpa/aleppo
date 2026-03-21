@@ -69,9 +69,14 @@ export async function POST(req: Request) {
 
   const [result, uploadedImageUrl] = await Promise.all([geminiPromise, imageUrlPromise]);
 
+  const imageSourceType = result.ok
+    ? (result.parsed.imageSourceType as string) ?? null
+    : null;
+
   const logImport = (status: string, errorMessage?: string) =>
     db.insert(recipeImports).values({
       userId, importType: "image", status, errorMessage,
+      rawPayload: imageSourceType ? { imageSourceType } : undefined,
     }).catch((err) => console.error("[import/images] Failed to log import:", err));
 
   if (!result.ok) {

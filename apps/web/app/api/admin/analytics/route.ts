@@ -23,6 +23,8 @@ export async function GET(req: Request) {
     cookLogsOverTime,
     recipesOverTime,
     activeUsers,
+    importsVsSaved,
+    imageSourceTypes,
   ] = await Promise.all([
     // Import count by type
     db.execute(sql`
@@ -106,6 +108,28 @@ export async function GET(req: Request) {
         (SELECT count(DISTINCT "userId")::int FROM "recipeImports" WHERE "createdAt" >= now() - interval '7 days') as "importLast7d",
         (SELECT count(DISTINCT "userId")::int FROM "recipeImports" WHERE "createdAt" >= now() - interval '30 days') as "importLast30d"
     `),
+
+    // Imports vs saved recipes (recipeId non-null = saved)
+    db.execute(sql`
+      SELECT "importType" as type,
+        count(*)::int as imports,
+        count("recipeId")::int as saved
+      FROM "recipeImports"
+      WHERE "createdAt" >= ${cutoff}::timestamp
+      GROUP BY "importType"
+      ORDER BY imports DESC
+    `),
+
+    // Image source type breakdown (dish_photo vs recipe_text)
+    db.execute(sql`
+      SELECT "rawPayload"->>'imageSourceType' as "sourceType", count(*)::int as count
+      FROM "recipeImports"
+      WHERE "createdAt" >= ${cutoff}::timestamp
+        AND "importType" = 'image'
+        AND "rawPayload"->>'imageSourceType' IS NOT NULL
+      GROUP BY "sourceType"
+      ORDER BY count DESC
+    `),
   ]);
 
   return NextResponse.json({
@@ -118,5 +142,7 @@ export async function GET(req: Request) {
     cookLogsOverTime,
     recipesOverTime,
     activeUsers: activeUsers[0] ?? {},
+    importsVsSaved,
+    imageSourceTypes,
   });
 }

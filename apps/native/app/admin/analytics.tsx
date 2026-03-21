@@ -19,6 +19,8 @@ type ImportByStatus = { type: string; status: string; count: number };
 type SourceDomain = { domain: string; type: string; count: number };
 type FailedError = { type: string; error: string; count: number };
 type WeeklyCount = { week: string; count: number };
+type ImportVsSaved = { type: string; imports: number; saved: number };
+type ImageSourceType = { sourceType: string; count: number };
 type ActiveUsers = {
   cookLast7d: number;
   cookLast30d: number;
@@ -35,6 +37,8 @@ type AnalyticsData = {
   newUsersOverTime: WeeklyCount[];
   cookLogsOverTime: WeeklyCount[];
   recipesOverTime: WeeklyCount[];
+  importsVsSaved: ImportVsSaved[];
+  imageSourceTypes: ImageSourceType[];
   activeUsers: ActiveUsers;
 };
 
@@ -128,20 +132,47 @@ export default function AnalyticsScreen() {
               </View>
             </View>
 
-            {/* Imports by type */}
+            {/* Imports vs saved */}
             <Text style={styles.sectionTitle}>Imports by Type</Text>
             <View style={styles.card}>
-              {data.importsByType.length === 0 ? (
+              {data.importsVsSaved.length === 0 ? (
                 <Text style={styles.emptyText}>No imports yet</Text>
               ) : (
-                data.importsByType.map((r) => (
-                  <View key={r.type} style={styles.row}>
-                    <Text style={styles.label}>{r.type}</Text>
-                    <Text style={styles.value}>{r.count}</Text>
+                <>
+                  <View style={styles.row}>
+                    <Text style={[styles.label, { fontWeight: "600" }]}>Type</Text>
+                    <View style={{ flexDirection: "row", gap: 16 }}>
+                      <Text style={[styles.sublabel, { width: 50, textAlign: "right" }]}>Imports</Text>
+                      <Text style={[styles.sublabel, { width: 50, textAlign: "right" }]}>Saved</Text>
+                    </View>
                   </View>
-                ))
+                  {data.importsVsSaved.map((r) => (
+                    <View key={r.type} style={styles.row}>
+                      <Text style={styles.label}>{r.type}</Text>
+                      <View style={{ flexDirection: "row", gap: 16 }}>
+                        <Text style={[styles.value, { width: 50, textAlign: "right" }]}>{r.imports}</Text>
+                        <Text style={[styles.value, { width: 50, textAlign: "right" }]}>{r.saved}</Text>
+                      </View>
+                    </View>
+                  ))}
+                </>
               )}
             </View>
+
+            {/* Image source types */}
+            {data.imageSourceTypes.length > 0 && (
+              <>
+                <Text style={styles.sectionTitle}>Image Import Types</Text>
+                <View style={styles.card}>
+                  {data.imageSourceTypes.map((r) => (
+                    <View key={r.sourceType} style={styles.row}>
+                      <Text style={styles.label}>{r.sourceType === "dish_photo" ? "Photo of dish" : r.sourceType === "recipe_text" ? "Recipe text/page" : r.sourceType}</Text>
+                      <Text style={styles.value}>{r.count}</Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            )}
 
             {/* Success / failure by type */}
             <Text style={styles.sectionTitle}>Import Success Rate</Text>
