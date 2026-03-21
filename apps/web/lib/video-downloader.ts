@@ -4,11 +4,35 @@ import { randomUUID } from "crypto";
 import { tmpdir } from "os";
 import path from "path";
 import fs from "fs/promises";
+import { getYouTubePoToken } from "./youtube-po-token";
 
 const execFileAsync = promisify(execFile);
 
 const TIMEOUT_MS = 60_000;
 const MAX_SIZE_MB = 50;
+
+function isYouTubeUrl(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return /youtube\.com|youtu\.be/i.test(host);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * If the URL is YouTube, try to get PO token args for yt-dlp.
+ * Returns extra args to prepend, or an empty array.
+ */
+async function getYouTubeArgs(url: string): Promise<string[]> {
+  if (!isYouTubeUrl(url)) return [];
+  const token = await getYouTubePoToken();
+  if (!token) return [];
+  return [
+    "--extractor-args",
+    `youtube:po_token=web+${token.poToken};visitor_data=${token.visitorData}`,
+  ];
+}
 
 export type DownloadResult = {
   videoPath: string;
@@ -100,9 +124,11 @@ const MAX_DURATION_SECONDS = 300; // 5 minutes
 export async function getVideoMeta(url: string): Promise<VideoMeta> {
   const ytdlp = await ensureYtDlp();
   try {
+    const ytArgs = await getYouTubeArgs(url);
     const { stdout } = await execFileAsync(
       ytdlp,
       [
+        ...ytArgs,
         "--print", "%(duration)s\t%(filesize_approx)s\t%(uploader)s",
         "--no-download", "--no-warnings", url,
       ],
@@ -115,7 +141,7 @@ export async function getVideoMeta(url: string): Promise<VideoMeta> {
     // Get description separately (can contain tabs/newlines)
     const { stdout: desc } = await execFileAsync(
       ytdlp,
-      ["--print", "%(description)s", "--no-download", "--no-warnings", url],
+      [...ytArgs, "--print", "%(description)s", "--no-download", "--no-warnings", url],
       { timeout: 15_000 }
     );
 
@@ -152,6 +178,7 @@ export function extractUrlsFromDescription(description: string): string[] {
  */
 export async function downloadVideo(url: string): Promise<DownloadResult> {
   const ytdlp = await ensureYtDlp();
+  const ytArgs = await getYouTubeArgs(url);
 
   const id = randomUUID();
   const videoPath = path.join(tmpdir(), `${id}.mp4`);
@@ -159,6 +186,7 @@ export async function downloadVideo(url: string): Promise<DownloadResult> {
   await execFileAsync(
     ytdlp,
     [
+      ...ytArgs,
       "-f", `best[vcodec^=h264][filesize<${MAX_SIZE_MB}M][ext=mp4]/best[vcodec^=h264][ext=mp4]/best[ext=mp4]/best`,
       "--merge-output-format", "mp4",
       "-o", videoPath,
