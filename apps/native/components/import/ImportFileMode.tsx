@@ -14,7 +14,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { API_URL } from "@/constants/api";
 import { sharedStyles } from "./importStyles";
 import { CookingSpinner } from "@/components/CookingSpinner";
-import { TranslationToggle, getClientLanguage } from "./TranslationToggle";
+import { TranslationToggle } from "./TranslationToggle";
+import { importPdfFile } from "./importPdf";
 import type { ImportOutcome } from "./types";
 import type { ScrapedRecipe } from "@aleppo/shared";
 
@@ -59,35 +60,19 @@ export function ImportFileMode({ token, router, onComplete, onBatchComplete, onA
     onAttempt?.();
     setFileParsing(true);
     setFileError(null);
-    const currentToken = Platform.OS === "web" ? localStorage.getItem("auth_token") : token;
-    const fileForForm: any = asset.file ?? { uri: asset.uri, name: asset.name, type: "application/pdf" };
     try {
-      const form = new FormData();
-      form.append("file", fileForForm);
-      if (language) form.append("language", language);
-      const res = await fetch(`${API_URL}/api/import/pdf`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${currentToken}` },
-        body: form,
+      await importPdfFile(asset, {
+        token,
+        language,
+        onComplete: (outcome) => {
+          if (!outcome.ok) {
+            setFileError(outcome.error);
+          } else if (onComplete) {
+            onComplete(outcome);
+          }
+        },
+        onBatchComplete,
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setFileError(data.error ?? "PDF import failed.");
-        return;
-      }
-      if (Array.isArray(data.recipes) && data.recipes.length > 1 && onBatchComplete) {
-        onBatchComplete(data.recipes);
-      } else if (Array.isArray(data.recipes) && data.recipes.length > 0 && onComplete) {
-        onComplete({
-          ok: true,
-          recipe: data.recipes[0],
-          aiGenerated: data.generated,
-        });
-      } else {
-        setFileError("No recipes found in the PDF.");
-      }
-    } catch {
-      setFileError("Could not connect to server.");
     } finally {
       setFileParsing(false);
     }

@@ -6,6 +6,8 @@ import { sharedStyles } from "./importStyles";
 import { RecipeWebExtractor } from "@/components/RecipeWebExtractor";
 import { CookingSpinner } from "@/components/CookingSpinner";
 import { TranslationToggle, getClientLanguage } from "./TranslationToggle";
+import { isGoogleDocUrl, importGoogleDoc } from "./importGoogleDoc";
+import { isGoogleDriveFileUrl, importGoogleDrivePdf } from "./importPdf";
 import type { ImportOutcome } from "./types";
 import type { ScrapedRecipe } from "@aleppo/shared";
 
@@ -26,23 +28,6 @@ function isVideoUrl(url: string): boolean {
   }
 }
 
-function isGoogleDocUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return /docs\.google\.com\/document\/d\//.test(parsed.hostname + parsed.pathname);
-  } catch {
-    return false;
-  }
-}
-
-function isGoogleDriveFileUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    return /drive\.google\.com\/file\/d\//.test(parsed.hostname + parsed.pathname);
-  } catch {
-    return false;
-  }
-}
 
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|gif|bmp|heic|heif|avif)(\?.*)?$/i;
 const IMAGE_HOSTS = [/\.cdninstagram\.com/i, /\.pinimg\.com/i, /\.imgur\.com/i, /i\.redd\.it/i];
@@ -319,78 +304,14 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onBat
 
   const handleGoogleDocImport = async (docUrl: string) => {
     setFetching(true);
-    const currentToken = Platform.OS === "web" ? localStorage.getItem("auth_token") : token;
-    try {
-      const res = await fetch(`${API_URL}/api/import/google-doc`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${currentToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ url: docUrl, language }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        onComplete({
-          ok: false,
-          error: res.status === 401
-            ? "Authentication error — please try again."
-            : data.error ?? "Google Doc import failed.",
-        });
-      } else if (Array.isArray(data.recipes) && data.recipes.length > 1 && onBatchComplete) {
-        onBatchComplete(data.recipes);
-      } else if (Array.isArray(data.recipes) && data.recipes.length > 0) {
-        onComplete({
-          ok: true,
-          recipe: { ...data.recipes[0], sourceUrl: docUrl },
-          aiGenerated: data.generated,
-        });
-      } else {
-        onComplete({ ok: false, error: "No recipes found in the document." });
-      }
-    } catch {
-      onComplete({ ok: false, error: "Could not connect to server." });
-    } finally {
-      setFetching(false);
-    }
+    await importGoogleDoc(docUrl, { token, language, onComplete, onBatchComplete });
+    setFetching(false);
   };
 
   const handleGoogleDrivePdfImport = async (driveUrl: string) => {
     setFetching(true);
-    const currentToken = Platform.OS === "web" ? localStorage.getItem("auth_token") : token;
-    try {
-      const form = new FormData();
-      form.append("url", driveUrl);
-      if (language) form.append("language", language);
-      const res = await fetch(`${API_URL}/api/import/pdf`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${currentToken}` },
-        body: form,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        onComplete({
-          ok: false,
-          error: res.status === 401
-            ? "Authentication error — please try again."
-            : data.error ?? "Google Drive PDF import failed.",
-        });
-      } else if (Array.isArray(data.recipes) && data.recipes.length > 1 && onBatchComplete) {
-        onBatchComplete(data.recipes);
-      } else if (Array.isArray(data.recipes) && data.recipes.length > 0) {
-        onComplete({
-          ok: true,
-          recipe: { ...data.recipes[0], sourceUrl: driveUrl },
-          aiGenerated: data.generated,
-        });
-      } else {
-        onComplete({ ok: false, error: "No recipes found in the PDF." });
-      }
-    } catch {
-      onComplete({ ok: false, error: "Could not connect to server." });
-    } finally {
-      setFetching(false);
-    }
+    await importGoogleDrivePdf(driveUrl, { token, language, onComplete, onBatchComplete });
+    setFetching(false);
   };
 
   const handleFetch = () => {
