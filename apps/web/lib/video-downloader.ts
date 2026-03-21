@@ -76,14 +76,16 @@ async function ensureYtDlp(): Promise<string> {
   // 1. Check for previously downloaded binary in /tmp
   try {
     await fs.access(YT_DLP_PATH);
-    await execFileAsync(YT_DLP_PATH, ["--version"]);
+    const { stdout: ver } = await execFileAsync(YT_DLP_PATH, ["--version"]);
+    console.log("[video-downloader] Using cached yt-dlp version:", ver.trim());
     resolvedYtDlp = YT_DLP_PATH;
     return YT_DLP_PATH;
   } catch {}
 
   // 2. Try system yt-dlp
   try {
-    await execFileAsync("yt-dlp", ["--version"]);
+    const { stdout: ver } = await execFileAsync("yt-dlp", ["--version"]);
+    console.log("[video-downloader] Using system yt-dlp version:", ver.trim());
     resolvedYtDlp = "yt-dlp";
     return "yt-dlp";
   } catch {}
@@ -183,19 +185,26 @@ export async function downloadVideo(url: string): Promise<DownloadResult> {
   const id = randomUUID();
   const videoPath = path.join(tmpdir(), `${id}.mp4`);
 
-  await execFileAsync(
-    ytdlp,
-    [
-      ...ytArgs,
-      "-f", `best[vcodec^=h264][filesize<${MAX_SIZE_MB}M][ext=mp4]/best[vcodec^=h264][ext=mp4]/best[ext=mp4]/best`,
-      "--merge-output-format", "mp4",
-      "-o", videoPath,
-      "--no-playlist",
-      "--no-warnings",
-      url,
-    ],
-    { timeout: TIMEOUT_MS }
-  );
+  try {
+    const { stderr } = await execFileAsync(
+      ytdlp,
+      [
+        ...ytArgs,
+        "-f", `best[vcodec^=h264][filesize<${MAX_SIZE_MB}M][ext=mp4]/best[vcodec^=h264][ext=mp4]/best[ext=mp4]/best`,
+        "--merge-output-format", "mp4",
+        "-o", videoPath,
+        "--no-playlist",
+        "--verbose",
+        url,
+      ],
+      { timeout: TIMEOUT_MS }
+    );
+    if (stderr) console.log("[video-downloader] yt-dlp stderr:", stderr.slice(0, 2000));
+  } catch (err: any) {
+    // Log verbose output from stderr on failure for debugging
+    if (err.stderr) console.log("[video-downloader] yt-dlp verbose stderr:", err.stderr.slice(0, 3000));
+    throw err;
+  }
 
   // Verify the file exists and isn't too large
   const stat = await fs.stat(videoPath);
