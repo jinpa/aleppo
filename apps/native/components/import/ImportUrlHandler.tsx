@@ -35,6 +35,15 @@ function isGoogleDocUrl(url: string): boolean {
   }
 }
 
+function isGoogleDriveFileUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return /drive\.google\.com\/file\/d\//.test(parsed.hostname + parsed.pathname);
+  } catch {
+    return false;
+  }
+}
+
 const IMAGE_EXTENSIONS = /\.(jpe?g|png|webp|gif|bmp|heic|heif|avif)(\?.*)?$/i;
 const IMAGE_HOSTS = [/\.cdninstagram\.com/i, /\.pinimg\.com/i, /\.imgur\.com/i, /i\.redd\.it/i];
 
@@ -346,11 +355,55 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onBat
     }
   };
 
+  const handleGoogleDrivePdfImport = async (driveUrl: string) => {
+    setFetching(true);
+    const currentToken = Platform.OS === "web" ? localStorage.getItem("auth_token") : token;
+    try {
+      const form = new FormData();
+      form.append("url", driveUrl);
+      if (language) form.append("language", language);
+      const res = await fetch(`${API_URL}/api/import/pdf`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${currentToken}` },
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        onComplete({
+          ok: false,
+          error: res.status === 401
+            ? "Authentication error — please try again."
+            : data.error ?? "Google Drive PDF import failed.",
+        });
+      } else if (Array.isArray(data.recipes) && data.recipes.length > 1 && onBatchComplete) {
+        onBatchComplete(data.recipes);
+      } else if (Array.isArray(data.recipes) && data.recipes.length > 0) {
+        onComplete({
+          ok: true,
+          recipe: { ...data.recipes[0], sourceUrl: driveUrl },
+          aiGenerated: data.generated,
+        });
+      } else {
+        onComplete({ ok: false, error: "No recipes found in the PDF." });
+      }
+    } catch {
+      onComplete({ ok: false, error: "Could not connect to server." });
+    } finally {
+      setFetching(false);
+    }
+  };
+
   const handleFetch = () => {
     if (!url.trim()) return;
     onAttempt?.();
 
     const trimmed = url.trim();
+
+    // Route Google Drive PDF URLs to the PDF endpoint
+    if (isGoogleDriveFileUrl(trimmed)) {
+      handleGoogleDrivePdfImport(trimmed);
+      return;
+    }
 
     // Route Google Docs URLs to the dedicated endpoint
     if (isGoogleDocUrl(trimmed)) {
@@ -380,6 +433,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onBat
   const busy = fetching || extracting || waitingForBookmarklet;
   let spinnerLabel = "Fetching recipe…";
   if (waitingForBookmarklet) spinnerLabel = "Receiving recipe from your browser…";
+  else if (fetching && url.trim() && isGoogleDriveFileUrl(url.trim())) spinnerLabel = "Reading PDF from Google Drive…";
   else if (fetching && url.trim() && isGoogleDocUrl(url.trim())) spinnerLabel = "Reading Google Doc…";
   else if (fetching && url.trim() && isVideoUrl(url.trim())) spinnerLabel = "Downloading and analyzing video…";
   else if (fetching && url.trim() && isImageUrl(url.trim())) spinnerLabel = "Analyzing image…";
@@ -393,7 +447,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onBat
     <>
       <Text style={sharedStyles.heading}>Import from Link</Text>
       <Text style={sharedStyles.subheading}>
-        Paste a link to a recipe blog, TikTok, Instagram Reel, YouTube video, Google Doc, or even a photo of a dish. We'll extract the recipe — you review and edit before saving.
+        Paste a link to a recipe blog, TikTok, Instagram Reel, YouTube video, Google Doc, Google Drive PDF, or even a photo of a dish. We'll extract the recipe — you review and edit before saving.
       </Text>
 
       <View style={styles.urlRow}>
@@ -441,7 +495,7 @@ export function ImportUrlHandler({ token, modeParam, shareUrl, onComplete, onBat
             <Text style={styles.hintItem}>· Food Network, Epicurious, King Arthur</Text>
             <Text style={styles.hintItem}>· Most sites using Schema.org recipe markup</Text>
             <Text style={styles.hintItem}>· TikTok, Instagram Reels, YouTube videos</Text>
-            <Text style={styles.hintItem}>· Google Docs (set to "Anyone with the link")</Text>
+            <Text style={styles.hintItem}>· Google Docs & Drive PDFs (set to "Anyone with the link")</Text>
             <Text style={styles.hintItem}>· Direct image links (jpg, png, webp)</Text>
           </View>
 

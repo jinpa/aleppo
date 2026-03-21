@@ -99,7 +99,9 @@ export async function POST(req: Request) {
   });
   const parts = [{ text: prompt }];
 
-  const result = await callGemini(parts as any, "[import/google-doc]");
+  const result = await callGemini(parts as any, "[import/google-doc]", {
+    maxOutputTokens: 32768,
+  });
 
   if (!result.ok) {
     return NextResponse.json(

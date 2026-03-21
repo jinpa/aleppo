@@ -176,7 +176,14 @@ export default function ImportScreen() {
       )}
 
       {mode === "file" && (
-        <ImportFileMode token={token} router={router} />
+        <ImportFileMode
+          token={token}
+          router={router}
+          onComplete={handleComplete}
+          onBatchComplete={handleBatchComplete}
+          onAttempt={() => setError(null)}
+          initialLanguage={targetLanguage}
+        />
       )}
 
       {mode === "text" && (
