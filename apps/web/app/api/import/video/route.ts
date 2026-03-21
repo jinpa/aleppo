@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     // YouTube bot detection — show a user-friendly message
     if (/sign in to confirm you.re not a bot/i.test(msg)) {
       return NextResponse.json(
-        { error: "YouTube is currently blocking this download from our server. Please try again later, or try a different video." },
+        { error: "YouTube blocks video downloads from our server. Try importing from TikTok or Instagram instead, or paste the recipe URL from the video description." },
         { status: 502 }
       );
     }

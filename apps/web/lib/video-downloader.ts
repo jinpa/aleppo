@@ -10,27 +10,6 @@ const execFileAsync = promisify(execFile);
 const TIMEOUT_MS = 60_000;
 const MAX_SIZE_MB = 50;
 
-function isYouTubeUrl(url: string): boolean {
-  try {
-    const host = new URL(url).hostname;
-    return /youtube\.com|youtu\.be/i.test(host);
-  } catch {
-    return false;
-  }
-}
-
-/**
- * If the URL is YouTube, return extra yt-dlp args to try alternative
- * player clients that face less bot detection from datacenter IPs.
- */
-function getYouTubeArgs(url: string): string[] {
-  if (!isYouTubeUrl(url)) return [];
-  return [
-    "--extractor-args",
-    "youtube:player-client=mediaconnect,android_vr",
-  ];
-}
-
 export type DownloadResult = {
   videoPath: string;
   thumbnailPath: string | null;
@@ -124,11 +103,9 @@ const MAX_DURATION_SECONDS = 300; // 5 minutes
 export async function getVideoMeta(url: string): Promise<VideoMeta> {
   const ytdlp = await ensureYtDlp();
   try {
-    const ytArgs = getYouTubeArgs(url);
     const { stdout } = await execFileAsync(
       ytdlp,
       [
-        ...ytArgs,
         "--print", "%(duration)s\t%(filesize_approx)s\t%(uploader)s",
         "--no-download", "--no-warnings", url,
       ],
@@ -141,7 +118,7 @@ export async function getVideoMeta(url: string): Promise<VideoMeta> {
     // Get description separately (can contain tabs/newlines)
     const { stdout: desc } = await execFileAsync(
       ytdlp,
-      [...ytArgs, "--print", "%(description)s", "--no-download", "--no-warnings", url],
+      ["--print", "%(description)s", "--no-download", "--no-warnings", url],
       { timeout: 15_000 }
     );
 
@@ -178,29 +155,25 @@ export function extractUrlsFromDescription(description: string): string[] {
  */
 export async function downloadVideo(url: string): Promise<DownloadResult> {
   const ytdlp = await ensureYtDlp();
-  const ytArgs = getYouTubeArgs(url);
 
   const id = randomUUID();
   const videoPath = path.join(tmpdir(), `${id}.mp4`);
 
   try {
-    const { stderr } = await execFileAsync(
+    await execFileAsync(
       ytdlp,
       [
-        ...ytArgs,
         "-f", `best[vcodec^=h264][filesize<${MAX_SIZE_MB}M][ext=mp4]/best[vcodec^=h264][ext=mp4]/best[ext=mp4]/best`,
         "--merge-output-format", "mp4",
         "-o", videoPath,
         "--no-playlist",
-        "--verbose",
+        "--no-warnings",
         url,
       ],
       { timeout: TIMEOUT_MS }
     );
-    if (stderr) console.log("[video-downloader] yt-dlp stderr:", stderr.slice(0, 2000));
   } catch (err: any) {
-    // Log verbose output from stderr on failure for debugging
-    if (err.stderr) console.log("[video-downloader] yt-dlp verbose stderr:", err.stderr.slice(0, 3000));
+    if (err.stderr) console.log("[video-downloader] yt-dlp stderr:", err.stderr.slice(0, 2000));
     throw err;
   }
 
