@@ -18,6 +18,14 @@ import { NavShell } from "@/components/NavShell";
 
 type Totals = { users: number; recipes: number; cookLogs: number; follows: number; totalStorageBytes: number };
 
+type GcScanResult = {
+  totalObjects: number;
+  referencedCount: number;
+  orphanCount: number;
+  orphanBytes: number;
+  orphans: { key: string; size: number }[];
+};
+
 type AdminUserRow = {
   id: string;
   name: string | null;
@@ -75,6 +83,10 @@ export default function AdminScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [bootstrapping, setBootstrapping] = useState(false);
+  const [gcScanning, setGcScanning] = useState(false);
+  const [gcDeleting, setGcDeleting] = useState(false);
+  const [gcResult, setGcResult] = useState<GcScanResult | null>(null);
+  const [gcDeletedCount, setGcDeletedCount] = useState<number | null>(null);
 
   // Guard: non-admin users attempt bootstrap (works if ADMIN_EMAIL matches),
   // then redirect away if it fails.
@@ -160,6 +172,53 @@ export default function AdminScreen() {
         { text: "Cancel", style: "cancel" },
         { text: action, onPress: doIt },
       ]);
+    }
+  };
+
+  const handleGcScan = async () => {
+    setGcScanning(true);
+    setGcResult(null);
+    setGcDeletedCount(null);
+    try {
+      const res = await apiFetch("/api/admin/r2-gc");
+      if (res.ok) {
+        setGcResult(await res.json());
+      }
+    } finally {
+      setGcScanning(false);
+    }
+  };
+
+  const handleGcDelete = () => {
+    if (!gcResult || gcResult.orphanCount === 0) return;
+    const doIt = async () => {
+      setGcDeleting(true);
+      try {
+        const keys = gcResult.orphans.map((o) => o.key);
+        const res = await apiFetch("/api/admin/r2-gc", {
+          method: "DELETE",
+          body: JSON.stringify({ keys }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setGcDeletedCount(data.deleted);
+          setGcResult(null);
+        }
+      } finally {
+        setGcDeleting(false);
+      }
+    };
+    if (Platform.OS === "web") {
+      if (confirm(`Delete ${gcResult.orphanCount} orphan images (${formatBytes(gcResult.orphanBytes)})?`)) doIt();
+    } else {
+      Alert.alert(
+        "Delete orphan images",
+        `Delete ${gcResult.orphanCount} orphan images (${formatBytes(gcResult.orphanBytes)})?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          { text: "Delete", style: "destructive", onPress: doIt },
+        ]
+      );
     }
   };
 
@@ -260,6 +319,52 @@ export default function AdminScreen() {
             </Text>
           </View>
         ))}
+      </View>
+
+      {/* Storage tools */}
+      <Text style={styles.sectionTitle}>Storage</Text>
+      <View style={styles.gcCard}>
+        <Text style={styles.gcDescription}>
+          Scan R2 for images not referenced by any recipe.
+        </Text>
+        <View style={styles.gcButtons}>
+          <TouchableOpacity
+            style={[styles.actionBtn, styles.gcScanBtn]}
+            onPress={handleGcScan}
+            disabled={gcScanning}
+          >
+            {gcScanning ? (
+              <ActivityIndicator size="small" color="#1d4ed8" />
+            ) : (
+              <Text style={[styles.actionBtnText, { color: "#1d4ed8" }]}>Scan for orphans</Text>
+            )}
+          </TouchableOpacity>
+          {gcResult && gcResult.orphanCount > 0 && (
+            <TouchableOpacity
+              style={[styles.actionBtn, { borderColor: "#fca5a5", backgroundColor: "#fef2f2" }]}
+              onPress={handleGcDelete}
+              disabled={gcDeleting}
+            >
+              {gcDeleting ? (
+                <ActivityIndicator size="small" color="#b91c1c" />
+              ) : (
+                <Text style={[styles.actionBtnText, styles.actionBtnTextDestructive]}>
+                  Delete {gcResult.orphanCount}
+                </Text>
+              )}
+            </TouchableOpacity>
+          )}
+        </View>
+        {gcResult && (
+          <Text style={styles.gcMeta}>
+            {gcResult.totalObjects} total objects · {gcResult.referencedCount} referenced · {gcResult.orphanCount} orphans ({formatBytes(gcResult.orphanBytes)})
+          </Text>
+        )}
+        {gcDeletedCount !== null && (
+          <Text style={[styles.gcMeta, { color: "#15803d" }]}>
+            Deleted {gcDeletedCount} orphan images.
+          </Text>
+        )}
       </View>
 
       {/* Search */}
@@ -469,5 +574,32 @@ const styles = StyleSheet.create({
   },
   actionBtnTextDestructive: {
     color: "#b91c1c",
+  },
+  gcCard: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#e7e5e4",
+    padding: 14,
+  },
+  gcDescription: {
+    fontSize: 13,
+    color: "#57534e",
+    marginBottom: 10,
+  },
+  gcButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  gcScanBtn: {
+    borderColor: "#bfdbfe",
+    backgroundColor: "#eff6ff",
+  },
+  gcMeta: {
+    fontSize: 12,
+    color: "#78716c",
+    marginTop: 10,
   },
 });
