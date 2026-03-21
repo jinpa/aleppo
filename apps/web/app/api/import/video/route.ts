@@ -41,9 +41,12 @@ export async function POST(req: Request) {
     );
   }
 
+  const source = videoSourceName(url);
+  const importType = source ? `video:${source.toLowerCase()}` : "video";
+
   const logImport = (status: string, errorMessage?: string) =>
     db.insert(recipeImports).values({
-      userId, importType: "video", sourceUrl: url, status, errorMessage,
+      userId, importType, sourceUrl: url, status, errorMessage,
     }).catch((err) => console.error("[import/video] Failed to log import:", err));
 
   // YouTube: can't download video from server, but try to find recipe URLs in the description
